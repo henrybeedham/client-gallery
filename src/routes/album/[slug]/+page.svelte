@@ -205,7 +205,7 @@
 			<div class="container">
 				<div class="flex items-center justify-between py-4 gap-4">
 					<div class="min-w-0">
-						<h1 class="text-lg font-semibold truncate">{data.album.title}</h1>
+						<h1 class="text-lg font-semibold">{data.album.title}</h1>
 						<span class="text-xs text-gray-500">{data.photos.length} photos</span>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
