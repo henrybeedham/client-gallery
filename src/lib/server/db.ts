@@ -344,23 +344,25 @@ export function checkAlbumPassword(albumId: number, password: string): boolean {
 }
 
 // Photo operations
-export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual'): Photo[] {
-	let orderBy: string;
-	switch (sortOrder) {
-		case 'newest':
-			orderBy = 'p.created_at DESC';
-			break;
-		case 'oldest':
-			orderBy = 'p.created_at ASC';
-			break;
-		case 'random':
-			orderBy = 'RANDOM()';
-			break;
-		default:
-			orderBy = 'p.sort_order, p.created_at';
-	}
+// Allowlist of valid order by clauses for getPhotosByAlbum
+const VALID_ORDER_BY_WITH_ALIAS = {
+	'manual': 'p.sort_order, p.created_at',
+	'newest': 'p.created_at DESC',
+	'oldest': 'p.created_at ASC',
+	'random': 'RANDOM()'
+} as const;
 
+const VALID_ORDER_BY_NO_ALIAS = {
+	'manual': 'sort_order, created_at',
+	'newest': 'created_at DESC',
+	'oldest': 'created_at ASC',
+	'random': 'RANDOM()'
+} as const;
+
+export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual'): Photo[] {
 	if (tagSlug) {
+		// Use allowlist to prevent SQL injection (with alias)
+		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['manual'];
 		return db
 			.prepare(
 				`
@@ -373,6 +375,9 @@ export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: '
 			)
 			.all(albumId, tagSlug) as Photo[];
 	}
+	
+	// Use allowlist to prevent SQL injection (without alias)
+	const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['manual'];
 	return db
 		.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
 		.all(albumId) as Photo[];

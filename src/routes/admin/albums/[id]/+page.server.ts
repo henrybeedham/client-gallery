@@ -74,7 +74,15 @@ export const actions: Actions = {
 		const expiresAt = data.get('expiresAt')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
 		const backgroundPhotoIdStr = data.get('backgroundPhotoId')?.toString();
-		const backgroundPhotoId = backgroundPhotoIdStr ? parseInt(backgroundPhotoIdStr) : null;
+		let backgroundPhotoId = backgroundPhotoIdStr ? parseInt(backgroundPhotoIdStr) : null;
+
+		// Validate that backgroundPhotoId belongs to this album
+		if (backgroundPhotoId !== null) {
+			const photo = getPhotoById(backgroundPhotoId);
+			if (!photo || photo.album_id !== albumId) {
+				backgroundPhotoId = null; // Invalid photo, reset to null
+			}
+		}
 
 		if (!title.trim()) {
 			return fail(400, { error: 'Title is required' });
