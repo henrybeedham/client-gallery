@@ -63,7 +63,7 @@
 		isDownloading = true;
 		try {
 			const ids = Array.from(selectedPhotos).join(',');
-			const response = await fetch(`/api/download/photos?ids=${ids}&album=${data.album.slug}`);
+			const response = await fetch(`/api/download/photos/${data.album.slug}?ids=${ids}`);
 			if (!response.ok) throw new Error('Download failed');
 
 			const blob = await response.blob();
