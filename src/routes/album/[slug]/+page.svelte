@@ -221,7 +221,7 @@
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute inset-0 bg-blue-600 transition-all duration-200"
+										class="absolute left-0 top-0 bottom-0 bg-blue-600 transition-all duration-200"
 										style="width: {downloadProgress}%"
 									></span>
 								{:else}
@@ -237,7 +237,7 @@
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute inset-0 bg-blue-600 transition-all duration-200"
+										class="absolute left-0 top-0 bottom-0 bg-blue-600 transition-all duration-200"
 										style="width: {downloadProgress}%"
 									></span>
 								{:else}
