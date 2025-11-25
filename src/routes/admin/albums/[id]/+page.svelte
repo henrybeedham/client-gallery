@@ -452,14 +452,19 @@
 								<p class="truncate text-gray-300" title={photo.original_filename}>
 									{photo.original_filename}
 								</p>
-								<div class="flex items-center justify-between">
-									<span class="text-gray-500">{formatFileSize(photo.file_size || 0)}</span>
+								<span class="text-gray-500">{formatFileSize(photo.file_size || 0)}</span>
+								<div>
 									{#if getPhotoTags(photo.id).length > 0}
-										<span class="text-blue-400"
-											>{getPhotoTags(photo.id).length} tag{getPhotoTags(photo.id).length > 1
-												? 's'
-												: ''}</span
-										>
+										{#each getPhotoTags(photo.id) as tagId}
+											{#each data.tags.filter((t) => t.id === tagId) as tag}
+												<span
+													class="inline-block bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full ml-1 mt-1"
+													title={tag.name}
+												>
+													{tag.name}
+												</span>
+											{/each}
+										{/each}
 									{/if}
 								</div>
 							</div>
