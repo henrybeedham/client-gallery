@@ -495,11 +495,15 @@ export function recordAnalyticsEvent(
 	eventType: AnalyticsEventType,
 	photoId: number | null = null
 ): void {
-	db.prepare('INSERT INTO analytics (album_id, photo_id, event_type) VALUES (?, ?, ?)').run(
-		albumId,
-		photoId,
-		eventType
-	);
+	try {
+		db.prepare('INSERT INTO analytics (album_id, photo_id, event_type) VALUES (?, ?, ?)').run(
+			albumId,
+			photoId,
+			eventType
+		);
+	} catch (e) {
+		console.warn('Failed to record analytics event:', e);
+	}
 }
 
 export function getAlbumAnalytics(

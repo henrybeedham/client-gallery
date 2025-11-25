@@ -7,7 +7,11 @@ export const POST: RequestHandler = async ({ params }) => {
 		return new Response('Invalid album ID', { status: 400 });
 	}
 
-	recordAnalyticsEvent(albumId, 'album_download');
+	try {
+		recordAnalyticsEvent(albumId, 'album_download');
+	} catch (e) {
+		console.warn('Failed to record analytics:', e);
+	}
 
 	return new Response('OK', { status: 200 });
 };

@@ -71,7 +71,9 @@
 		try {
 			// Track download analytics
 			if (trackDownload) {
-				fetch(`/api/download/track/${data.album.id}`, { method: 'POST' }).catch(() => {});
+				fetch(`/api/download/track/${data.album.id}`, { method: 'POST' }).catch((e) =>
+					console.warn('Analytics tracking failed:', e)
+				);
 			}
 
 			const response = await fetch(url);
@@ -191,8 +193,24 @@
 
 	// Track single photo download
 	function trackPhotoDownload() {
-		fetch(`/api/download/track-photo/${data.album.id}`, { method: 'POST' }).catch(() => {});
+		fetch(`/api/download/track-photo/${data.album.id}`, { method: 'POST' }).catch((e) =>
+			console.warn('Analytics tracking failed:', e)
+		);
 	}
+
+	// Sanitize color to prevent XSS
+	function sanitizeColor(color: string): string {
+		// Only allow valid hex colors or standard color names
+		const hexPattern = /^#[0-9A-Fa-f]{3,8}$/;
+		const colorNames =
+			/^(red|blue|green|yellow|orange|purple|pink|cyan|white|black|gray|grey)$/i;
+		if (hexPattern.test(color) || colorNames.test(color)) {
+			return color;
+		}
+		return '#3b82f6'; // Default blue if invalid
+	}
+
+	let safeColor = $derived(sanitizeColor(data.album.primary_color || '#3b82f6'));
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -218,7 +236,7 @@
 	{/if}
 
 	<!-- Custom color scheme -->
-	{@html `<style>:root { --gallery-primary: ${data.album.primary_color || '#3b82f6'}; }</style>`}
+	{@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
 </svelte:head>
 
 {#if data.isExpired}
