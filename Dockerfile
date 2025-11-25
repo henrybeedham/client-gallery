@@ -2,6 +2,9 @@ FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
+# Install dependencies for building native modules (Python/Make/G++ are required for better-sqlite3)
+RUN apk add --no-cache python3 make g++
+
 # Copy package.json and bun.lockb (if it exists)
 COPY package.json bun.lockb* ./
 
