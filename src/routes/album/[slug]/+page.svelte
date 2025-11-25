@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
+	import { onMount } from 'svelte';
 
 	let { data, form } = $props();
 
@@ -11,10 +12,58 @@
 	let downloadProgress = $state(0);
 	let passwordInput = $state('');
 
+	// Lazy loading state
+	let displayedPhotos = $state([...data.photos]);
+	let isLoadingMore = $state(false);
+	let hasMore = $state(data.hasMore);
+	let loadMoreTrigger: HTMLDivElement;
+
 	// Touch swipe state for lightbox
 	let touchStartX = $state(0);
 	let touchEndX = $state(0);
 	const minSwipeDistance = 50;
+
+	// Set up intersection observer for infinite scroll
+	onMount(() => {
+		if (!loadMoreTrigger) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+					loadMorePhotos();
+				}
+			},
+			{ rootMargin: '200px' }
+		);
+
+		observer.observe(loadMoreTrigger);
+
+		return () => observer.disconnect();
+	});
+
+	async function loadMorePhotos() {
+		if (isLoadingMore || !hasMore) return;
+		
+		isLoadingMore = true;
+		try {
+			const url = new URL(`/api/photos/${data.album.slug}/list`, window.location.origin);
+			url.searchParams.set('offset', String(displayedPhotos.length));
+			url.searchParams.set('sort', data.selectedSort);
+			if (data.selectedTag) {
+				url.searchParams.set('tag', data.selectedTag);
+			}
+
+			const response = await fetch(url.toString());
+			if (!response.ok) throw new Error('Failed to load more photos');
+
+			const result = await response.json();
+			displayedPhotos = [...displayedPhotos, ...result.photos];
+			hasMore = result.hasMore;
+		} catch (e) {
+			console.error('Failed to load more photos:', e);
+		}
+		isLoadingMore = false;
+	}
 
 	// Handle photo click
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
@@ -137,7 +186,7 @@
 	}
 
 	function nextPhoto() {
-		if (lightboxIndex !== null && lightboxIndex < data.photos.length - 1) {
+		if (lightboxIndex !== null && lightboxIndex < displayedPhotos.length - 1) {
 			lightboxIndex++;
 		}
 	}
@@ -337,7 +386,7 @@
 							{/if}
 						</div>
 						<div class="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-							<span>{data.photos.length} photos</span>
+							<span>{data.totalCount} photos</span>
 							{#if data.expiresIn && data.expiresIn > 0}
 								<span class="text-amber-500">• Expires in {formatTimeRemaining(data.expiresIn)}</span>
 							{/if}
@@ -458,7 +507,7 @@
 					</select>
 				</div>
 
-				{#if data.photos.length === 0}
+				{#if displayedPhotos.length === 0}
 					<div class="empty-state">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -480,7 +529,7 @@
 					</div>
 				{:else}
 					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-						{#each data.photos as photo, index}
+						{#each displayedPhotos as photo, index}
 							<button
 								class="group relative bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 {selectedPhotos.has(
 									photo.id
@@ -525,6 +574,25 @@
 							</button>
 						{/each}
 					</div>
+
+					<!-- Load more trigger and loading indicator -->
+					<div bind:this={loadMoreTrigger} class="py-8 flex justify-center">
+						{#if isLoadingMore}
+							<div class="flex items-center gap-2 text-gray-400">
+								<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								</svg>
+								<span>Loading more photos...</span>
+							</div>
+						{:else if hasMore}
+							<button class="btn btn-secondary text-sm" onclick={loadMorePhotos}>
+								Load More
+							</button>
+						{:else if displayedPhotos.length > 0}
+							<span class="text-gray-500 text-sm">All {data.totalCount} photos loaded</span>
+						{/if}
+					</div>
 				{/if}
 			</div>
 		</main>
@@ -542,7 +610,7 @@
 		aria-label="Photo lightbox"
 	>
 		<div class="flex items-center justify-between p-4 text-white flex-shrink-0">
-			<span class="text-sm opacity-80">{lightboxIndex + 1} / {data.photos.length}</span>
+			<span class="text-sm opacity-80">{lightboxIndex + 1} / {displayedPhotos.length}</span>
 			<button
 				class="p-2 opacity-80 hover:opacity-100 transition-opacity"
 				onclick={closeLightbox}
@@ -597,8 +665,8 @@
 				</svg>
 			</button>
 			<img
-				src="/api/photos/{data.album.slug}/{data.photos[lightboxIndex].filename}/medium"
-				alt={data.photos[lightboxIndex].original_filename}
+				src="/api/photos/{data.album.slug}/{displayedPhotos[lightboxIndex].filename}/medium"
+				alt={displayedPhotos[lightboxIndex].original_filename}
 				class="max-w-full max-h-full object-contain"
 				style="max-height: calc(100vh - 140px);"
 			/>
@@ -608,7 +676,7 @@
 					e.stopPropagation();
 					nextPhoto();
 				}}
-				disabled={lightboxIndex === data.photos.length - 1}
+				disabled={lightboxIndex === displayedPhotos.length - 1}
 				aria-label="Next photo"
 			>
 				<svg
@@ -628,14 +696,14 @@
 		</div>
 		<div class="flex justify-center p-4 flex-shrink-0">
 			<a
-				href="/api/photos/{data.album.slug}/{data.photos[lightboxIndex].filename}/original"
-				download={data.photos[lightboxIndex].original_filename}
+				href="/api/photos/{data.album.slug}/{displayedPhotos[lightboxIndex].filename}/original"
+				download={displayedPhotos[lightboxIndex].original_filename}
 				class="btn"
 				style="background-color: var(--gallery-primary); color: white;"
 				onclick={(e) => {
 					e.stopPropagation();
 					if (lightboxIndex !== null) {
-						trackPhotoDownload(data.photos[lightboxIndex].id);
+						trackPhotoDownload(displayedPhotos[lightboxIndex].id);
 					}
 				}}
 			>

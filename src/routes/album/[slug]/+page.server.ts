@@ -3,6 +3,8 @@ import { getAlbumBySlug, getPhotosByAlbum, getTagsByAlbum, recordAnalyticsEvent 
 import { error, fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 
+const INITIAL_PHOTOS = 24;
+
 export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const album = getAlbumBySlug(params.slug);
 
@@ -32,7 +34,9 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			selectedSort: album.sort_order || 'newest',
 			contactEmail,
 			contactPhone,
-			allPhotoIds: []
+			allPhotoIds: [],
+			hasMore: false,
+			totalCount: 0
 		};
 	}
 
@@ -50,7 +54,9 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				selectedSort: album.sort_order || 'newest',
 				contactEmail,
 				contactPhone,
-				allPhotoIds: []
+				allPhotoIds: [],
+				hasMore: false,
+				totalCount: 0
 			};
 		}
 	}
@@ -63,11 +69,16 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const sortParam = url.searchParams.get('sort');
 	const validSorts = ['newest', 'oldest', 'random'];
 	const sortOrder = sortParam && validSorts.includes(sortParam) ? sortParam : (album.sort_order || 'newest');
-	const photos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'newest' | 'oldest' | 'random');
+	
+	// Get all photos to extract IDs, then slice for initial load
+	const allPhotos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'newest' | 'oldest' | 'random');
+	const photos = allPhotos.slice(0, INITIAL_PHOTOS);
 	const tags = getTagsByAlbum(album.id);
 	
 	// Get all photo IDs for select all functionality
-	const allPhotoIds = photos.map(p => p.id);
+	const allPhotoIds = allPhotos.map(p => p.id);
+	const hasMore = allPhotos.length > INITIAL_PHOTOS;
+	const totalCount = allPhotos.length;
 
 	return {
 		album,
@@ -80,7 +91,9 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		selectedSort: sortOrder,
 		contactEmail,
 		contactPhone,
-		allPhotoIds
+		allPhotoIds,
+		hasMore,
+		totalCount
 	};
 };
 
