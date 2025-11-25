@@ -42,12 +42,14 @@ export async function processAndSaveImage(
 	// Generate medium size
 	const mediumPath = path.join(UPLOAD_DIR, 'medium', filename);
 	await image
+		.clone()
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(mediumPath);
 
-	// Generate thumbnail
+	// Generate thumbnail using clone() for efficiency
 	const thumbnailPath = path.join(UPLOAD_DIR, 'thumbnail', filename);
-	await sharp(buffer)
+	await image
+		.clone()
 		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'cover' })
 		.toFile(thumbnailPath);
 

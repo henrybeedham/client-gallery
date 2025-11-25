@@ -7,7 +7,8 @@ import {
 	createPhoto,
 	deletePhoto,
 	setAlbumCover,
-	updatePhotoOrder
+	updatePhotoOrder,
+	getPhotoById
 } from '$lib/server/db';
 import { processAndSaveImage, deleteImageFiles } from '$lib/server/storage';
 import { slugify } from '$lib/utils';
@@ -142,9 +143,6 @@ export const actions: Actions = {
 		}
 
 		try {
-			const photos = getPhotosByAlbum(0); // We need to get the photo first
-			// Actually, let's get it from db directly
-			const { getPhotoById } = await import('$lib/server/db');
 			const photo = getPhotoById(photoId);
 
 			if (photo) {
