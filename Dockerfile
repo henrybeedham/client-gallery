@@ -40,6 +40,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATABASE_PATH=/app/data/gallery.db
 ENV UPLOAD_DIR=/app/uploads
+# FIX: Increase body size limit for file uploads. 
+# '0' disables the limit, allowing large file uploads. 
+# Alternatively set to bytes, e.g., 536870912 for 512MB.
+ENV BODY_SIZE_LIMIT=0
 
 EXPOSE 3000
 
