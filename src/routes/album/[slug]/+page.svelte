@@ -134,7 +134,6 @@
 
 	function handleTouchStart(e: TouchEvent) {
 		touchStartX = e.touches[0].clientX;
-		touchEndX = e.touches[0].clientX;
 	}
 
 	function handleTouchMove(e: TouchEvent) {
@@ -142,6 +141,8 @@
 	}
 
 	function handleTouchEnd() {
+		if (lightboxIndex === null) return;
+
 		const swipeDistance = touchStartX - touchEndX;
 		if (Math.abs(swipeDistance) >= minSwipeDistance) {
 			if (swipeDistance > 0) {
