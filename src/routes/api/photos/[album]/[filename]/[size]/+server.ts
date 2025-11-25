@@ -2,11 +2,10 @@ import type { RequestHandler } from './$types';
 import { getImageBuffer } from '$lib/server/storage';
 import { error } from '@sveltejs/kit';
 
-export const GET: RequestHandler = async ({ params, url }) => {
-	const { filename, size } = params;
-	const albumSlug = url.searchParams.get('album');
+export const GET: RequestHandler = async ({ params }) => {
+	const { filename, size, album } = params;
 
-	if (!albumSlug) {
+	if (!album) {
 		throw error(400, 'Album slug required');
 	}
 
@@ -15,7 +14,11 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	}
 
 	try {
-		const buffer = await getImageBuffer(filename, size as 'original' | 'medium' | 'thumbnail', albumSlug);
+		const buffer = await getImageBuffer(
+			filename,
+			size as 'original' | 'medium' | 'thumbnail',
+			album
+		);
 
 		// Determine content type from filename extension
 		const ext = filename.split('.').pop()?.toLowerCase();

@@ -1,23 +1,26 @@
 import type { RequestHandler } from './$types';
-import { getPhotosByIds, getAlbumById } from '$lib/server/db';
+import { getPhotosByIds } from '$lib/server/db';
 import { getImagePath } from '$lib/server/storage';
 import { error } from '@sveltejs/kit';
 import archiver from 'archiver';
 import { createReadStream } from 'fs';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, params }) => {
 	const idsParam = url.searchParams.get('ids');
-	const albumSlug = url.searchParams.get('album');
-	
+	const albumSlug = params.album;
+
 	if (!idsParam) {
 		throw error(400, 'Missing photo IDs');
 	}
-	
+
 	if (!albumSlug) {
 		throw error(400, 'Missing album slug');
 	}
 
-	const ids = idsParam.split(',').map((id) => parseInt(id)).filter((id) => !isNaN(id));
+	const ids = idsParam
+		.split(',')
+		.map((id) => parseInt(id))
+		.filter((id) => !isNaN(id));
 	if (ids.length === 0) {
 		throw error(400, 'Invalid photo IDs');
 	}

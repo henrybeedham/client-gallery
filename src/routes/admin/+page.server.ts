@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getAlbums, deleteAlbum, getPhotosByAlbum, getStats, getAlbumById } from '$lib/server/db';
+import { getAlbums, deleteAlbum, getStats, getAlbumById } from '$lib/server/db';
 import { deleteAlbumDirectory } from '$lib/server/storage';
 import { fail } from '@sveltejs/kit';
 
@@ -32,7 +32,10 @@ export const actions: Actions = {
 			deleteAlbum(albumId);
 			return { success: true };
 		} catch (e) {
-			return fail(500, { error: 'Failed to delete album' });
+			return fail(500, {
+				error: 'Failed to delete album',
+				details: e instanceof Error ? e.message : String(e)
+			});
 		}
 	}
 };

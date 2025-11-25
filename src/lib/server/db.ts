@@ -63,61 +63,69 @@ db.exec(`
 
 // Migration: Add new columns if they don't exist
 try {
-  db.exec(`ALTER TABLE albums ADD COLUMN show_on_home INTEGER DEFAULT 1`);
-} catch { /* Column may already exist */ }
+	db.exec(`ALTER TABLE albums ADD COLUMN show_on_home INTEGER DEFAULT 1`);
+} catch {
+	/* Column may already exist */
+}
 try {
-  db.exec(`ALTER TABLE albums ADD COLUMN password TEXT`);
-} catch { /* Column may already exist */ }
+	db.exec(`ALTER TABLE albums ADD COLUMN password TEXT`);
+} catch {
+	/* Column may already exist */
+}
 try {
-  db.exec(`ALTER TABLE albums ADD COLUMN layout TEXT DEFAULT 'grid'`);
-} catch { /* Column may already exist */ }
+	db.exec(`ALTER TABLE albums ADD COLUMN layout TEXT DEFAULT 'grid'`);
+} catch {
+	/* Column may already exist */
+}
 
 // Drop old categories table if exists (migration)
 try {
-  db.exec(`DROP TABLE IF EXISTS categories`);
-} catch { /* Table may not exist */ }
+	db.exec(`DROP TABLE IF EXISTS categories`);
+} catch {
+	/* Table may not exist */
+}
 
 export interface Album {
-  id: number;
-  title: string;
-  slug: string;
-  description: string | null;
-  cover_photo_id: number | null;
-  is_public: number;
-  show_on_home: number;
-  password: string | null;
-  layout: 'grid' | 'masonry';
-  created_at: string;
-  updated_at: string;
-  photo_count?: number;
-  cover_filename?: string;
+	id: number;
+	title: string;
+	slug: string;
+	description: string | null;
+	cover_photo_id: number | null;
+	is_public: number;
+	show_on_home: number;
+	password: string | null;
+	layout: 'grid' | 'masonry';
+	created_at: string;
+	updated_at: string;
+	photo_count?: number;
+	cover_filename?: string;
 }
 
 export interface Photo {
-  id: number;
-  album_id: number;
-  filename: string;
-  original_filename: string;
-  width: number | null;
-  height: number | null;
-  file_size: number | null;
-  mime_type: string | null;
-  created_at: string;
-  sort_order: number;
-  tags?: PhotoTag[];
+	id: number;
+	album_id: number;
+	filename: string;
+	original_filename: string;
+	width: number | null;
+	height: number | null;
+	file_size: number | null;
+	mime_type: string | null;
+	created_at: string;
+	sort_order: number;
+	tags?: PhotoTag[];
 }
 
 export interface PhotoTag {
-  id: number;
-  album_id: number;
-  name: string;
-  slug: string;
-  created_at: string;
+	id: number;
+	album_id: number;
+	name: string;
+	slug: string;
+	created_at: string;
 }
 
 // Album operations
 export function getAlbums(showOnHomeOnly = false, publicOnly = true): Album[] {
-  let query = `
+	let query = `
     SELECT 
       a.*,
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
@@ -125,24 +133,24 @@ export function getAlbums(showOnHomeOnly = false, publicOnly = true): Album[] {
     FROM albums a
     WHERE 1=1
   `;
-  
-  if (publicOnly) {
-    query += ' AND a.is_public = 1';
-  }
-  
-  if (showOnHomeOnly) {
-    query += ' AND a.show_on_home = 1';
-  }
 
-  query += ' ORDER BY a.created_at DESC';
+	if (publicOnly) {
+		query += ' AND a.is_public = 1';
+	}
 
-  return db.prepare(query).all() as Album[];
+	if (showOnHomeOnly) {
+		query += ' AND a.show_on_home = 1';
+	}
+
+	query += ' ORDER BY a.created_at DESC';
+
+	return db.prepare(query).all() as Album[];
 }
 
 export function getAlbumBySlug(slug: string): Album | undefined {
-  return db
-    .prepare(
-      `
+	return db
+		.prepare(
+			`
     SELECT 
       a.*,
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
@@ -150,14 +158,14 @@ export function getAlbumBySlug(slug: string): Album | undefined {
     FROM albums a
     WHERE a.slug = ?
   `
-    )
-    .get(slug) as Album | undefined;
+		)
+		.get(slug) as Album | undefined;
 }
 
 export function getAlbumById(id: number): Album | undefined {
-  return db
-    .prepare(
-      `
+	return db
+		.prepare(
+			`
     SELECT 
       a.*,
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
@@ -165,40 +173,39 @@ export function getAlbumById(id: number): Album | undefined {
     FROM albums a
     WHERE a.id = ?
   `
-    )
-    .get(id) as Album | undefined;
+		)
+		.get(id) as Album | undefined;
 }
 
 export function createAlbum(
-  title: string,
-  slug: string,
-  description: string | null,
-  isPublic: boolean,
-  showOnHome: boolean,
-  password: string | null,
-  layout: 'grid' | 'masonry'
+	title: string,
+	slug: string,
+	description: string | null,
+	isPublic: boolean,
+	showOnHome: boolean,
+	password: string | null,
+	layout: 'grid' | 'masonry'
 ): number {
-  const result = db
-    .prepare(
-      'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    )
-    .run(title, slug, description, isPublic ? 1 : 0, showOnHome ? 1 : 0, password || null, layout);
-  return result.lastInsertRowid as number;
+	const result = db
+		.prepare(
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout) VALUES (?, ?, ?, ?, ?, ?, ?)'
+		)
+		.run(title, slug, description, isPublic ? 1 : 0, showOnHome ? 1 : 0, password || null, layout);
+	return result.lastInsertRowid as number;
 }
 
 export function updateAlbum(
-  id: number,
-  title: string,
-  slug: string,
-  description: string | null,
-  isPublic: boolean,
-  showOnHome: boolean,
-  password: string | null,
-  layout: 'grid' | 'masonry',
-  coverPhotoId: number | null
+	id: number,
+	title: string,
+	slug: string,
+	description: string | null,
+	isPublic: boolean,
+	showOnHome: boolean,
+	password: string | null,
+	layout: 'grid' | 'masonry'
 ): void {
-  db.prepare(
-    `UPDATE albums SET 
+	db.prepare(
+		`UPDATE albums SET 
       title = ?, 
       slug = ?, 
       description = ?, 
@@ -206,144 +213,169 @@ export function updateAlbum(
       show_on_home = ?,
       password = ?,
       layout = ?,
-      cover_photo_id = ?,
       updated_at = CURRENT_TIMESTAMP 
     WHERE id = ?`
-  ).run(title, slug, description, isPublic ? 1 : 0, showOnHome ? 1 : 0, password || null, layout, coverPhotoId, id);
+	).run(
+		title,
+		slug,
+		description,
+		isPublic ? 1 : 0,
+		showOnHome ? 1 : 0,
+		password || null,
+		layout,
+		id
+	);
 }
 
 export function deleteAlbum(id: number): void {
-  db.prepare('DELETE FROM albums WHERE id = ?').run(id);
+	db.prepare('DELETE FROM albums WHERE id = ?').run(id);
 }
 
 export function setAlbumCover(albumId: number, photoId: number | null): void {
-  db.prepare('UPDATE albums SET cover_photo_id = ? WHERE id = ?').run(photoId, albumId);
+	db.prepare('UPDATE albums SET cover_photo_id = ? WHERE id = ?').run(photoId, albumId);
 }
 
 export function checkAlbumPassword(albumId: number, password: string): boolean {
-  const album = getAlbumById(albumId);
-  if (!album || !album.password) return true;
-  return album.password === password;
+	const album = getAlbumById(albumId);
+	if (!album || !album.password) return true;
+	return album.password === password;
 }
 
 // Photo operations
 export function getPhotosByAlbum(albumId: number, tagSlug?: string): Photo[] {
-  if (tagSlug) {
-    return db
-      .prepare(`
+	if (tagSlug) {
+		return db
+			.prepare(
+				`
         SELECT p.* FROM photos p
         INNER JOIN photo_tag_relations ptr ON p.id = ptr.photo_id
         INNER JOIN photo_tags pt ON ptr.tag_id = pt.id
         WHERE p.album_id = ? AND pt.slug = ?
         ORDER BY p.sort_order, p.created_at
-      `)
-      .all(albumId, tagSlug) as Photo[];
-  }
-  return db
-    .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order, created_at')
-    .all(albumId) as Photo[];
+      `
+			)
+			.all(albumId, tagSlug) as Photo[];
+	}
+	return db
+		.prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order, created_at')
+		.all(albumId) as Photo[];
 }
 
 export function getPhotoById(id: number): Photo | undefined {
-  return db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo | undefined;
+	return db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo | undefined;
 }
 
 export function getPhotosByIds(ids: number[]): Photo[] {
-  if (ids.length === 0) return [];
-  const placeholders = ids.map(() => '?').join(',');
-  return db.prepare(`SELECT * FROM photos WHERE id IN (${placeholders})`).all(...ids) as Photo[];
+	if (ids.length === 0) return [];
+	const placeholders = ids.map(() => '?').join(',');
+	return db.prepare(`SELECT * FROM photos WHERE id IN (${placeholders})`).all(...ids) as Photo[];
 }
 
 export function createPhoto(
-  albumId: number,
-  filename: string,
-  originalFilename: string,
-  width: number | null,
-  height: number | null,
-  fileSize: number | null,
-  mimeType: string | null
+	albumId: number,
+	filename: string,
+	originalFilename: string,
+	width: number | null,
+	height: number | null,
+	fileSize: number | null,
+	mimeType: string | null
 ): number {
-  const maxOrder = db
-    .prepare('SELECT MAX(sort_order) as max_order FROM photos WHERE album_id = ?')
-    .get(albumId) as { max_order: number | null };
-  const sortOrder = (maxOrder?.max_order ?? -1) + 1;
+	const maxOrder = db
+		.prepare('SELECT MAX(sort_order) as max_order FROM photos WHERE album_id = ?')
+		.get(albumId) as { max_order: number | null };
+	const sortOrder = (maxOrder?.max_order ?? -1) + 1;
 
-  const result = db
-    .prepare(
-      `INSERT INTO photos 
+	const result = db
+		.prepare(
+			`INSERT INTO photos 
       (album_id, filename, original_filename, width, height, file_size, mime_type, sort_order) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(albumId, filename, originalFilename, width, height, fileSize, mimeType, sortOrder);
-  return result.lastInsertRowid as number;
+		)
+		.run(albumId, filename, originalFilename, width, height, fileSize, mimeType, sortOrder);
+	return result.lastInsertRowid as number;
 }
 
 export function deletePhoto(id: number): void {
-  db.prepare('DELETE FROM photos WHERE id = ?').run(id);
+	db.prepare('DELETE FROM photos WHERE id = ?').run(id);
 }
 
 export function updatePhotoOrder(photos: { id: number; sort_order: number }[]): void {
-  const stmt = db.prepare('UPDATE photos SET sort_order = ? WHERE id = ?');
-  const transaction = db.transaction(() => {
-    for (const photo of photos) {
-      stmt.run(photo.sort_order, photo.id);
-    }
-  });
-  transaction();
+	const stmt = db.prepare('UPDATE photos SET sort_order = ? WHERE id = ?');
+	const transaction = db.transaction(() => {
+		for (const photo of photos) {
+			stmt.run(photo.sort_order, photo.id);
+		}
+	});
+	transaction();
 }
 
 // Photo Tag operations
 export function getTagsByAlbum(albumId: number): PhotoTag[] {
-  return db
-    .prepare('SELECT * FROM photo_tags WHERE album_id = ? ORDER BY name')
-    .all(albumId) as PhotoTag[];
+	return db
+		.prepare('SELECT * FROM photo_tags WHERE album_id = ? ORDER BY name')
+		.all(albumId) as PhotoTag[];
 }
 
 export function createTag(albumId: number, name: string, slug: string): number {
-  const result = db
-    .prepare('INSERT INTO photo_tags (album_id, name, slug) VALUES (?, ?, ?)')
-    .run(albumId, name, slug);
-  return result.lastInsertRowid as number;
+	const result = db
+		.prepare('INSERT INTO photo_tags (album_id, name, slug) VALUES (?, ?, ?)')
+		.run(albumId, name, slug);
+	return result.lastInsertRowid as number;
 }
 
 export function deleteTag(id: number): void {
-  db.prepare('DELETE FROM photo_tags WHERE id = ?').run(id);
+	db.prepare('DELETE FROM photo_tags WHERE id = ?').run(id);
 }
 
 export function addTagToPhoto(photoId: number, tagId: number): void {
-  db.prepare('INSERT OR IGNORE INTO photo_tag_relations (photo_id, tag_id) VALUES (?, ?)').run(photoId, tagId);
+	db.prepare('INSERT OR IGNORE INTO photo_tag_relations (photo_id, tag_id) VALUES (?, ?)').run(
+		photoId,
+		tagId
+	);
 }
 
 export function removeTagFromPhoto(photoId: number, tagId: number): void {
-  db.prepare('DELETE FROM photo_tag_relations WHERE photo_id = ? AND tag_id = ?').run(photoId, tagId);
+	db.prepare('DELETE FROM photo_tag_relations WHERE photo_id = ? AND tag_id = ?').run(
+		photoId,
+		tagId
+	);
 }
 
 export function getPhotoTags(photoId: number): PhotoTag[] {
-  return db
-    .prepare(`
+	return db
+		.prepare(
+			`
       SELECT pt.* FROM photo_tags pt
       INNER JOIN photo_tag_relations ptr ON pt.id = ptr.tag_id
       WHERE ptr.photo_id = ?
-    `)
-    .all(photoId) as PhotoTag[];
+    `
+		)
+		.all(photoId) as PhotoTag[];
 }
 
-export function getPhotoTagRelationsByAlbum(albumId: number): { photo_id: number; tag_id: number }[] {
-  return db
-    .prepare(`
+export function getPhotoTagRelationsByAlbum(
+	albumId: number
+): { photo_id: number; tag_id: number }[] {
+	return db
+		.prepare(
+			`
       SELECT ptr.photo_id, ptr.tag_id 
       FROM photo_tag_relations ptr
       INNER JOIN photos p ON ptr.photo_id = p.id
       WHERE p.album_id = ?
-    `)
-    .all(albumId) as { photo_id: number; tag_id: number }[];
+    `
+		)
+		.all(albumId) as { photo_id: number; tag_id: number }[];
 }
 
 export function getStats(): { albums: number; photos: number; tags: number } {
-  const albums = (db.prepare('SELECT COUNT(*) as count FROM albums').get() as { count: number }).count;
-  const photos = (db.prepare('SELECT COUNT(*) as count FROM photos').get() as { count: number }).count;
-  const tags = (db.prepare('SELECT COUNT(*) as count FROM photo_tags').get() as { count: number }).count;
-  return { albums, photos, tags };
+	const albums = (db.prepare('SELECT COUNT(*) as count FROM albums').get() as { count: number })
+		.count;
+	const photos = (db.prepare('SELECT COUNT(*) as count FROM photos').get() as { count: number })
+		.count;
+	const tags = (db.prepare('SELECT COUNT(*) as count FROM photo_tags').get() as { count: number })
+		.count;
+	return { albums, photos, tags };
 }
 
 export default db;
