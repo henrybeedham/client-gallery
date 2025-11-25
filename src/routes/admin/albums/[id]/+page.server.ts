@@ -14,7 +14,8 @@ import {
 	createTag,
 	deleteTag,
 	addTagToPhoto,
-	removeTagFromPhoto
+	removeTagFromPhoto,
+	getAlbumAnalytics
 } from '$lib/server/db';
 import { processAndSaveImage, deleteImageFiles, renameAlbumDirectory } from '$lib/server/storage';
 import { slugify } from '$lib/utils';
@@ -34,12 +35,14 @@ export const load: PageServerLoad = async ({ params }) => {
 	const photos = getPhotosByAlbum(albumId);
 	const tags = getTagsByAlbum(albumId);
 	const photoTags = getPhotoTagRelationsByAlbum(albumId);
+	const analytics = getAlbumAnalytics(albumId);
 
 	return {
 		album,
 		photos,
 		tags,
-		photoTags
+		photoTags,
+		analytics
 	};
 };
 
@@ -63,6 +66,11 @@ export const actions: Actions = {
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
 		const layout = (data.get('layout')?.toString() || 'grid') as 'grid' | 'masonry';
+		const albumDate = data.get('albumDate')?.toString() || null;
+		const expiresAt = data.get('expiresAt')?.toString() || null;
+		const contactEmail = data.get('contactEmail')?.toString() || null;
+		const contactPhone = data.get('contactPhone')?.toString() || null;
+		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
 
 		if (!title.trim()) {
 			return fail(400, { error: 'Title is required' });
@@ -92,7 +100,12 @@ export const actions: Actions = {
 				isPublic,
 				showOnHome,
 				password || null,
-				layout
+				layout,
+				albumDate || null,
+				expiresAt || null,
+				contactEmail || null,
+				contactPhone || null,
+				primaryColor
 			);
 			return { success: true, message: 'Album updated' };
 		} catch {

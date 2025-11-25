@@ -17,6 +17,11 @@ export const actions: Actions = {
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
 		const layout = (data.get('layout')?.toString() || 'grid') as 'grid' | 'masonry';
+		const albumDate = data.get('albumDate')?.toString() || null;
+		const expiresAt = data.get('expiresAt')?.toString() || null;
+		const contactEmail = data.get('contactEmail')?.toString() || null;
+		const contactPhone = data.get('contactPhone')?.toString() || null;
+		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
 
 		if (!title.trim()) {
 			return fail(400, { error: 'Title is required', title, description, slug: slugInput });
@@ -46,7 +51,12 @@ export const actions: Actions = {
 				isPublic,
 				showOnHome,
 				password || null,
-				layout
+				layout,
+				albumDate,
+				expiresAt,
+				contactEmail,
+				contactPhone,
+				primaryColor
 			);
 			redirect(303, `/admin/albums/${albumId}`);
 		} catch (e) {

@@ -12,6 +12,12 @@
 	let showOnHome = $state(data.album.show_on_home === 1);
 	let password = $state(data.album.password || '');
 	let layout = $state(data.album.layout || 'grid');
+	let albumDate = $state(data.album.album_date || '');
+	let expiresAt = $state(data.album.expires_at || '');
+	let contactEmail = $state(data.album.contact_email || '');
+	let contactPhone = $state(data.album.contact_phone || '');
+	let primaryColor = $state(data.album.primary_color || '#3b82f6');
+	let showAdvancedSettings = $state(false);
 
 	let autoSlug = $derived(slugify(title));
 
@@ -21,6 +27,7 @@
 	let uploadStatus = $state('');
 	let deleteConfirm: number | null = $state(null);
 	let selectedPhoto: number[] | null = $state([]);
+	let lastSelectedIndex: number | null = $state(null);
 
 	let fileInput: HTMLInputElement;
 
@@ -37,6 +44,25 @@
 	function isTagAppliedToAllSelected(tagId: number): boolean {
 		if (!selectedPhoto || selectedPhoto.length === 0) return false;
 		return selectedPhoto.every((id) => getPhotoTags(id).includes(tagId));
+	}
+
+	// Handle shift+click selection
+	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
+		if (event.shiftKey && lastSelectedIndex !== null) {
+			// Shift+click: select range
+			const start = Math.min(lastSelectedIndex, index);
+			const end = Math.max(lastSelectedIndex, index);
+			const rangeIds = data.photos.slice(start, end + 1).map((p) => p.id);
+			selectedPhoto = [...new Set([...(selectedPhoto || []), ...rangeIds])];
+		} else {
+			// Normal click: toggle selection
+			if (selectedPhoto?.includes(photoId)) {
+				selectedPhoto = selectedPhoto.filter((id) => id !== photoId);
+			} else {
+				selectedPhoto = [...(selectedPhoto || []), photoId];
+			}
+			lastSelectedIndex = index;
+		}
 	}
 
 	async function handleUpload(event: Event) {
@@ -282,8 +308,11 @@
 					<button class="btn btn-primary" onclick={() => fileInput.click()}> Upload Photos </button>
 				</div>
 			{:else}
+				<p class="text-xs text-gray-500 mb-3">
+					<span class="font-medium">Tip:</span> Hold Shift and click to select a range of photos
+				</p>
 				<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-					{#each data.photos as photo}
+					{#each data.photos as photo, index}
 						<div
 							class="group relative rounded-lg overflow-hidden bg-[var(--color-bg-tertiary)] cursor-pointer transition-all {photo.id ===
 							data.album.cover_photo_id
@@ -291,13 +320,7 @@
 								: ''} {selectedPhoto?.includes(photo.id)
 								? 'ring-2 ring-blue-500 scale-[0.98]'
 								: ''}"
-							onclick={() => {
-								if (selectedPhoto?.includes(photo.id)) {
-									selectedPhoto = selectedPhoto.filter((id) => id !== photo.id);
-								} else {
-									selectedPhoto = [...(selectedPhoto || []), photo.id];
-								}
-							}}
+							onclick={(e) => handlePhotoClick(photo.id, index, e)}
 							role="button"
 							tabindex="0"
 							onkeydown={(e) => {
@@ -307,6 +330,7 @@
 									} else {
 										selectedPhoto = [...(selectedPhoto || []), photo.id];
 									}
+									lastSelectedIndex = index;
 								}
 							}}
 						>
@@ -475,6 +499,27 @@
 		</div>
 
 		<div class="space-y-6">
+			<!-- Analytics display -->
+			<div
+				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
+			>
+				<h2 class="text-lg font-semibold mb-4">Analytics</h2>
+				<div class="grid grid-cols-3 gap-4">
+					<div class="text-center">
+						<div class="text-2xl font-bold text-blue-400">{data.analytics.page_views}</div>
+						<div class="text-xs text-gray-500">Page Views</div>
+					</div>
+					<div class="text-center">
+						<div class="text-2xl font-bold text-green-400">{data.analytics.downloads}</div>
+						<div class="text-xs text-gray-500">Photo Downloads</div>
+					</div>
+					<div class="text-center">
+						<div class="text-2xl font-bold text-purple-400">{data.analytics.album_downloads}</div>
+						<div class="text-xs text-gray-500">Album Downloads</div>
+					</div>
+				</div>
+			</div>
+
 			<div
 				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 top-6"
 			>
@@ -543,42 +588,153 @@
 							</select>
 						</div>
 
-						<div class="space-y-3 pt-2">
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input
-									type="checkbox"
-									name="isPublic"
-									bind:checked={isPublic}
-									class="w-4 h-4 accent-blue-500"
-								/>
-								<span class="text-sm">Public album</span>
-							</label>
-
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input
-									type="checkbox"
-									name="showOnHome"
-									bind:checked={showOnHome}
-									class="w-4 h-4 accent-blue-500"
-								/>
-								<span class="text-sm">Show on homepage</span>
-							</label>
-						</div>
-
 						<div>
-							<label for="password" class="block text-sm font-medium mb-1.5">
-								Password
+							<label for="albumDate" class="block text-sm font-medium mb-1.5">
+								Album Date
 								<span class="text-gray-500 font-normal">(optional)</span>
 							</label>
 							<input
-								type="text"
-								id="password"
-								name="password"
+								type="date"
+								id="albumDate"
+								name="albumDate"
 								class="form-input"
-								bind:value={password}
-								placeholder="Leave empty for no password"
+								bind:value={albumDate}
 							/>
 						</div>
+
+						<!-- Advanced Settings Toggle -->
+						<button
+							type="button"
+							class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+							onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="transition-transform {showAdvancedSettings ? 'rotate-90' : ''}"
+							>
+								<polyline points="9 18 15 12 9 6"></polyline>
+							</svg>
+							Advanced Settings
+						</button>
+
+						{#if showAdvancedSettings}
+							<div
+								class="space-y-4 pt-2 border-t border-[var(--color-border)] animate-fade-in"
+							>
+								<div class="space-y-3">
+									<label class="flex items-center gap-2 cursor-pointer">
+										<input
+											type="checkbox"
+											name="isPublic"
+											bind:checked={isPublic}
+											class="w-4 h-4 accent-blue-500"
+										/>
+										<span class="text-sm">Public album</span>
+									</label>
+
+									<label class="flex items-center gap-2 cursor-pointer">
+										<input
+											type="checkbox"
+											name="showOnHome"
+											bind:checked={showOnHome}
+											class="w-4 h-4 accent-blue-500"
+										/>
+										<span class="text-sm">Show on homepage</span>
+									</label>
+								</div>
+
+								<div>
+									<label for="password" class="block text-sm font-medium mb-1.5">
+										Password
+										<span class="text-gray-500 font-normal">(optional)</span>
+									</label>
+									<input
+										type="text"
+										id="password"
+										name="password"
+										class="form-input"
+										bind:value={password}
+										placeholder="Leave empty for no password"
+									/>
+								</div>
+
+								<div>
+									<label for="expiresAt" class="block text-sm font-medium mb-1.5">
+										Expiration Date
+										<span class="text-gray-500 font-normal">(optional)</span>
+									</label>
+									<input
+										type="datetime-local"
+										id="expiresAt"
+										name="expiresAt"
+										class="form-input"
+										bind:value={expiresAt}
+									/>
+									<p class="text-xs text-gray-500 mt-1">
+										Gallery will show an expired message after this date
+									</p>
+								</div>
+
+								<div>
+									<label for="contactEmail" class="block text-sm font-medium mb-1.5">
+										Contact Email
+										<span class="text-gray-500 font-normal">(shown on expired page)</span>
+									</label>
+									<input
+										type="email"
+										id="contactEmail"
+										name="contactEmail"
+										class="form-input"
+										bind:value={contactEmail}
+										placeholder="contact@example.com"
+									/>
+								</div>
+
+								<div>
+									<label for="contactPhone" class="block text-sm font-medium mb-1.5">
+										Contact Phone
+										<span class="text-gray-500 font-normal">(shown on expired page)</span>
+									</label>
+									<input
+										type="tel"
+										id="contactPhone"
+										name="contactPhone"
+										class="form-input"
+										bind:value={contactPhone}
+										placeholder="+1 234 567 8900"
+									/>
+								</div>
+
+								<div>
+									<label for="primaryColor" class="block text-sm font-medium mb-1.5">
+										Gallery Accent Color
+									</label>
+									<div class="flex items-center gap-3">
+										<input
+											type="color"
+											id="primaryColor"
+											name="primaryColor"
+											bind:value={primaryColor}
+											class="w-10 h-10 rounded cursor-pointer border-0"
+										/>
+										<input
+											type="text"
+											class="form-input flex-1"
+											bind:value={primaryColor}
+											placeholder="#3b82f6"
+										/>
+									</div>
+								</div>
+							</div>
+						{/if}
 
 						<button type="submit" class="btn btn-primary w-full mt-4" disabled={loading}>
 							{loading ? 'Saving...' : 'Save Changes'}

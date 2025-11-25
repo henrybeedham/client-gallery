@@ -20,6 +20,11 @@ db.exec(`
     show_on_home INTEGER DEFAULT 1,
     password TEXT,
     layout TEXT DEFAULT 'grid',
+    album_date TEXT,
+    expires_at TEXT,
+    contact_email TEXT,
+    contact_phone TEXT,
+    primary_color TEXT DEFAULT '#3b82f6',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -56,9 +61,21 @@ db.exec(`
     FOREIGN KEY (tag_id) REFERENCES photo_tags(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    album_id INTEGER NOT NULL,
+    photo_id INTEGER,
+    event_type TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
+    FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_photos_album_id ON photos(album_id);
   CREATE INDEX IF NOT EXISTS idx_albums_slug ON albums(slug);
   CREATE INDEX IF NOT EXISTS idx_photo_tags_album_id ON photo_tags(album_id);
+  CREATE INDEX IF NOT EXISTS idx_analytics_album_id ON analytics(album_id);
+  CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics(created_at);
 `);
 
 // Migration: Add new columns if they don't exist
@@ -78,6 +95,52 @@ try {
 	/* Column may already exist */
 }
 
+// New column migrations for album date, expiration, contact info, and styling
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN album_date TEXT`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN expires_at TEXT`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN contact_email TEXT`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN contact_phone TEXT`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN primary_color TEXT DEFAULT '#3b82f6'`);
+} catch {
+	/* Column may already exist */
+}
+
+// Create analytics table if not exists (for migrations)
+try {
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS analytics (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			album_id INTEGER NOT NULL,
+			photo_id INTEGER,
+			event_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
+			FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
+		);
+		CREATE INDEX IF NOT EXISTS idx_analytics_album_id ON analytics(album_id);
+		CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics(created_at);
+	`);
+} catch {
+	/* Table may already exist */
+}
+
 // Drop old categories table if exists (migration)
 try {
 	db.exec(`DROP TABLE IF EXISTS categories`);
@@ -95,6 +158,11 @@ export interface Album {
 	show_on_home: number;
 	password: string | null;
 	layout: 'grid' | 'masonry';
+	album_date: string | null;
+	expires_at: string | null;
+	contact_email: string | null;
+	contact_phone: string | null;
+	primary_color: string;
 	created_at: string;
 	updated_at: string;
 	photo_count?: number;
@@ -184,13 +252,31 @@ export function createAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	layout: 'grid' | 'masonry'
+	layout: 'grid' | 'masonry',
+	albumDate: string | null = null,
+	expiresAt: string | null = null,
+	contactEmail: string | null = null,
+	contactPhone: string | null = null,
+	primaryColor: string = '#3b82f6'
 ): number {
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout) VALUES (?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout, album_date, expires_at, contact_email, contact_phone, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
-		.run(title, slug, description, isPublic ? 1 : 0, showOnHome ? 1 : 0, password || null, layout);
+		.run(
+			title,
+			slug,
+			description,
+			isPublic ? 1 : 0,
+			showOnHome ? 1 : 0,
+			password || null,
+			layout,
+			albumDate || null,
+			expiresAt || null,
+			contactEmail || null,
+			contactPhone || null,
+			primaryColor
+		);
 	return result.lastInsertRowid as number;
 }
 
@@ -202,7 +288,12 @@ export function updateAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	layout: 'grid' | 'masonry'
+	layout: 'grid' | 'masonry',
+	albumDate: string | null = null,
+	expiresAt: string | null = null,
+	contactEmail: string | null = null,
+	contactPhone: string | null = null,
+	primaryColor: string = '#3b82f6'
 ): void {
 	db.prepare(
 		`UPDATE albums SET 
@@ -213,6 +304,11 @@ export function updateAlbum(
       show_on_home = ?,
       password = ?,
       layout = ?,
+      album_date = ?,
+      expires_at = ?,
+      contact_email = ?,
+      contact_phone = ?,
+      primary_color = ?,
       updated_at = CURRENT_TIMESTAMP 
     WHERE id = ?`
 	).run(
@@ -223,6 +319,11 @@ export function updateAlbum(
 		showOnHome ? 1 : 0,
 		password || null,
 		layout,
+		albumDate || null,
+		expiresAt || null,
+		contactEmail || null,
+		contactPhone || null,
+		primaryColor,
 		id
 	);
 }
@@ -376,6 +477,87 @@ export function getStats(): { albums: number; photos: number; tags: number } {
 	const tags = (db.prepare('SELECT COUNT(*) as count FROM photo_tags').get() as { count: number })
 		.count;
 	return { albums, photos, tags };
+}
+
+// Analytics operations
+export type AnalyticsEventType = 'page_view' | 'download' | 'album_download';
+
+export interface AnalyticsEvent {
+	id: number;
+	album_id: number;
+	photo_id: number | null;
+	event_type: AnalyticsEventType;
+	created_at: string;
+}
+
+export function recordAnalyticsEvent(
+	albumId: number,
+	eventType: AnalyticsEventType,
+	photoId: number | null = null
+): void {
+	db.prepare('INSERT INTO analytics (album_id, photo_id, event_type) VALUES (?, ?, ?)').run(
+		albumId,
+		photoId,
+		eventType
+	);
+}
+
+export function getAlbumAnalytics(
+	albumId: number
+): { page_views: number; downloads: number; album_downloads: number } {
+	const pageViews = (
+		db
+			.prepare(
+				"SELECT COUNT(*) as count FROM analytics WHERE album_id = ? AND event_type = 'page_view'"
+			)
+			.get(albumId) as { count: number }
+	).count;
+	const downloads = (
+		db
+			.prepare(
+				"SELECT COUNT(*) as count FROM analytics WHERE album_id = ? AND event_type = 'download'"
+			)
+			.get(albumId) as { count: number }
+	).count;
+	const albumDownloads = (
+		db
+			.prepare(
+				"SELECT COUNT(*) as count FROM analytics WHERE album_id = ? AND event_type = 'album_download'"
+			)
+			.get(albumId) as { count: number }
+	).count;
+	return { page_views: pageViews, downloads, album_downloads: albumDownloads };
+}
+
+export function getAllAnalytics(): {
+	album_id: number;
+	title: string;
+	page_views: number;
+	downloads: number;
+	album_downloads: number;
+}[] {
+	return db
+		.prepare(
+			`
+			SELECT 
+				a.id as album_id,
+				a.title,
+				COALESCE(SUM(CASE WHEN an.event_type = 'page_view' THEN 1 ELSE 0 END), 0) as page_views,
+				COALESCE(SUM(CASE WHEN an.event_type = 'download' THEN 1 ELSE 0 END), 0) as downloads,
+				COALESCE(SUM(CASE WHEN an.event_type = 'album_download' THEN 1 ELSE 0 END), 0) as album_downloads
+			FROM albums a
+			LEFT JOIN analytics an ON a.id = an.album_id
+			GROUP BY a.id, a.title
+			ORDER BY page_views DESC
+		`
+		)
+		.all() as {
+		album_id: number;
+		title: string;
+		page_views: number;
+		downloads: number;
+		album_downloads: number;
+	}[];
 }
 
 export default db;

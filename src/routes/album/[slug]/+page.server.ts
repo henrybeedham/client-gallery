@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getAlbumBySlug, getPhotosByAlbum, getTagsByAlbum } from '$lib/server/db';
+import { getAlbumBySlug, getPhotosByAlbum, getTagsByAlbum, recordAnalyticsEvent } from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, cookies, url }) => {
@@ -7,6 +7,24 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 
 	if (!album || !album.is_public) {
 		throw error(404, 'Album not found');
+	}
+
+	// Check if album has expired
+	const isExpired = album.expires_at ? new Date(album.expires_at) < new Date() : false;
+	const expiresIn = album.expires_at
+		? Math.max(0, new Date(album.expires_at).getTime() - Date.now())
+		: null;
+
+	if (isExpired) {
+		return {
+			album,
+			photos: [],
+			tags: [],
+			requiresPassword: false,
+			isExpired: true,
+			expiresIn: null,
+			selectedTag: undefined
+		};
 	}
 
 	// Check password protection
@@ -17,10 +35,15 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				album,
 				photos: [],
 				tags: [],
-				requiresPassword: true
+				requiresPassword: true,
+				isExpired: false,
+				expiresIn
 			};
 		}
 	}
+
+	// Record page view
+	recordAnalyticsEvent(album.id, 'page_view');
 
 	const tagSlug = url.searchParams.get('tag') || undefined;
 	const photos = getPhotosByAlbum(album.id, tagSlug);
@@ -31,6 +54,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		photos,
 		tags,
 		requiresPassword: false,
+		isExpired: false,
+		expiresIn,
 		selectedTag: tagSlug
 	};
 };

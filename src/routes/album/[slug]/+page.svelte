@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { renderMarkdown } from '$lib/utils';
+	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
 
 	let { data, form } = $props();
 
@@ -10,11 +10,33 @@
 	let isDownloading = $state(false);
 	let downloadProgress = $state(0);
 	let passwordInput = $state('');
+	let lastSelectedIndex: number | null = $state(null);
 
 	// Touch swipe state for lightbox
 	let touchStartX = $state(0);
 	let touchEndX = $state(0);
 	const minSwipeDistance = 50;
+
+	// Handle shift+click selection
+	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
+		if (!isSelecting) {
+			openLightbox(index);
+			return;
+		}
+
+		if (event.shiftKey && lastSelectedIndex !== null) {
+			// Shift+click: select range
+			const start = Math.min(lastSelectedIndex, index);
+			const end = Math.max(lastSelectedIndex, index);
+			const rangeIds = data.photos.slice(start, end + 1).map((p) => p.id);
+			rangeIds.forEach((id) => selectedPhotos.add(id));
+			selectedPhotos = new Set(selectedPhotos);
+		} else {
+			// Normal click: toggle selection
+			toggleSelection(photoId);
+			lastSelectedIndex = index;
+		}
+	}
 
 	function toggleSelection(photoId: number) {
 		if (selectedPhotos.has(photoId)) {
@@ -32,19 +54,26 @@
 	function clearSelection() {
 		selectedPhotos = new Set();
 		isSelecting = false;
+		lastSelectedIndex = null;
 	}
 
 	function toggleSelectMode() {
 		isSelecting = !isSelecting;
 		if (!isSelecting) {
 			selectedPhotos = new Set();
+			lastSelectedIndex = null;
 		}
 	}
 
-	async function downloadWithProgress(url: string, filename: string) {
+	async function downloadWithProgress(url: string, filename: string, trackDownload = false) {
 		isDownloading = true;
 		downloadProgress = 0;
 		try {
+			// Track download analytics
+			if (trackDownload) {
+				fetch(`/api/download/track/${data.album.id}`, { method: 'POST' }).catch(() => {});
+			}
+
 			const response = await fetch(url);
 			if (!response.ok) throw new Error('Download failed');
 
@@ -96,7 +125,7 @@
 	}
 
 	async function downloadAlbum() {
-		await downloadWithProgress(`/api/download/album/${data.album.id}`, `${data.album.slug}.zip`);
+		await downloadWithProgress(`/api/download/album/${data.album.id}`, `${data.album.slug}.zip`, true);
 	}
 
 	async function downloadSelected() {
@@ -104,14 +133,13 @@
 		const ids = Array.from(selectedPhotos).join(',');
 		await downloadWithProgress(
 			`/api/download/photos/${data.album.slug}?ids=${ids}`,
-			`${data.album.slug}-selected.zip`
+			`${data.album.slug}-selected.zip`,
+			true
 		);
 	}
 
 	function openLightbox(index: number) {
-		if (!isSelecting) {
-			lightboxIndex = index;
-		}
+		lightboxIndex = index;
 	}
 
 	function closeLightbox() {
@@ -160,15 +188,94 @@
 		touchStartX = 0;
 		touchEndX = 0;
 	}
+
+	// Track single photo download
+	function trackPhotoDownload() {
+		fetch(`/api/download/track-photo/${data.album.id}`, { method: 'POST' }).catch(() => {});
+	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
 	<title>{data.album.title} - Gallery</title>
+	<meta name="description" content={data.album.description || `View ${data.album.title} photo gallery`} />
+	
+	<!-- Open Graph / Facebook -->
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content={data.album.title} />
+	<meta property="og:description" content={data.album.description || `View ${data.album.title} photo gallery`} />
+	{#if data.album.cover_filename}
+		<meta property="og:image" content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium" />
+	{/if}
+	
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={data.album.title} />
+	<meta name="twitter:description" content={data.album.description || `View ${data.album.title} photo gallery`} />
+	{#if data.album.cover_filename}
+		<meta name="twitter:image" content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium" />
+	{/if}
+
+	<!-- Custom color scheme -->
+	{@html `<style>:root { --gallery-primary: ${data.album.primary_color || '#3b82f6'}; }</style>`}
 </svelte:head>
 
-{#if data.requiresPassword}
+{#if data.isExpired}
+	<!-- Expired gallery page -->
+	<div class="min-h-screen flex items-center justify-center p-4">
+		<div
+			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full text-center"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="64"
+				height="64"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="mx-auto mb-4 text-gray-500"
+			>
+				<circle cx="12" cy="12" r="10"></circle>
+				<polyline points="12 6 12 12 16 14"></polyline>
+			</svg>
+			<h1 class="text-2xl font-bold mb-2">{data.album.title}</h1>
+			<p class="text-gray-400 mb-6">This gallery has expired and is no longer available.</p>
+			
+			{#if data.album.contact_email || data.album.contact_phone}
+				<div class="border-t border-[var(--color-border)] pt-6">
+					<p class="text-sm text-gray-400 mb-4">If you need access, please contact:</p>
+					{#if data.album.contact_email}
+						<a
+							href="mailto:{data.album.contact_email}"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 mb-2"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+								<polyline points="22,6 12,13 2,6"></polyline>
+							</svg>
+							{data.album.contact_email}
+						</a>
+					{/if}
+					{#if data.album.contact_phone}
+						<a
+							href="tel:{data.album.contact_phone}"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+							</svg>
+							{data.album.contact_phone}
+						</a>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</div>
+{:else if data.requiresPassword}
 	<div class="min-h-screen flex items-center justify-center p-4">
 		<div
 			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full"
@@ -206,23 +313,32 @@
 				<div class="flex items-center justify-between py-4 gap-4">
 					<div class="min-w-0">
 						<h1 class="text-lg font-semibold">{data.album.title}</h1>
-						<span class="text-xs text-gray-500">{data.photos.length} photos</span>
+						<div class="flex items-center gap-3 text-xs text-gray-500">
+							<span>{data.photos.length} photos</span>
+							{#if data.album.album_date}
+								<span>• {new Date(data.album.album_date).toLocaleDateString()}</span>
+							{/if}
+							{#if data.expiresIn && data.expiresIn > 0}
+								<span class="text-amber-500">• Expires in {formatTimeRemaining(data.expiresIn)}</span>
+							{/if}
+						</div>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
-						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode}>
+						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode} style="background-color: {isSelecting ? 'var(--gallery-primary)' : ''}; color: {isSelecting ? 'white' : ''};">
 							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
 							<button
-								class="btn btn-primary text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden"
+								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadSelected}
 								disabled={isDownloading}
 							>
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 bg-blue-600 transition-all duration-200"
-										style="width: {downloadProgress}%"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
 									Download ({selectedPhotos.size})
@@ -230,15 +346,16 @@
 							</button>
 						{:else if !isSelecting}
 							<button
-								class="btn btn-primary text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden"
+								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadAlbum}
 								disabled={isDownloading}
 							>
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 bg-blue-600 transition-all duration-200"
-										style="width: {downloadProgress}%"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
 									Download All
@@ -320,21 +437,27 @@
 						<p>Check back soon for new photos!</p>
 					</div>
 				{:else}
+					{#if isSelecting}
+						<p class="text-xs text-gray-500 mb-3">
+							<span class="font-medium">Tip:</span> Hold Shift and click to select a range of photos
+						</p>
+					{/if}
 					<div
 						class={data.album.layout === 'masonry'
-							? 'columns-2 sm:columns-3 lg:columns-4 gap-3'
+							? 'columns-2 sm:columns-3 lg:columns-4 gap-4 masonry-container'
 							: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'}
 					>
 						{#each data.photos as photo, index}
 							<button
 								class="group relative {data.album.layout === 'masonry'
-									? 'mb-3 break-inside-avoid block'
-									: ''} w-full bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.02] {selectedPhotos.has(
+									? 'mb-4 break-inside-avoid block masonry-item'
+									: ''} w-full bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-shadow duration-200 {selectedPhotos.has(
 									photo.id
 								)
-									? 'ring-4 ring-blue-500 scale-[0.97]'
+									? 'ring-4 scale-[0.97]'
 									: ''}"
-								onclick={() => (isSelecting ? toggleSelection(photo.id) : openLightbox(index))}
+								style={selectedPhotos.has(photo.id) ? `--tw-ring-color: var(--gallery-primary);` : ''}
+								onclick={(e) => handlePhotoClick(photo.id, index, e)}
 							>
 								<img
 									src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
@@ -349,8 +472,9 @@
 										class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
 											photo.id
 										)
-											? 'bg-blue-500 text-white'
+											? 'text-white'
 											: 'bg-white/90 border-2 border-gray-300'}"
+										style={selectedPhotos.has(photo.id) ? `background-color: var(--gallery-primary);` : ''}
 									>
 										{#if selectedPhotos.has(photo.id)}
 											<svg
@@ -477,8 +601,12 @@
 			<a
 				href="/api/photos/{data.album.slug}/{data.photos[lightboxIndex].filename}/original"
 				download={data.photos[lightboxIndex].original_filename}
-				class="btn btn-primary"
-				onclick={(e) => e.stopPropagation()}
+				class="btn"
+				style="background-color: var(--gallery-primary); color: white;"
+				onclick={(e) => {
+					e.stopPropagation();
+					trackPhotoDownload();
+				}}
 			>
 				Download Photo
 			</a>
