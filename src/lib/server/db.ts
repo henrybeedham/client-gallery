@@ -20,8 +20,7 @@ db.exec(`
     is_public INTEGER DEFAULT 1,
     show_on_home INTEGER DEFAULT 1,
     password TEXT,
-    layout TEXT DEFAULT 'grid',
-    sort_order TEXT DEFAULT 'manual',
+    sort_order TEXT DEFAULT 'newest',
     album_date TEXT,
     expires_at TEXT,
     primary_color TEXT DEFAULT '#3b82f6',
@@ -166,8 +165,7 @@ export interface Album {
 	is_public: number;
 	show_on_home: number;
 	password: string | null;
-	layout: 'grid' | 'masonry';
-	sort_order: 'manual' | 'newest' | 'oldest' | 'random';
+	sort_order: 'newest' | 'oldest' | 'random';
 	album_date: string | null;
 	expires_at: string | null;
 	primary_color: string;
@@ -264,15 +262,14 @@ export function createAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	layout: 'grid' | 'masonry',
-	sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual',
+	sortOrder: 'newest' | 'oldest' | 'random' = 'newest',
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
 	primaryColor: string = '#3b82f6'
 ): number {
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout, sort_order, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, sort_order, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
 		.run(
 			title,
@@ -281,7 +278,6 @@ export function createAlbum(
 			isPublic ? 1 : 0,
 			showOnHome ? 1 : 0,
 			password || null,
-			layout,
 			sortOrder,
 			albumDate || null,
 			expiresAt || null,
@@ -298,8 +294,7 @@ export function updateAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	layout: 'grid' | 'masonry',
-	sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual',
+	sortOrder: 'newest' | 'oldest' | 'random' = 'newest',
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
 	primaryColor: string = '#3b82f6',
@@ -313,7 +308,6 @@ export function updateAlbum(
       is_public = ?,
       show_on_home = ?,
       password = ?,
-      layout = ?,
       sort_order = ?,
       album_date = ?,
       expires_at = ?,
@@ -328,7 +322,6 @@ export function updateAlbum(
 		isPublic ? 1 : 0,
 		showOnHome ? 1 : 0,
 		password || null,
-		layout,
 		sortOrder,
 		albumDate || null,
 		expiresAt || null,
@@ -359,12 +352,16 @@ export function checkAlbumPassword(albumId: number, password: string): boolean {
 // Photo operations
 // For deterministic random order, we use a hash of album_id + photo_id
 // This ensures the same "random" order every time for a given album
+const HASH_MULTIPLIER_1 = 31;  // Prime multiplier for first hash step
+const HASH_MULTIPLIER_2 = 17;  // Prime multiplier for second hash step
+const HASH_MODULUS = 1000000;  // Modulus to keep hash values bounded
+
 function getSeededRandomOrder(photos: Photo[], albumId: number): Photo[] {
 	// Simple deterministic shuffle using album_id as seed
 	const shuffled = [...photos];
 	shuffled.sort((a, b) => {
-		const hashA = ((albumId * 31 + a.id) * 17) % 1000000;
-		const hashB = ((albumId * 31 + b.id) * 17) % 1000000;
+		const hashA = ((albumId * HASH_MULTIPLIER_1 + a.id) * HASH_MULTIPLIER_2) % HASH_MODULUS;
+		const hashB = ((albumId * HASH_MULTIPLIER_1 + b.id) * HASH_MULTIPLIER_2) % HASH_MODULUS;
 		return hashA - hashB;
 	});
 	return shuffled;
@@ -372,25 +369,23 @@ function getSeededRandomOrder(photos: Photo[], albumId: number): Photo[] {
 
 // Allowlist of valid order by clauses for getPhotosByAlbum
 const VALID_ORDER_BY_WITH_ALIAS = {
-	'manual': 'p.sort_order, p.created_at',
 	'newest': 'COALESCE(p.date_taken, p.created_at) DESC',
 	'oldest': 'COALESCE(p.date_taken, p.created_at) ASC',
 	'random': 'p.id' // We'll shuffle in JS for deterministic random
 } as const;
 
 const VALID_ORDER_BY_NO_ALIAS = {
-	'manual': 'sort_order, created_at',
 	'newest': 'COALESCE(date_taken, created_at) DESC',
 	'oldest': 'COALESCE(date_taken, created_at) ASC',
 	'random': 'id' // We'll shuffle in JS for deterministic random
 } as const;
 
-export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual'): Photo[] {
+export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'newest' | 'oldest' | 'random' = 'newest'): Photo[] {
 	let photos: Photo[];
 	
 	if (tagSlug) {
 		// Use allowlist to prevent SQL injection (with alias)
-		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['manual'];
+		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['newest'];
 		photos = db
 			.prepare(
 				`
@@ -404,7 +399,7 @@ export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: '
 			.all(albumId, tagSlug) as Photo[];
 	} else {
 		// Use allowlist to prevent SQL injection (without alias)
-		const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['manual'];
+		const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['newest'];
 		photos = db
 			.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
 			.all(albumId) as Photo[];

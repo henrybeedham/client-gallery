@@ -16,17 +16,14 @@
 	let touchEndX = $state(0);
 	const minSwipeDistance = 50;
 
-	// Check if layout is masonry - disable shift selection for masonry
-	const isMasonry = $derived(data.album.layout === 'masonry');
-
-	// Handle photo click - masonry only allows individual selection
+	// Handle photo click
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
 			openLightbox(index);
 			return;
 		}
 
-		// Just toggle selection, no shift-select for simplicity on masonry
+		// Toggle selection
 		toggleSelection(photoId);
 	}
 
@@ -455,7 +452,6 @@
 							window.location.href = url.toString();
 						}}
 					>
-						<option value="manual" selected={data.selectedSort === 'manual'}>Manual</option>
 						<option value="newest" selected={data.selectedSort === 'newest'}>Newest first</option>
 						<option value="oldest" selected={data.selectedSort === 'oldest'}>Oldest first</option>
 						<option value="random" selected={data.selectedSort === 'random'}>Random</option>
@@ -483,16 +479,10 @@
 						<p>Check back soon for new photos!</p>
 					</div>
 				{:else}
-					<div
-						class={data.album.layout === 'masonry'
-							? 'flex flex-wrap gap-3 masonry-flex-container'
-							: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'}
-					>
+					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
 						{#each data.photos as photo, index}
 							<button
-								class="group relative {data.album.layout === 'masonry'
-									? 'masonry-flex-item'
-									: ''} bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 {selectedPhotos.has(
+								class="group relative bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 {selectedPhotos.has(
 									photo.id
 								)
 									? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)]'
@@ -504,9 +494,7 @@
 									src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
 									alt={photo.original_filename}
 									loading="lazy"
-									class="w-full {data.album.layout === 'masonry'
-										? 'h-auto block'
-										: 'aspect-square object-cover'}"
+									class="w-full aspect-square object-cover"
 								/>
 								{#if isSelecting}
 									<div

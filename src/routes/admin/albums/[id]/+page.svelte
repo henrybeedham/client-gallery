@@ -11,8 +11,7 @@
 	let isPublic = $state(data.album.is_public === 1);
 	let showOnHome = $state(data.album.show_on_home === 1);
 	let password = $state(data.album.password || '');
-	let layout = $state(data.album.layout || 'grid');
-	let sortOrder = $state(data.album.sort_order || 'manual');
+	let sortOrder = $state(data.album.sort_order || 'newest');
 	let albumDate = $state(data.album.album_date || '');
 	let expiresAt = $state(data.album.expires_at || '');
 	let primaryColor = $state(data.album.primary_color || '#3b82f6');
@@ -643,17 +642,8 @@
 						</div>
 
 						<div>
-							<label for="layout" class="block text-sm font-medium mb-1.5">Gallery Layout</label>
-							<select id="layout" name="layout" class="form-select" bind:value={layout}>
-								<option value="grid">Grid</option>
-								<option value="masonry">Masonry</option>
-							</select>
-						</div>
-
-						<div>
 							<label for="sortOrder" class="block text-sm font-medium mb-1.5">Photo Sort Order</label>
 							<select id="sortOrder" name="sortOrder" class="form-select" bind:value={sortOrder}>
-								<option value="manual">Manual (drag to reorder)</option>
 								<option value="newest">Newest first</option>
 								<option value="oldest">Oldest first</option>
 								<option value="random">Random</option>

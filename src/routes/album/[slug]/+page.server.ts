@@ -61,9 +61,9 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const tagSlug = url.searchParams.get('tag') || undefined;
 	// Allow user to override sort order via query parameter, otherwise use album default
 	const sortParam = url.searchParams.get('sort');
-	const validSorts = ['manual', 'newest', 'oldest', 'random'];
-	const sortOrder = sortParam && validSorts.includes(sortParam) ? sortParam : (album.sort_order || 'manual');
-	const photos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'manual' | 'newest' | 'oldest' | 'random');
+	const validSorts = ['newest', 'oldest', 'random'];
+	const sortOrder = sortParam && validSorts.includes(sortParam) ? sortParam : (album.sort_order || 'newest');
+	const photos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'newest' | 'oldest' | 'random');
 	const tags = getTagsByAlbum(album.id);
 	
 	// Get all photo IDs for select all functionality
