@@ -38,6 +38,7 @@ db.exec(`
     height INTEGER,
     file_size INTEGER,
     mime_type TEXT,
+    date_taken DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     sort_order INTEGER DEFAULT 0,
     FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE
@@ -122,6 +123,13 @@ try {
 	/* Column may already exist */
 }
 
+// Migration: Add date_taken column to photos for EXIF data
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN date_taken DATETIME`);
+} catch {
+	/* Column may already exist */
+}
+
 // Create analytics table if not exists (for migrations)
 try {
 	db.exec(`
@@ -179,6 +187,7 @@ export interface Photo {
 	height: number | null;
 	file_size: number | null;
 	mime_type: string | null;
+	date_taken: string | null;
 	created_at: string;
 	sort_order: number;
 	tags?: PhotoTag[];
@@ -337,6 +346,10 @@ export function setAlbumCover(albumId: number, photoId: number | null): void {
 	db.prepare('UPDATE albums SET cover_photo_id = ? WHERE id = ?').run(photoId, albumId);
 }
 
+export function setAlbumBackground(albumId: number, photoId: number | null): void {
+	db.prepare('UPDATE albums SET background_photo_id = ? WHERE id = ?').run(photoId, albumId);
+}
+
 export function checkAlbumPassword(albumId: number, password: string): boolean {
 	const album = getAlbumById(albumId);
 	if (!album || !album.password) return true;
@@ -344,26 +357,41 @@ export function checkAlbumPassword(albumId: number, password: string): boolean {
 }
 
 // Photo operations
+// For deterministic random order, we use a hash of album_id + photo_id
+// This ensures the same "random" order every time for a given album
+function getSeededRandomOrder(photos: Photo[], albumId: number): Photo[] {
+	// Simple deterministic shuffle using album_id as seed
+	const shuffled = [...photos];
+	shuffled.sort((a, b) => {
+		const hashA = ((albumId * 31 + a.id) * 17) % 1000000;
+		const hashB = ((albumId * 31 + b.id) * 17) % 1000000;
+		return hashA - hashB;
+	});
+	return shuffled;
+}
+
 // Allowlist of valid order by clauses for getPhotosByAlbum
 const VALID_ORDER_BY_WITH_ALIAS = {
 	'manual': 'p.sort_order, p.created_at',
-	'newest': 'p.created_at DESC',
-	'oldest': 'p.created_at ASC',
-	'random': 'RANDOM()'
+	'newest': 'COALESCE(p.date_taken, p.created_at) DESC',
+	'oldest': 'COALESCE(p.date_taken, p.created_at) ASC',
+	'random': 'p.id' // We'll shuffle in JS for deterministic random
 } as const;
 
 const VALID_ORDER_BY_NO_ALIAS = {
 	'manual': 'sort_order, created_at',
-	'newest': 'created_at DESC',
-	'oldest': 'created_at ASC',
-	'random': 'RANDOM()'
+	'newest': 'COALESCE(date_taken, created_at) DESC',
+	'oldest': 'COALESCE(date_taken, created_at) ASC',
+	'random': 'id' // We'll shuffle in JS for deterministic random
 } as const;
 
 export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual'): Photo[] {
+	let photos: Photo[];
+	
 	if (tagSlug) {
 		// Use allowlist to prevent SQL injection (with alias)
 		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['manual'];
-		return db
+		photos = db
 			.prepare(
 				`
         SELECT p.* FROM photos p
@@ -374,13 +402,20 @@ export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: '
       `
 			)
 			.all(albumId, tagSlug) as Photo[];
+	} else {
+		// Use allowlist to prevent SQL injection (without alias)
+		const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['manual'];
+		photos = db
+			.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
+			.all(albumId) as Photo[];
 	}
 	
-	// Use allowlist to prevent SQL injection (without alias)
-	const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['manual'];
-	return db
-		.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
-		.all(albumId) as Photo[];
+	// Apply deterministic random shuffle if needed
+	if (sortOrder === 'random') {
+		return getSeededRandomOrder(photos, albumId);
+	}
+	
+	return photos;
 }
 
 export function getPhotoById(id: number): Photo | undefined {
@@ -400,7 +435,8 @@ export function createPhoto(
 	width: number | null,
 	height: number | null,
 	fileSize: number | null,
-	mimeType: string | null
+	mimeType: string | null,
+	dateTaken: string | null = null
 ): number {
 	const maxOrder = db
 		.prepare('SELECT MAX(sort_order) as max_order FROM photos WHERE album_id = ?')
@@ -410,10 +446,10 @@ export function createPhoto(
 	const result = db
 		.prepare(
 			`INSERT INTO photos 
-      (album_id, filename, original_filename, width, height, file_size, mime_type, sort_order) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      (album_id, filename, original_filename, width, height, file_size, mime_type, date_taken, sort_order) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
-		.run(albumId, filename, originalFilename, width, height, fileSize, mimeType, sortOrder);
+		.run(albumId, filename, originalFilename, width, height, fileSize, mimeType, dateTaken, sortOrder);
 	return result.lastInsertRowid as number;
 }
 

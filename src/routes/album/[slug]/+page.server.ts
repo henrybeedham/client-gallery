@@ -29,6 +29,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			isExpired: true,
 			expiresIn: null,
 			selectedTag: undefined,
+			selectedSort: album.sort_order || 'manual',
 			contactEmail,
 			contactPhone,
 			allPhotoIds: []
@@ -46,6 +47,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				requiresPassword: true,
 				isExpired: false,
 				expiresIn,
+				selectedSort: album.sort_order || 'manual',
 				contactEmail,
 				contactPhone,
 				allPhotoIds: []
@@ -57,7 +59,10 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	recordAnalyticsEvent(album.id, 'page_view');
 
 	const tagSlug = url.searchParams.get('tag') || undefined;
-	const sortOrder = album.sort_order || 'manual';
+	// Allow user to override sort order via query parameter, otherwise use album default
+	const sortParam = url.searchParams.get('sort');
+	const validSorts = ['manual', 'newest', 'oldest', 'random'];
+	const sortOrder = sortParam && validSorts.includes(sortParam) ? sortParam : (album.sort_order || 'manual');
 	const photos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'manual' | 'newest' | 'oldest' | 'random');
 	const tags = getTagsByAlbum(album.id);
 	
@@ -72,6 +77,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		isExpired: false,
 		expiresIn,
 		selectedTag: tagSlug,
+		selectedSort: sortOrder,
 		contactEmail,
 		contactPhone,
 		allPhotoIds

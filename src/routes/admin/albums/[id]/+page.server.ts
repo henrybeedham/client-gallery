@@ -9,6 +9,7 @@ import {
 	createPhoto,
 	deletePhoto,
 	setAlbumCover,
+	setAlbumBackground,
 	updatePhotoOrder,
 	getPhotoById,
 	createTag,
@@ -167,7 +168,8 @@ export const actions: Actions = {
 					processed.width,
 					processed.height,
 					processed.fileSize,
-					processed.mimeType
+					processed.mimeType,
+					processed.dateTaken
 				);
 
 				if (!firstPhotoId) {
@@ -232,6 +234,44 @@ export const actions: Actions = {
 			return { success: true, message: 'Cover photo updated' };
 		} catch {
 			return fail(500, { error: 'Failed to set cover photo' });
+		}
+	},
+
+	setBackground: async ({ params, request }) => {
+		const albumId = parseInt(params.id);
+		const data = await request.formData();
+		const photoId = parseInt(data.get('photoId')?.toString() || '');
+
+		if (isNaN(albumId) || isNaN(photoId)) {
+			return fail(400, { error: 'Invalid IDs' });
+		}
+
+		// Validate photo belongs to album
+		const photo = getPhotoById(photoId);
+		if (!photo || photo.album_id !== albumId) {
+			return fail(400, { error: 'Photo not found in album' });
+		}
+
+		try {
+			setAlbumBackground(albumId, photoId);
+			return { success: true, message: 'Background photo updated' };
+		} catch {
+			return fail(500, { error: 'Failed to set background photo' });
+		}
+	},
+
+	clearBackground: async ({ params }) => {
+		const albumId = parseInt(params.id);
+
+		if (isNaN(albumId)) {
+			return fail(400, { error: 'Invalid album ID' });
+		}
+
+		try {
+			setAlbumBackground(albumId, null);
+			return { success: true, message: 'Background cleared' };
+		} catch {
+			return fail(500, { error: 'Failed to clear background' });
 		}
 	},
 

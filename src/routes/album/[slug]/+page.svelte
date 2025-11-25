@@ -439,6 +439,29 @@
 					</div>
 				{/if}
 
+				<!-- Sort dropdown -->
+				<div class="flex items-center gap-2 mb-4">
+					<label for="sortSelect" class="text-sm text-gray-400">Sort:</label>
+					<select 
+						id="sortSelect"
+						class="form-select text-sm py-1 px-2 bg-[var(--color-bg-secondary)] border-[var(--color-border)] rounded"
+						onchange={(e) => {
+							const target = e.target as HTMLSelectElement;
+							const url = new URL(window.location.href);
+							url.searchParams.set('sort', target.value);
+							if (data.selectedTag) {
+								url.searchParams.set('tag', data.selectedTag);
+							}
+							window.location.href = url.toString();
+						}}
+					>
+						<option value="manual" selected={data.selectedSort === 'manual'}>Manual</option>
+						<option value="newest" selected={data.selectedSort === 'newest'}>Newest first</option>
+						<option value="oldest" selected={data.selectedSort === 'oldest'}>Oldest first</option>
+						<option value="random" selected={data.selectedSort === 'random'}>Random</option>
+					</select>
+				</div>
+
 				{#if data.photos.length === 0}
 					<div class="empty-state">
 						<svg

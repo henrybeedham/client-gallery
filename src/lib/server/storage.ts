@@ -20,6 +20,7 @@ export interface ProcessedImage {
 	height: number;
 	fileSize: number;
 	mimeType: string;
+	dateTaken: string | null;
 }
 
 function ensureAlbumDirs(albumSlug: string): void {
@@ -44,6 +45,26 @@ export async function processAndSaveImage(
 
 	const image = sharp(buffer);
 	const metadata = await image.metadata();
+
+	// Extract EXIF date taken
+	let dateTaken: string | null = null;
+	if (metadata.exif) {
+		try {
+			// Parse EXIF data to extract DateTimeOriginal
+			const exifData = metadata.exif;
+			// EXIF dates are typically in offset 36 (DateTimeOriginal) or offset 132 (DateTime)
+			// Sharp's metadata.exif is a Buffer - we need to look for date patterns
+			const exifString = exifData.toString('binary');
+			// Look for date pattern: YYYY:MM:DD HH:MM:SS
+			const dateMatch = exifString.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+			if (dateMatch) {
+				const [, year, month, day, hour, minute, second] = dateMatch;
+				dateTaken = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+			}
+		} catch {
+			// Failed to parse EXIF, dateTaken remains null
+		}
+	}
 
 	// Save original
 	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);
@@ -70,7 +91,8 @@ export async function processAndSaveImage(
 		width: metadata.width || 0,
 		height: metadata.height || 0,
 		fileSize: stats.size,
-		mimeType: `image/${metadata.format || 'jpeg'}`
+		mimeType: `image/${metadata.format || 'jpeg'}`,
+		dateTaken
 	};
 }
 
