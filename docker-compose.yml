@@ -10,9 +10,5 @@ services:
       - DATABASE_PATH=/app/data/gallery.db
       - UPLOAD_DIR=/app/uploads
     volumes:
-      - gallery_data:/app/data
-      - gallery_uploads:/app/uploads
-
-volumes:
-  gallery_data:
-  gallery_uploads:
+      - /opt/client-gallery/data:/app/data
+      - /opt/client-gallery/uploads:/app/uploads

@@ -1,22 +1,27 @@
-FROM node:20-alpine AS builder
+FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+# Copy package.json and bun.lockb (if it exists)
+COPY package.json bun.lockb* ./
+
+# Install all dependencies (including devDependencies for building)
+RUN bun install --frozen-lockfile
 
 COPY . .
-RUN npm run build
+RUN bun run build
 
-FROM node:20-alpine AS production
+FROM oven/bun:1-alpine AS production
 
 WORKDIR /app
 
-# Install dependencies for native modules
+# Install dependencies for native modules (vips-dev for Sharp, etc.)
 RUN apk add --no-cache python3 make g++ vips-dev
 
-COPY package*.json ./
-RUN npm ci --omit=dev
+COPY package.json bun.lockb* ./
+
+# Install only production dependencies
+RUN bun install --production
 
 COPY --from=builder /app/build ./build
 
@@ -30,4 +35,5 @@ ENV UPLOAD_DIR=/app/uploads
 
 EXPOSE 3000
 
-CMD ["node", "build"]
+# Point explicitly to the entry file, as "bun build" is a reserved CLI command
+CMD ["bun", "build/index.js"]
