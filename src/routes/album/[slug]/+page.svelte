@@ -11,6 +11,11 @@
 	let downloadProgress = $state(0);
 	let passwordInput = $state('');
 
+	// Touch swipe state for lightbox
+	let touchStartX = $state(0);
+	let touchEndX = $state(0);
+	const minSwipeDistance = 50;
+
 	function toggleSelection(photoId: number) {
 		if (selectedPhotos.has(photoId)) {
 			selectedPhotos.delete(photoId);
@@ -125,6 +130,28 @@
 		if (e.key === 'Escape') closeLightbox();
 		if (e.key === 'ArrowRight') nextPhoto();
 		if (e.key === 'ArrowLeft') prevPhoto();
+	}
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.touches[0].clientX;
+		touchEndX = e.touches[0].clientX;
+	}
+
+	function handleTouchMove(e: TouchEvent) {
+		touchEndX = e.touches[0].clientX;
+	}
+
+	function handleTouchEnd() {
+		const swipeDistance = touchStartX - touchEndX;
+		if (Math.abs(swipeDistance) >= minSwipeDistance) {
+			if (swipeDistance > 0) {
+				nextPhoto();
+			} else {
+				prevPhoto();
+			}
+		}
+		touchStartX = 0;
+		touchEndX = 0;
 	}
 </script>
 
@@ -382,6 +409,9 @@
 		<div
 			class="flex-1 flex items-center justify-center relative px-12 min-h-0 overflow-hidden"
 			onclick={(e) => e.stopPropagation()}
+			ontouchstart={handleTouchStart}
+			ontouchmove={handleTouchMove}
+			ontouchend={handleTouchEnd}
 		>
 			<button
 				class="absolute left-2 top-1/2 -translate-y-1/2 p-3 text-white opacity-70 hover:opacity-100 disabled:opacity-30 transition-opacity z-10"
