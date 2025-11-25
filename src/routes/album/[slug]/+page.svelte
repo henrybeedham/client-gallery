@@ -87,10 +87,7 @@
 	}
 
 	async function downloadAlbum() {
-		await downloadWithProgress(
-			`/api/download/album/${data.album.id}`,
-			`${data.album.slug}.zip`
-		);
+		await downloadWithProgress(`/api/download/album/${data.album.id}`, `${data.album.slug}.zip`);
 	}
 
 	async function downloadSelected() {
@@ -204,7 +201,7 @@
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
 						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode}>
-							{isSelecting ? 'Cancel' : 'Select'}
+							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
 							<button
@@ -474,7 +471,7 @@
 				class="btn btn-primary"
 				onclick={(e) => e.stopPropagation()}
 			>
-				Download Original
+				Download Photo
 			</a>
 		</div>
 	</div>
