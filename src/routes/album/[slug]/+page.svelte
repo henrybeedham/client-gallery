@@ -48,8 +48,14 @@
 			const response = await fetch(url);
 			if (!response.ok) throw new Error('Download failed');
 
+			// Try Content-Length first, then fall back to X-Estimated-Size for streaming responses
 			const contentLength = response.headers.get('Content-Length');
-			const total = contentLength ? parseInt(contentLength, 10) : 0;
+			const estimatedSize = response.headers.get('X-Estimated-Size');
+			const total = contentLength
+				? parseInt(contentLength, 10)
+				: estimatedSize
+					? parseInt(estimatedSize, 10)
+					: 0;
 
 			let blob: Blob;
 			if (total && response.body) {
@@ -62,8 +68,11 @@
 					if (done) break;
 					chunks.push(value);
 					received += value.length;
-					downloadProgress = Math.round((received / total) * 100);
+					// Cap progress at 99% until complete to handle size estimation differences
+					downloadProgress = Math.min(99, Math.round((received / total) * 100));
 				}
+				// Set to 100% when done
+				downloadProgress = 100;
 
 				blob = new Blob(chunks, { type: 'application/zip' });
 			} else {

@@ -3,7 +3,7 @@ import { getPhotosByIds } from '$lib/server/db';
 import { getImagePath } from '$lib/server/storage';
 import { error } from '@sveltejs/kit';
 import archiver from 'archiver';
-import { createReadStream } from 'fs';
+import { createReadStream, statSync } from 'fs';
 
 export const GET: RequestHandler = async ({ url, params }) => {
 	const idsParam = url.searchParams.get('ids');
@@ -30,31 +30,55 @@ export const GET: RequestHandler = async ({ url, params }) => {
 		throw error(404, 'No photos found');
 	}
 
+	// Calculate estimated total size from original files for progress estimation
+	let estimatedTotalSize = 0;
+	for (const photo of photos) {
+		const filePath = getImagePath(photo.filename, 'original', albumSlug);
+		try {
+			const stats = statSync(filePath);
+			estimatedTotalSize += stats.size;
+		} catch {
+			// If file stats fail, use stored file_size or default
+			estimatedTotalSize += photo.file_size || 1000000;
+		}
+	}
+
 	// Create a zip stream
 	const archive = archiver('zip', { zlib: { level: 5 } });
 
-	// Collect all chunks into a buffer using a Promise to ensure all data is collected
-	const buffer = await new Promise<Buffer>((resolve, reject) => {
-		const chunks: Uint8Array[] = [];
-		archive.on('data', (chunk: Uint8Array) => chunks.push(chunk));
-		archive.on('end', () => resolve(Buffer.concat(chunks)));
-		archive.on('error', reject);
+	// Create a ReadableStream that streams the archive data
+	const stream = new ReadableStream({
+		start(controller) {
+			archive.on('data', (chunk: Uint8Array) => {
+				controller.enqueue(chunk);
+			});
 
-		// Add photos to archive
-		for (const photo of photos) {
-			const filePath = getImagePath(photo.filename, 'original', albumSlug);
-			archive.append(createReadStream(filePath), { name: photo.original_filename });
+			archive.on('end', () => {
+				controller.close();
+			});
+
+			archive.on('error', (err) => {
+				controller.error(err);
+			});
+
+			// Add photos to archive
+			for (const photo of photos) {
+				const filePath = getImagePath(photo.filename, 'original', albumSlug);
+				archive.append(createReadStream(filePath), { name: photo.original_filename });
+			}
+
+			// Finalize the archive
+			archive.finalize();
 		}
-
-		// Finalize the archive
-		archive.finalize();
 	});
 
-	return new Response(new Uint8Array(buffer), {
+	return new Response(stream, {
 		headers: {
 			'Content-Type': 'application/zip',
 			'Content-Disposition': 'attachment; filename="photos.zip"',
-			'Content-Length': buffer.length.toString()
+			// Provide estimated size as a custom header for progress tracking
+			// Don't use Content-Length since actual ZIP size differs due to compression
+			'X-Estimated-Size': estimatedTotalSize.toString()
 		}
 	});
 };
