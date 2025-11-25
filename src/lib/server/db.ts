@@ -328,6 +328,17 @@ export function getPhotoTags(photoId: number): PhotoTag[] {
     .all(photoId) as PhotoTag[];
 }
 
+export function getPhotoTagRelationsByAlbum(albumId: number): { photo_id: number; tag_id: number }[] {
+  return db
+    .prepare(`
+      SELECT ptr.photo_id, ptr.tag_id 
+      FROM photo_tag_relations ptr
+      INNER JOIN photos p ON ptr.photo_id = p.id
+      WHERE p.album_id = ?
+    `)
+    .all(albumId) as { photo_id: number; tag_id: number }[];
+}
+
 export function getStats(): { albums: number; photos: number; tags: number } {
   const albums = (db.prepare('SELECT COUNT(*) as count FROM albums').get() as { count: number }).count;
   const photos = (db.prepare('SELECT COUNT(*) as count FROM photos').get() as { count: number }).count;

@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { env } from '$env/dynamic/private';
 
 const UPLOAD_DIR = env.UPLOAD_DIR || './uploads';
-const THUMBNAIL_SIZE = 400;
+const THUMBNAIL_SIZE = 600;
 const MEDIUM_SIZE = 1600;
 
 // Ensure base upload directory exists

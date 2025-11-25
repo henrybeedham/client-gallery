@@ -226,7 +226,7 @@ class="px-3 py-1.5 rounded-full text-sm transition-colors {data.selectedTag === 
 <div class="{data.album.layout === 'masonry' ? 'columns-2 sm:columns-3 lg:columns-4 gap-3' : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'}">
 {#each data.photos as photo, index}
 <button
-class="group relative {data.album.layout === 'masonry' ? 'mb-3 break-inside-avoid' : ''} w-full bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-transform hover:scale-[1.02] {selectedPhotos.has(photo.id) ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-[var(--color-bg)]' : ''}"
+class="group relative {data.album.layout === 'masonry' ? 'mb-3 break-inside-avoid block' : ''} w-full bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.02] {selectedPhotos.has(photo.id) ? 'ring-4 ring-blue-500 scale-[0.97]' : ''}"
 onclick={() => isSelecting ? toggleSelection(photo.id) : openLightbox(index)}
 >
 <img
@@ -257,7 +257,7 @@ class="w-full {data.album.layout === 'masonry' ? 'h-auto' : 'aspect-square objec
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_interactive_supports_focus -->
 <div class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[1000] flex flex-col" onclick={closeLightbox} role="dialog" aria-modal="true" aria-label="Photo lightbox">
-<div class="flex items-center justify-between p-4 text-white">
+<div class="flex items-center justify-between p-4 text-white flex-shrink-0">
 <span class="text-sm opacity-80">{lightboxIndex + 1} / {data.photos.length}</span>
 <button class="p-2 opacity-80 hover:opacity-100 transition-opacity" onclick={closeLightbox} aria-label="Close lightbox">
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -268,8 +268,8 @@ class="w-full {data.album.layout === 'masonry' ? 'h-auto' : 'aspect-square objec
 </div>
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="flex-1 flex items-center justify-center relative px-12" onclick={(e) => e.stopPropagation()}>
-<button class="absolute left-2 top-1/2 -translate-y-1/2 p-3 text-white opacity-70 hover:opacity-100 disabled:opacity-30 transition-opacity" onclick={(e) => { e.stopPropagation(); prevPhoto(); }} disabled={lightboxIndex === 0} aria-label="Previous photo">
+<div class="flex-1 flex items-center justify-center relative px-12 min-h-0 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+<button class="absolute left-2 top-1/2 -translate-y-1/2 p-3 text-white opacity-70 hover:opacity-100 disabled:opacity-30 transition-opacity z-10" onclick={(e) => { e.stopPropagation(); prevPhoto(); }} disabled={lightboxIndex === 0} aria-label="Previous photo">
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <polyline points="15 18 9 12 15 6"></polyline>
 </svg>
@@ -278,14 +278,15 @@ class="w-full {data.album.layout === 'masonry' ? 'h-auto' : 'aspect-square objec
 src="/api/photos/{data.photos[lightboxIndex].filename}/medium?album={data.album.slug}"
 alt={data.photos[lightboxIndex].original_filename}
 class="max-w-full max-h-full object-contain"
+style="max-height: calc(100vh - 140px);"
 />
-<button class="absolute right-2 top-1/2 -translate-y-1/2 p-3 text-white opacity-70 hover:opacity-100 disabled:opacity-30 transition-opacity" onclick={(e) => { e.stopPropagation(); nextPhoto(); }} disabled={lightboxIndex === data.photos.length - 1} aria-label="Next photo">
+<button class="absolute right-2 top-1/2 -translate-y-1/2 p-3 text-white opacity-70 hover:opacity-100 disabled:opacity-30 transition-opacity z-10" onclick={(e) => { e.stopPropagation(); nextPhoto(); }} disabled={lightboxIndex === data.photos.length - 1} aria-label="Next photo">
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>
 </button>
 </div>
-<div class="flex justify-center p-4">
+<div class="flex justify-center p-4 flex-shrink-0">
 <a
 href="/api/photos/{data.photos[lightboxIndex].filename}/original?album={data.album.slug}"
 download={data.photos[lightboxIndex].original_filename}

@@ -4,6 +4,7 @@ getAlbumById,
 getAlbumBySlug,
 getPhotosByAlbum,
 getTagsByAlbum,
+getPhotoTagRelationsByAlbum,
 updateAlbum,
 createPhoto,
 deletePhoto,
@@ -32,11 +33,13 @@ throw error(404, 'Album not found');
 
 const photos = getPhotosByAlbum(albumId);
 const tags = getTagsByAlbum(albumId);
+const photoTags = getPhotoTagRelationsByAlbum(albumId);
 
 return {
 album,
 photos,
-tags
+tags,
+photoTags
 };
 };
 

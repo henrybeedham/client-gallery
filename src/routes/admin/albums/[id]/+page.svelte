@@ -12,18 +12,22 @@ let isPublic = $state(data.album.is_public === 1);
 let showOnHome = $state(data.album.show_on_home === 1);
 let password = $state(data.album.password || '');
 let layout = $state(data.album.layout || 'grid');
-let coverPhotoId = $state(data.album.cover_photo_id?.toString() || '');
 
 let autoSlug = $derived(slugify(title));
-let displaySlug = $derived(customSlug || autoSlug);
 
 let loading = $state(false);
 let uploading = $state(false);
 let uploadProgress = $state(0);
 let uploadStatus = $state('');
 let deleteConfirm: number | null = $state(null);
+let selectedPhoto: number | null = $state(null);
 
 let fileInput: HTMLInputElement;
+
+// Get tags for a specific photo
+function getPhotoTags(photoId: number): number[] {
+  return data.photoTags?.filter((pt: {photo_id: number, tag_id: number}) => pt.photo_id === photoId).map((pt: {photo_id: number, tag_id: number}) => pt.tag_id) || [];
+}
 
 async function handleUpload(event: Event) {
 const input = event.target as HTMLInputElement;
@@ -77,6 +81,22 @@ uploading = false;
 }
 
 input.value = '';
+}
+
+async function togglePhotoTag(photoId: number, tagId: number) {
+const hasTag = getPhotoTags(photoId).includes(tagId);
+const action = hasTag ? 'removeTagFromPhoto' : 'addTagToPhoto';
+
+const formData = new FormData();
+formData.append('photoId', photoId.toString());
+formData.append('tagId', tagId.toString());
+
+await fetch(`/admin/albums/${data.album.id}?/${action}`, {
+method: 'POST',
+body: formData
+});
+
+await invalidateAll();
 }
 </script>
 
@@ -171,7 +191,13 @@ Upload Photos
 {:else}
 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
 {#each data.photos as photo}
-<div class="group relative rounded-lg overflow-hidden bg-[var(--color-bg-tertiary)] {photo.id === data.album.cover_photo_id ? 'ring-2 ring-blue-500' : ''}">
+<div 
+class="group relative rounded-lg overflow-hidden bg-[var(--color-bg-tertiary)] cursor-pointer transition-all {photo.id === data.album.cover_photo_id ? 'ring-2 ring-yellow-500' : ''} {selectedPhoto === photo.id ? 'ring-2 ring-blue-500 scale-[0.98]' : ''}"
+onclick={() => selectedPhoto = selectedPhoto === photo.id ? null : photo.id}
+role="button"
+tabindex="0"
+onkeydown={(e) => e.key === 'Enter' && (selectedPhoto = selectedPhoto === photo.id ? null : photo.id)}
+>
 <img
 src="/api/photos/{photo.filename}/thumbnail?album={data.album.slug}"
 alt={photo.original_filename}
@@ -179,16 +205,22 @@ loading="lazy"
 class="w-full aspect-square object-cover"
 />
 <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
-<div class="flex gap-1 justify-end">
+<div class="flex gap-1 justify-end" onclick={(e) => e.stopPropagation()}>
 {#if photo.id !== data.album.cover_photo_id}
 <form method="POST" action="?/setCover" use:enhance>
 <input type="hidden" name="photoId" value={photo.id} />
-<button type="submit" class="p-1.5 rounded bg-black/50 text-white hover:bg-black/70" title="Set as cover">
+<button type="submit" class="p-1.5 rounded bg-black/50 text-white hover:bg-yellow-500" title="Set as cover">
 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
 </svg>
 </button>
 </form>
+{:else}
+<span class="p-1.5 rounded bg-yellow-500 text-white" title="Cover photo">
+<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+</svg>
+</span>
 {/if}
 {#if deleteConfirm === photo.id}
 <form method="POST" action="?/deletePhoto" use:enhance={() => {
@@ -204,14 +236,14 @@ await update();
 </svg>
 </button>
 </form>
-<button class="p-1.5 rounded bg-black/50 text-white hover:bg-black/70" onclick={() => deleteConfirm = null} title="Cancel">
+<button class="p-1.5 rounded bg-black/50 text-white hover:bg-black/70" onclick={(e) => { e.stopPropagation(); deleteConfirm = null; }} title="Cancel">
 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <line x1="18" y1="6" x2="6" y2="18"></line>
 <line x1="6" y1="6" x2="18" y2="18"></line>
 </svg>
 </button>
 {:else}
-<button class="p-1.5 rounded bg-black/50 text-white hover:bg-red-500" onclick={() => deleteConfirm = photo.id} title="Delete">
+<button class="p-1.5 rounded bg-black/50 text-white hover:bg-red-500" onclick={(e) => { e.stopPropagation(); deleteConfirm = photo.id; }} title="Delete">
 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <polyline points="3 6 5 6 21 6"></polyline>
 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -219,13 +251,15 @@ await update();
 </button>
 {/if}
 </div>
-{#if photo.id === data.album.cover_photo_id}
-<span class="text-[10px] font-semibold uppercase tracking-wide px-2 py-1 bg-blue-500 text-white rounded self-start">Cover</span>
-{/if}
 </div>
 <div class="p-2 text-xs">
 <p class="truncate text-gray-300" title={photo.original_filename}>{photo.original_filename}</p>
-<p class="text-gray-500">{formatFileSize(photo.file_size || 0)}</p>
+<div class="flex items-center justify-between">
+<span class="text-gray-500">{formatFileSize(photo.file_size || 0)}</span>
+{#if getPhotoTags(photo.id).length > 0}
+<span class="text-blue-400">{getPhotoTags(photo.id).length} tag{getPhotoTags(photo.id).length > 1 ? 's' : ''}</span>
+{/if}
+</div>
 </div>
 </div>
 {/each}
@@ -241,9 +275,12 @@ method="POST"
 action="?/updateAlbum"
 use:enhance={() => {
 loading = true;
-return async ({ update }) => {
+return async ({ result, update }) => {
 loading = false;
-await update();
+if (result.type === 'success') {
+await invalidateAll();
+}
+await update({ reset: false });
 };
 }}
 >
@@ -297,16 +334,6 @@ bind:value={description}
 </select>
 </div>
 
-<div>
-<label for="coverPhotoId" class="block text-sm font-medium mb-1.5">Cover Photo</label>
-<select id="coverPhotoId" name="coverPhotoId" class="form-select" bind:value={coverPhotoId}>
-<option value="">Auto (first photo)</option>
-{#each data.photos as photo}
-<option value={photo.id}>{photo.original_filename}</option>
-{/each}
-</select>
-</div>
-
 <div class="space-y-3 pt-2">
 <label class="flex items-center gap-2 cursor-pointer">
 <input type="checkbox" name="isPublic" bind:checked={isPublic} class="w-4 h-4 accent-blue-500" />
@@ -342,7 +369,7 @@ placeholder="Leave empty for no password"
 </div>
 
 {#if data.tags.length > 0 || true}
-<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
+<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 sticky top-[calc(1.5rem+600px)]" style="max-height: calc(100vh - 3rem); overflow-y: auto;">
 <h2 class="text-lg font-semibold mb-4">Photo Tags</h2>
 <form method="POST" action="?/createTag" use:enhance class="flex gap-2 mb-4">
 <input
@@ -354,7 +381,7 @@ placeholder="New tag name..."
 <button type="submit" class="btn btn-secondary">Add</button>
 </form>
 {#if data.tags.length > 0}
-<div class="flex flex-wrap gap-2">
+<div class="flex flex-wrap gap-2 mb-4">
 {#each data.tags as tag}
 <form method="POST" action="?/deleteTag" use:enhance class="inline">
 <input type="hidden" name="tagId" value={tag.id} />
@@ -368,6 +395,24 @@ placeholder="New tag name..."
 </form>
 {/each}
 </div>
+{#if selectedPhoto}
+<div class="border-t border-[var(--color-border)] pt-4">
+<p class="text-sm text-gray-400 mb-2">Click tags to add/remove from selected photo:</p>
+<div class="flex flex-wrap gap-2">
+{#each data.tags as tag}
+<button
+type="button"
+onclick={() => togglePhotoTag(selectedPhoto!, tag.id)}
+class="px-3 py-1 rounded-full text-sm transition-colors {getPhotoTags(selectedPhoto).includes(tag.id) ? 'bg-blue-500 text-white' : 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
+>
+{tag.name}
+</button>
+{/each}
+</div>
+</div>
+{:else}
+<p class="text-sm text-gray-500 border-t border-[var(--color-border)] pt-4">Select a photo to assign tags to it.</p>
+{/if}
 {:else}
 <p class="text-sm text-gray-500">No tags yet. Add tags to categorize photos within this album.</p>
 {/if}
