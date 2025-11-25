@@ -29,7 +29,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			isExpired: true,
 			expiresIn: null,
 			selectedTag: undefined,
-			selectedSort: album.sort_order || 'manual',
+			selectedSort: album.sort_order || 'newest',
 			contactEmail,
 			contactPhone,
 			allPhotoIds: []
@@ -47,7 +47,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				requiresPassword: true,
 				isExpired: false,
 				expiresIn,
-				selectedSort: album.sort_order || 'manual',
+				selectedSort: album.sort_order || 'newest',
 				contactEmail,
 				contactPhone,
 				allPhotoIds: []

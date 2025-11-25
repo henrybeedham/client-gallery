@@ -117,9 +117,16 @@ try {
 	/* Column may already exist */
 }
 try {
-	db.exec(`ALTER TABLE albums ADD COLUMN sort_order TEXT DEFAULT 'manual'`);
+	db.exec(`ALTER TABLE albums ADD COLUMN sort_order TEXT DEFAULT 'newest'`);
 } catch {
 	/* Column may already exist */
+}
+
+// Migration: Update existing albums with 'manual' sort_order to 'newest'
+try {
+	db.exec(`UPDATE albums SET sort_order = 'newest' WHERE sort_order = 'manual'`);
+} catch {
+	/* Table may not exist yet */
 }
 
 // Migration: Add date_taken column to photos for EXIF data
