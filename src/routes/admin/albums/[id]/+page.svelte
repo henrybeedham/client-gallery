@@ -321,6 +321,8 @@
 							class="group relative rounded-lg overflow-hidden bg-[var(--color-bg-tertiary)] cursor-pointer transition-all {photo.id ===
 							data.album.cover_photo_id
 								? 'ring-2 ring-yellow-500'
+								: ''} {photo.id === data.album.background_photo_id
+								? 'ring-2 ring-purple-500'
 								: ''} {selectedPhoto?.includes(photo.id)
 								? 'ring-2 ring-blue-500 scale-[0.98]'
 								: ''}"
@@ -395,7 +397,12 @@
 									{/if}
 									<!-- Background photo button -->
 									{#if photo.id !== data.album.background_photo_id}
-										<form method="POST" action="?/setBackground" use:enhance>
+										<form method="POST" action="?/setBackground" use:enhance={() => {
+											return async ({ update }) => {
+												backgroundPhotoId = photo.id;
+												await update();
+											};
+										}}>
 											<input type="hidden" name="photoId" value={photo.id} />
 											<button
 												type="submit"
@@ -420,7 +427,12 @@
 											</button>
 										</form>
 									{:else}
-										<form method="POST" action="?/clearBackground" use:enhance>
+										<form method="POST" action="?/clearBackground" use:enhance={() => {
+											return async ({ update }) => {
+												backgroundPhotoId = null;
+												await update();
+											};
+										}}>
 											<button
 												type="submit"
 												class="p-1.5 rounded bg-purple-500 text-white"
@@ -780,6 +792,8 @@
 									<label class="block text-sm font-medium mb-1.5">
 										Background Photo
 									</label>
+									<!-- Hidden input to preserve backgroundPhotoId when advanced settings is open -->
+									<input type="hidden" name="backgroundPhotoId" value={backgroundPhotoId || ''} />
 									{#if data.album.background_photo_id}
 										<p class="text-sm text-purple-400">
 											Set from photo grid (purple icon)

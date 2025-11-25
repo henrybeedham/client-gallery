@@ -359,16 +359,24 @@ export function checkAlbumPassword(albumId: number, password: string): boolean {
 // Photo operations
 // For deterministic random order, we use a hash of album_id + photo_id
 // This ensures the same "random" order every time for a given album
-const HASH_MULTIPLIER_1 = 31;  // Prime multiplier for first hash step
-const HASH_MULTIPLIER_2 = 17;  // Prime multiplier for second hash step
-const HASH_MODULUS = 1000000;  // Modulus to keep hash values bounded
+
+// Simple hash function that creates a pseudo-random but deterministic value
+function hashCode(albumId: number, photoId: number): number {
+	// Combine album and photo IDs into a seed
+	let hash = albumId * 2654435761 + photoId; // Golden ratio prime
+	// Mix bits using xorshift-like operations
+	hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
+	hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
+	hash = (hash >>> 16) ^ hash;
+	return hash >>> 0; // Convert to unsigned 32-bit integer
+}
 
 function getSeededRandomOrder(photos: Photo[], albumId: number): Photo[] {
-	// Simple deterministic shuffle using album_id as seed
+	// Deterministic shuffle using album_id as seed
 	const shuffled = [...photos];
 	shuffled.sort((a, b) => {
-		const hashA = ((albumId * HASH_MULTIPLIER_1 + a.id) * HASH_MULTIPLIER_2) % HASH_MODULUS;
-		const hashB = ((albumId * HASH_MULTIPLIER_1 + b.id) * HASH_MULTIPLIER_2) % HASH_MODULUS;
+		const hashA = hashCode(albumId, a.id);
+		const hashB = hashCode(albumId, b.id);
 		return hashA - hashB;
 	});
 	return shuffled;
