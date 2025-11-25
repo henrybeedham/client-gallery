@@ -53,7 +53,8 @@ export const GET: RequestHandler = async ({ url, params }) => {
 	return new Response(new Uint8Array(buffer), {
 		headers: {
 			'Content-Type': 'application/zip',
-			'Content-Disposition': 'attachment; filename="photos.zip"'
+			'Content-Disposition': 'attachment; filename="photos.zip"',
+			'Content-Length': buffer.length.toString()
 		}
 	});
 };

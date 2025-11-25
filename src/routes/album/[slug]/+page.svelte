@@ -8,6 +8,7 @@
 	let isSelecting = $state(false);
 	let lightboxIndex: number | null = $state(null);
 	let isDownloading = $state(false);
+	let downloadProgress = $state(0);
 	let passwordInput = $state('');
 
 	function toggleSelection(photoId: number) {
@@ -37,49 +38,107 @@
 
 	async function downloadAlbum() {
 		isDownloading = true;
+		downloadProgress = 0;
 		try {
 			const response = await fetch(`/api/download/album/${data.album.id}`);
 			if (!response.ok) throw new Error('Download failed');
 
-			const blob = await response.blob();
-			const url = window.URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `${data.album.slug}.zip`;
-			document.body.appendChild(a);
-			a.click();
-			window.URL.revokeObjectURL(url);
-			document.body.removeChild(a);
+			const contentLength = response.headers.get('Content-Length');
+			const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+			if (total && response.body) {
+				const reader = response.body.getReader();
+				const chunks: BlobPart[] = [];
+				let received = 0;
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					chunks.push(value);
+					received += value.length;
+					downloadProgress = Math.round((received / total) * 100);
+				}
+
+				const blob = new Blob(chunks, { type: 'application/zip' });
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `${data.album.slug}.zip`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			} else {
+				const blob = await response.blob();
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `${data.album.slug}.zip`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			}
 		} catch (e) {
 			console.error('Download failed:', e);
 			alert('Download failed. Please try again.');
 		}
 		isDownloading = false;
+		downloadProgress = 0;
 	}
 
 	async function downloadSelected() {
 		if (selectedPhotos.size === 0) return;
 
 		isDownloading = true;
+		downloadProgress = 0;
 		try {
 			const ids = Array.from(selectedPhotos).join(',');
 			const response = await fetch(`/api/download/photos/${data.album.slug}?ids=${ids}`);
 			if (!response.ok) throw new Error('Download failed');
 
-			const blob = await response.blob();
-			const url = window.URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `${data.album.slug}-selected.zip`;
-			document.body.appendChild(a);
-			a.click();
-			window.URL.revokeObjectURL(url);
-			document.body.removeChild(a);
+			const contentLength = response.headers.get('Content-Length');
+			const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+			if (total && response.body) {
+				const reader = response.body.getReader();
+				const chunks: BlobPart[] = [];
+				let received = 0;
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					chunks.push(value);
+					received += value.length;
+					downloadProgress = Math.round((received / total) * 100);
+				}
+
+				const blob = new Blob(chunks, { type: 'application/zip' });
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `${data.album.slug}-selected.zip`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			} else {
+				const blob = await response.blob();
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `${data.album.slug}-selected.zip`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			}
 		} catch (e) {
 			console.error('Download failed:', e);
 			alert('Download failed. Please try again.');
 		}
 		isDownloading = false;
+		downloadProgress = 0;
 	}
 
 	function openLightbox(index: number) {
@@ -165,19 +224,35 @@
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
 							<button
-								class="btn btn-primary text-sm"
+								class="btn btn-primary text-sm relative overflow-hidden"
 								onclick={downloadSelected}
 								disabled={isDownloading}
 							>
-								{isDownloading ? 'Downloading...' : `Download (${selectedPhotos.size})`}
+								{#if isDownloading}
+									<span class="relative z-10">Downloading... {downloadProgress}%</span>
+									<span
+										class="absolute inset-0 bg-blue-600 transition-all duration-200"
+										style="width: {downloadProgress}%"
+									></span>
+								{:else}
+									Download ({selectedPhotos.size})
+								{/if}
 							</button>
 						{:else if !isSelecting}
 							<button
-								class="btn btn-primary text-sm"
+								class="btn btn-primary text-sm relative overflow-hidden"
 								onclick={downloadAlbum}
 								disabled={isDownloading}
 							>
-								{isDownloading ? 'Downloading...' : 'Download All'}
+								{#if isDownloading}
+									<span class="relative z-10">Downloading... {downloadProgress}%</span>
+									<span
+										class="absolute inset-0 bg-blue-600 transition-all duration-200"
+										style="width: {downloadProgress}%"
+									></span>
+								{:else}
+									Download All
+								{/if}
 							</button>
 						{/if}
 					</div>
