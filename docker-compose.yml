@@ -1,0 +1,20 @@
+services:
+  gallery:
+    build: .
+    container_name: client-gallery
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/gallery.db
+      - UPLOAD_DIR=/app/uploads
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=changeme
+    volumes:
+      - gallery_data:/app/data
+      - gallery_uploads:/app/uploads
+
+volumes:
+  gallery_data:
+  gallery_uploads:
