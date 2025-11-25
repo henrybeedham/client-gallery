@@ -1,42 +1,52 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getCategories, createAlbum } from '$lib/server/db';
+import { createAlbum, getAlbumBySlug } from '$lib/server/db';
 import { slugify } from '$lib/utils';
 import { fail, redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async () => {
-	const categories = getCategories();
-	return { categories };
+return {};
 };
 
 export const actions: Actions = {
-	default: async ({ request }) => {
-		const data = await request.formData();
-		const title = data.get('title')?.toString() || '';
-		const description = data.get('description')?.toString() || '';
-		const categoryId = data.get('categoryId')?.toString() || '';
-		const isPublic = data.get('isPublic') === 'on';
+default: async ({ request }) => {
+const data = await request.formData();
+const title = data.get('title')?.toString() || '';
+const slugInput = data.get('slug')?.toString() || '';
+const description = data.get('description')?.toString() || '';
+const isPublic = data.get('isPublic') === 'on';
+const showOnHome = data.get('showOnHome') === 'on';
+const password = data.get('password')?.toString() || '';
+const layout = (data.get('layout')?.toString() || 'grid') as 'grid' | 'masonry';
 
-		if (!title.trim()) {
-			return fail(400, { error: 'Title is required' });
-		}
+if (!title.trim()) {
+return fail(400, { error: 'Title is required', title, description, slug: slugInput });
+}
 
-		const slug = slugify(title);
-		if (!slug) {
-			return fail(400, { error: 'Invalid title' });
-		}
+const slug = slugInput.trim() || slugify(title);
+if (!slug) {
+return fail(400, { error: 'Invalid title/slug', title, description, slug: slugInput });
+}
 
-		try {
-			const albumId = createAlbum(
-				title.trim(),
-				slug,
-				description.trim() || null,
-				categoryId ? parseInt(categoryId) : null,
-				isPublic
-			);
-			throw redirect(303, `/admin/albums/${albumId}`);
-		} catch (e) {
-			if (e instanceof Response) throw e;
-			return fail(500, { error: 'Failed to create album. Slug may already exist.' });
-		}
-	}
+// Check if slug already exists
+const existing = getAlbumBySlug(slug);
+if (existing) {
+return fail(400, { error: 'An album with this slug already exists', title, description, slug: slugInput });
+}
+
+try {
+const albumId = createAlbum(
+title.trim(),
+slug,
+description.trim() || null,
+isPublic,
+showOnHome,
+password || null,
+layout
+);
+redirect(303, `/admin/albums/${albumId}`);
+} catch (e) {
+if (e && typeof e === 'object' && 'status' in e) throw e;
+return fail(500, { error: 'Failed to create album', title, description, slug: slugInput });
+}
+}
 };

@@ -1,192 +1,300 @@
 import type { PageServerLoad, Actions } from './$types';
 import {
-	getAlbumById,
-	getPhotosByAlbum,
-	getCategories,
-	updateAlbum,
-	createPhoto,
-	deletePhoto,
-	setAlbumCover,
-	updatePhotoOrder,
-	getPhotoById
+getAlbumById,
+getAlbumBySlug,
+getPhotosByAlbum,
+getTagsByAlbum,
+updateAlbum,
+createPhoto,
+deletePhoto,
+setAlbumCover,
+updatePhotoOrder,
+getPhotoById,
+createTag,
+deleteTag,
+addTagToPhoto,
+removeTagFromPhoto
 } from '$lib/server/db';
-import { processAndSaveImage, deleteImageFiles } from '$lib/server/storage';
+import { processAndSaveImage, deleteImageFiles, renameAlbumDirectory } from '$lib/server/storage';
 import { slugify } from '$lib/utils';
 import { error, fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const albumId = parseInt(params.id);
-	if (isNaN(albumId)) {
-		throw error(404, 'Album not found');
-	}
+const albumId = parseInt(params.id);
+if (isNaN(albumId)) {
+throw error(404, 'Album not found');
+}
 
-	const album = getAlbumById(albumId);
-	if (!album) {
-		throw error(404, 'Album not found');
-	}
+const album = getAlbumById(albumId);
+if (!album) {
+throw error(404, 'Album not found');
+}
 
-	const photos = getPhotosByAlbum(albumId);
-	const categories = getCategories();
+const photos = getPhotosByAlbum(albumId);
+const tags = getTagsByAlbum(albumId);
 
-	return {
-		album,
-		photos,
-		categories
-	};
+return {
+album,
+photos,
+tags
+};
 };
 
 export const actions: Actions = {
-	updateAlbum: async ({ params, request }) => {
-		const albumId = parseInt(params.id);
-		if (isNaN(albumId)) {
-			return fail(400, { error: 'Invalid album ID' });
-		}
+updateAlbum: async ({ params, request }) => {
+const albumId = parseInt(params.id);
+if (isNaN(albumId)) {
+return fail(400, { error: 'Invalid album ID' });
+}
 
-		const data = await request.formData();
-		const title = data.get('title')?.toString() || '';
-		const description = data.get('description')?.toString() || '';
-		const categoryId = data.get('categoryId')?.toString() || '';
-		const isPublic = data.get('isPublic') === 'on';
-		const coverPhotoId = data.get('coverPhotoId')?.toString() || '';
+const album = getAlbumById(albumId);
+if (!album) {
+return fail(404, { error: 'Album not found' });
+}
 
-		if (!title.trim()) {
-			return fail(400, { error: 'Title is required' });
-		}
+const data = await request.formData();
+const title = data.get('title')?.toString() || '';
+const slugInput = data.get('slug')?.toString() || '';
+const description = data.get('description')?.toString() || '';
+const isPublic = data.get('isPublic') === 'on';
+const showOnHome = data.get('showOnHome') === 'on';
+const password = data.get('password')?.toString() || '';
+const layout = (data.get('layout')?.toString() || 'grid') as 'grid' | 'masonry';
+const coverPhotoId = data.get('coverPhotoId')?.toString() || '';
 
-		const slug = slugify(title);
-		if (!slug) {
-			return fail(400, { error: 'Invalid title' });
-		}
+if (!title.trim()) {
+return fail(400, { error: 'Title is required' });
+}
 
-		try {
-			updateAlbum(
-				albumId,
-				title.trim(),
-				slug,
-				description.trim() || null,
-				categoryId ? parseInt(categoryId) : null,
-				isPublic,
-				coverPhotoId ? parseInt(coverPhotoId) : null
-			);
-			return { success: true, message: 'Album updated' };
-		} catch {
-			return fail(500, { error: 'Failed to update album' });
-		}
-	},
+const newSlug = slugInput.trim() || slugify(title);
+if (!newSlug) {
+return fail(400, { error: 'Invalid title/slug' });
+}
 
-	uploadPhotos: async ({ params, request }) => {
-		const albumId = parseInt(params.id);
-		if (isNaN(albumId)) {
-			return fail(400, { error: 'Invalid album ID' });
-		}
+// Check if slug already exists for a different album
+if (newSlug !== album.slug) {
+const existing = getAlbumBySlug(newSlug);
+if (existing && existing.id !== albumId) {
+return fail(400, { error: 'An album with this slug already exists' });
+}
+// Rename the album directory if slug changed
+await renameAlbumDirectory(album.slug, newSlug);
+}
 
-		const data = await request.formData();
-		const files = data.getAll('photos') as File[];
+try {
+updateAlbum(
+albumId,
+title.trim(),
+newSlug,
+description.trim() || null,
+isPublic,
+showOnHome,
+password || null,
+layout,
+coverPhotoId ? parseInt(coverPhotoId) : null
+);
+return { success: true, message: 'Album updated' };
+} catch {
+return fail(500, { error: 'Failed to update album' });
+}
+},
 
-		if (files.length === 0 || (files.length === 1 && files[0].size === 0)) {
-			return fail(400, { error: 'No files selected' });
-		}
+uploadPhotos: async ({ params, request }) => {
+const albumId = parseInt(params.id);
+if (isNaN(albumId)) {
+return fail(400, { error: 'Invalid album ID' });
+}
 
-		const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-		const maxSize = 50 * 1024 * 1024; // 50MB
+const album = getAlbumById(albumId);
+if (!album) {
+return fail(404, { error: 'Album not found' });
+}
 
-		let uploaded = 0;
-		let firstPhotoId: number | null = null;
+const data = await request.formData();
+const files = data.getAll('photos') as File[];
 
-		for (const file of files) {
-			if (!validTypes.includes(file.type)) {
-				continue;
-			}
-			if (file.size > maxSize) {
-				continue;
-			}
+if (files.length === 0 || (files.length === 1 && files[0].size === 0)) {
+return fail(400, { error: 'No files selected' });
+}
 
-			try {
-				const buffer = Buffer.from(await file.arrayBuffer());
-				const processed = await processAndSaveImage(buffer, file.name);
-				const photoId = createPhoto(
-					albumId,
-					processed.filename,
-					file.name,
-					processed.width,
-					processed.height,
-					processed.fileSize,
-					processed.mimeType
-				);
+const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const maxSize = 50 * 1024 * 1024; // 50MB
 
-				if (!firstPhotoId) {
-					firstPhotoId = photoId;
-				}
-				uploaded++;
-			} catch (e) {
-				console.error('Failed to process image:', e);
-			}
-		}
+let uploaded = 0;
+let firstPhotoId: number | null = null;
 
-		// Set cover photo if album doesn't have one
-		if (firstPhotoId) {
-			const album = getAlbumById(albumId);
-			if (album && !album.cover_photo_id) {
-				setAlbumCover(albumId, firstPhotoId);
-			}
-		}
+for (const file of files) {
+if (!validTypes.includes(file.type)) {
+continue;
+}
+if (file.size > maxSize) {
+continue;
+}
 
-		return { success: true, message: `${uploaded} photo(s) uploaded` };
-	},
+try {
+const buffer = Buffer.from(await file.arrayBuffer());
+const processed = await processAndSaveImage(buffer, file.name, album.slug);
+const photoId = createPhoto(
+albumId,
+processed.filename,
+file.name,
+processed.width,
+processed.height,
+processed.fileSize,
+processed.mimeType
+);
 
-	deletePhoto: async ({ request }) => {
-		const data = await request.formData();
-		const photoId = parseInt(data.get('photoId')?.toString() || '');
+if (!firstPhotoId) {
+firstPhotoId = photoId;
+}
+uploaded++;
+} catch (e) {
+console.error('Failed to process image:', e);
+}
+}
 
-		if (isNaN(photoId)) {
-			return fail(400, { error: 'Invalid photo ID' });
-		}
+// Set cover photo if album doesn't have one
+if (firstPhotoId) {
+const updatedAlbum = getAlbumById(albumId);
+if (updatedAlbum && !updatedAlbum.cover_photo_id) {
+setAlbumCover(albumId, firstPhotoId);
+}
+}
 
-		try {
-			const photo = getPhotoById(photoId);
+return { success: true, message: `${uploaded} photo(s) uploaded` };
+},
 
-			if (photo) {
-				await deleteImageFiles(photo.filename);
-				deletePhoto(photoId);
-			}
+deletePhoto: async ({ params, request }) => {
+const albumId = parseInt(params.id);
+const album = getAlbumById(albumId);
+if (!album) {
+return fail(404, { error: 'Album not found' });
+}
 
-			return { success: true };
-		} catch {
-			return fail(500, { error: 'Failed to delete photo' });
-		}
-	},
+const data = await request.formData();
+const photoId = parseInt(data.get('photoId')?.toString() || '');
 
-	setCover: async ({ params, request }) => {
-		const albumId = parseInt(params.id);
-		const data = await request.formData();
-		const photoId = parseInt(data.get('photoId')?.toString() || '');
+if (isNaN(photoId)) {
+return fail(400, { error: 'Invalid photo ID' });
+}
 
-		if (isNaN(albumId) || isNaN(photoId)) {
-			return fail(400, { error: 'Invalid IDs' });
-		}
+try {
+const photo = getPhotoById(photoId);
 
-		try {
-			setAlbumCover(albumId, photoId);
-			return { success: true, message: 'Cover photo updated' };
-		} catch {
-			return fail(500, { error: 'Failed to set cover photo' });
-		}
-	},
+if (photo) {
+await deleteImageFiles(photo.filename, album.slug);
+deletePhoto(photoId);
+}
 
-	reorderPhotos: async ({ request }) => {
-		const data = await request.formData();
-		const orderJson = data.get('order')?.toString();
+return { success: true };
+} catch {
+return fail(500, { error: 'Failed to delete photo' });
+}
+},
 
-		if (!orderJson) {
-			return fail(400, { error: 'Invalid order data' });
-		}
+setCover: async ({ params, request }) => {
+const albumId = parseInt(params.id);
+const data = await request.formData();
+const photoId = parseInt(data.get('photoId')?.toString() || '');
 
-		try {
-			const order = JSON.parse(orderJson) as { id: number; sort_order: number }[];
-			updatePhotoOrder(order);
-			return { success: true };
-		} catch {
-			return fail(500, { error: 'Failed to reorder photos' });
-		}
-	}
+if (isNaN(albumId) || isNaN(photoId)) {
+return fail(400, { error: 'Invalid IDs' });
+}
+
+try {
+setAlbumCover(albumId, photoId);
+return { success: true, message: 'Cover photo updated' };
+} catch {
+return fail(500, { error: 'Failed to set cover photo' });
+}
+},
+
+reorderPhotos: async ({ request }) => {
+const data = await request.formData();
+const orderJson = data.get('order')?.toString();
+
+if (!orderJson) {
+return fail(400, { error: 'Invalid order data' });
+}
+
+try {
+const order = JSON.parse(orderJson) as { id: number; sort_order: number }[];
+updatePhotoOrder(order);
+return { success: true };
+} catch {
+return fail(500, { error: 'Failed to reorder photos' });
+}
+},
+
+createTag: async ({ params, request }) => {
+const albumId = parseInt(params.id);
+if (isNaN(albumId)) {
+return fail(400, { error: 'Invalid album ID' });
+}
+
+const data = await request.formData();
+const name = data.get('name')?.toString() || '';
+
+if (!name.trim()) {
+return fail(400, { error: 'Tag name is required' });
+}
+
+try {
+const slug = slugify(name);
+createTag(albumId, name.trim(), slug);
+return { success: true };
+} catch {
+return fail(500, { error: 'Failed to create tag. It may already exist.' });
+}
+},
+
+deleteTag: async ({ request }) => {
+const data = await request.formData();
+const tagId = parseInt(data.get('tagId')?.toString() || '');
+
+if (isNaN(tagId)) {
+return fail(400, { error: 'Invalid tag ID' });
+}
+
+try {
+deleteTag(tagId);
+return { success: true };
+} catch {
+return fail(500, { error: 'Failed to delete tag' });
+}
+},
+
+addTagToPhoto: async ({ request }) => {
+const data = await request.formData();
+const photoId = parseInt(data.get('photoId')?.toString() || '');
+const tagId = parseInt(data.get('tagId')?.toString() || '');
+
+if (isNaN(photoId) || isNaN(tagId)) {
+return fail(400, { error: 'Invalid IDs' });
+}
+
+try {
+addTagToPhoto(photoId, tagId);
+return { success: true };
+} catch {
+return fail(500, { error: 'Failed to add tag' });
+}
+},
+
+removeTagFromPhoto: async ({ request }) => {
+const data = await request.formData();
+const photoId = parseInt(data.get('photoId')?.toString() || '');
+const tagId = parseInt(data.get('tagId')?.toString() || '');
+
+if (isNaN(photoId) || isNaN(tagId)) {
+return fail(400, { error: 'Invalid IDs' });
+}
+
+try {
+removeTagFromPhoto(photoId, tagId);
+return { success: true };
+} catch {
+return fail(500, { error: 'Failed to remove tag' });
+}
+}
 };

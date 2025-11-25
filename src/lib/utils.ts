@@ -1,3 +1,5 @@
+import { marked } from 'marked';
+
 export function slugify(text: string): string {
 	return text
 		.toLowerCase()
@@ -22,4 +24,9 @@ export function formatDate(dateString: string): string {
 		month: 'long',
 		day: 'numeric'
 	});
+}
+
+export function renderMarkdown(text: string | null): string {
+	if (!text) return '';
+	return marked(text, { breaks: true, gfm: true }) as string;
 }

@@ -1,157 +1,141 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { slugify } from '$lib/utils';
+import { enhance } from '$app/forms';
+import { slugify } from '$lib/utils';
 
-	let { data, form } = $props();
-	let title = $state('');
-	let loading = $state(false);
+let { form } = $props();
+let title = $state(form?.title || '');
+let customSlug = $state(form?.slug || '');
+let loading = $state(false);
 
-	let slug = $derived(slugify(title));
+let autoSlug = $derived(slugify(title));
+let displaySlug = $derived(customSlug || autoSlug);
 </script>
 
 <svelte:head>
-	<title>New Album - Admin</title>
+<title>New Album - Admin</title>
 </svelte:head>
 
-<div class="page">
-	<div class="page-header">
-		<a href="/admin" class="back-btn" aria-label="Back to dashboard">
-			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="15 18 9 12 15 6"></polyline>
-			</svg>
-		</a>
-		<h1>New Album</h1>
-	</div>
-
-	{#if form?.error}
-		<div class="error-message">{form.error}</div>
-	{/if}
-
-	<div class="form-card">
-		<form
-			method="POST"
-			use:enhance={() => {
-				loading = true;
-				return async ({ update }) => {
-					loading = false;
-					await update();
-				};
-			}}
-		>
-			<div class="form-group">
-				<label for="title" class="form-label">Title</label>
-				<input
-					type="text"
-					id="title"
-					name="title"
-					class="form-input"
-					bind:value={title}
-					required
-				/>
-				{#if slug}
-					<p class="form-hint">URL: /album/{slug}</p>
-				{/if}
-			</div>
-
-			<div class="form-group">
-				<label for="description" class="form-label">Description (optional)</label>
-				<textarea
-					id="description"
-					name="description"
-					class="form-textarea"
-					rows="3"
-				></textarea>
-			</div>
-
-			<div class="form-group">
-				<label for="categoryId" class="form-label">Category (optional)</label>
-				<select id="categoryId" name="categoryId" class="form-select">
-					<option value="">No category</option>
-					{#each data.categories as category}
-						<option value={category.id}>{category.name}</option>
-					{/each}
-				</select>
-			</div>
-
-			<div class="form-group">
-				<label class="form-checkbox">
-					<input type="checkbox" name="isPublic" checked />
-					<span>Public album</span>
-				</label>
-				<p class="form-hint">Private albums are only visible to admins</p>
-			</div>
-
-			<div class="form-actions">
-				<a href="/admin" class="btn btn-secondary">Cancel</a>
-				<button type="submit" class="btn btn-primary" disabled={loading}>
-					{loading ? 'Creating...' : 'Create Album'}
-				</button>
-			</div>
-		</form>
-	</div>
+<div class="max-w-2xl">
+<div class="flex items-center gap-3 mb-8">
+<a href="/admin" class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors" aria-label="Back to dashboard">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<polyline points="15 18 9 12 15 6"></polyline>
+</svg>
+</a>
+<h1 class="text-2xl font-bold">New Album</h1>
 </div>
 
-<style>
-	.page {
-		max-width: 600px;
-	}
+{#if form?.error}
+<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
+{form.error}
+</div>
+{/if}
 
-	.page-header {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 2rem;
-	}
+<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
+<form
+method="POST"
+use:enhance={() => {
+loading = true;
+return async ({ update }) => {
+loading = false;
+await update();
+};
+}}
+>
+<div class="space-y-5">
+<div>
+<label for="title" class="block text-sm font-medium mb-1.5">Title</label>
+<input
+type="text"
+id="title"
+name="title"
+class="form-input"
+bind:value={title}
+required
+/>
+</div>
 
-	.page-header h1 {
-		font-size: 1.5rem;
-		font-weight: 700;
-	}
+<div>
+<label for="slug" class="block text-sm font-medium mb-1.5">
+URL Slug
+<span class="text-gray-500 font-normal">(optional - auto-generated from title)</span>
+</label>
+<div class="flex items-center gap-2">
+<span class="text-gray-500 text-sm">/album/</span>
+<input
+type="text"
+id="slug"
+name="slug"
+class="form-input flex-1"
+bind:value={customSlug}
+placeholder={autoSlug}
+/>
+</div>
+{#if displaySlug}
+<p class="text-xs text-gray-500 mt-1">Full URL: /album/{displaySlug}</p>
+{/if}
+</div>
 
-	.back-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.5rem;
-		border-radius: 0.375rem;
-		color: var(--color-text-secondary);
-		transition: all 0.15s ease;
-	}
+<div>
+<label for="description" class="block text-sm font-medium mb-1.5">
+Description
+<span class="text-gray-500 font-normal">(supports markdown)</span>
+</label>
+<textarea
+id="description"
+name="description"
+class="form-textarea"
+rows="4"
+placeholder="Enter album description... You can use **bold**, *italic*, and other markdown formatting."
+>{form?.description || ''}</textarea>
+</div>
 
-	.back-btn:hover {
-		color: var(--color-text);
-		background-color: var(--color-bg-secondary);
-	}
+<div>
+<label for="layout" class="block text-sm font-medium mb-1.5">Gallery Layout</label>
+<select id="layout" name="layout" class="form-select">
+<option value="grid">Grid</option>
+<option value="masonry">Masonry</option>
+</select>
+</div>
 
-	.error-message {
-		background-color: rgba(239, 68, 68, 0.1);
-		border: 1px solid var(--color-error);
-		color: var(--color-error);
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		font-size: 0.875rem;
-		margin-bottom: 1.5rem;
-	}
+<div class="flex flex-col gap-3">
+<label class="flex items-center gap-2 cursor-pointer">
+<input type="checkbox" name="isPublic" checked class="w-4 h-4 accent-blue-500" />
+<span class="text-sm">Public album</span>
+</label>
+<p class="text-xs text-gray-500 ml-6">Private albums are only visible to admins</p>
+</div>
 
-	.form-card {
-		background-color: var(--color-bg-secondary);
-		border: 1px solid var(--color-border);
-		border-radius: 0.75rem;
-		padding: 1.5rem;
-	}
+<div class="flex flex-col gap-3">
+<label class="flex items-center gap-2 cursor-pointer">
+<input type="checkbox" name="showOnHome" checked class="w-4 h-4 accent-blue-500" />
+<span class="text-sm">Show on homepage</span>
+</label>
+<p class="text-xs text-gray-500 ml-6">Hidden albums can still be accessed via direct link</p>
+</div>
 
-	.form-hint {
-		font-size: 0.75rem;
-		color: var(--color-text-muted);
-		margin-top: 0.25rem;
-	}
+<div>
+<label for="password" class="block text-sm font-medium mb-1.5">
+Password Protection
+<span class="text-gray-500 font-normal">(optional)</span>
+</label>
+<input
+type="text"
+id="password"
+name="password"
+class="form-input"
+placeholder="Leave empty for no password"
+/>
+<p class="text-xs text-gray-500 mt-1">Visitors will need to enter this password to view the album</p>
+</div>
+</div>
 
-	.form-actions {
-		display: flex;
-		gap: 0.75rem;
-		justify-content: flex-end;
-		margin-top: 1.5rem;
-		padding-top: 1.5rem;
-		border-top: 1px solid var(--color-border);
-	}
-</style>
+<div class="flex gap-3 justify-end mt-8 pt-6 border-t border-[var(--color-border)]">
+<a href="/admin" class="btn btn-secondary">Cancel</a>
+<button type="submit" class="btn btn-primary" disabled={loading}>
+{loading ? 'Creating...' : 'Create Album'}
+</button>
+</div>
+</form>
+</div>
+</div>

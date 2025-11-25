@@ -33,7 +33,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 		// Add photos to archive
 		for (const photo of photos) {
-			const filePath = getImagePath(photo.filename, 'original');
+			const filePath = getImagePath(photo.filename, 'original', album.slug);
 			archive.append(createReadStream(filePath), { name: photo.original_filename });
 		}
 

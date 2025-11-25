@@ -2,15 +2,20 @@ import type { RequestHandler } from './$types';
 import { getImageBuffer } from '$lib/server/storage';
 import { error } from '@sveltejs/kit';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
 	const { filename, size } = params;
+	const albumSlug = url.searchParams.get('album');
+
+	if (!albumSlug) {
+		throw error(400, 'Album slug required');
+	}
 
 	if (!['original', 'medium', 'thumbnail'].includes(size)) {
 		throw error(400, 'Invalid size');
 	}
 
 	try {
-		const buffer = await getImageBuffer(filename, size as 'original' | 'medium' | 'thumbnail');
+		const buffer = await getImageBuffer(filename, size as 'original' | 'medium' | 'thumbnail', albumSlug);
 
 		// Determine content type from filename extension
 		const ext = filename.split('.').pop()?.toLowerCase();

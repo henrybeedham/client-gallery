@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { getPhotosByIds } from '$lib/server/db';
+import { getPhotosByIds, getAlbumById } from '$lib/server/db';
 import { getImagePath } from '$lib/server/storage';
 import { error } from '@sveltejs/kit';
 import archiver from 'archiver';
@@ -7,8 +7,14 @@ import { createReadStream } from 'fs';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const idsParam = url.searchParams.get('ids');
+	const albumSlug = url.searchParams.get('album');
+	
 	if (!idsParam) {
 		throw error(400, 'Missing photo IDs');
+	}
+	
+	if (!albumSlug) {
+		throw error(400, 'Missing album slug');
 	}
 
 	const ids = idsParam.split(',').map((id) => parseInt(id)).filter((id) => !isNaN(id));
@@ -33,7 +39,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		// Add photos to archive
 		for (const photo of photos) {
-			const filePath = getImagePath(photo.filename, 'original');
+			const filePath = getImagePath(photo.filename, 'original', albumSlug);
 			archive.append(createReadStream(filePath), { name: photo.original_filename });
 		}
 
