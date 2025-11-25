@@ -241,6 +241,30 @@ transform: translateZ(0);
 z-index: 10;
 }
 
+/* Masonry flex layout - left to right ordering */
+.masonry-flex-container {
+align-items: flex-start;
+}
+
+.masonry-flex-item {
+flex: 0 0 calc(50% - 0.375rem);
+max-width: calc(50% - 0.375rem);
+}
+
+@media (min-width: 640px) {
+.masonry-flex-item {
+  flex: 0 0 calc(33.333% - 0.5rem);
+  max-width: calc(33.333% - 0.5rem);
+}
+}
+
+@media (min-width: 1024px) {
+.masonry-flex-item {
+  flex: 0 0 calc(25% - 0.5625rem);
+  max-width: calc(25% - 0.5625rem);
+}
+}
+
 /* Animation for advanced settings */
 @keyframes fade-in {
 from { opacity: 0; transform: translateY(-4px); }

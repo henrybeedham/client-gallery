@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getAlbumBySlug, getPhotosByAlbum, getTagsByAlbum, recordAnalyticsEvent } from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 
 export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const album = getAlbumBySlug(params.slug);
@@ -15,6 +16,10 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		? Math.max(0, new Date(album.expires_at).getTime() - Date.now())
 		: null;
 
+	// Get contact details from environment variables
+	const contactEmail = env.GALLERY_CONTACT_EMAIL || null;
+	const contactPhone = env.GALLERY_CONTACT_PHONE || null;
+
 	if (isExpired) {
 		return {
 			album,
@@ -23,7 +28,10 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			requiresPassword: false,
 			isExpired: true,
 			expiresIn: null,
-			selectedTag: undefined
+			selectedTag: undefined,
+			contactEmail,
+			contactPhone,
+			allPhotoIds: []
 		};
 	}
 
@@ -37,7 +45,10 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				tags: [],
 				requiresPassword: true,
 				isExpired: false,
-				expiresIn
+				expiresIn,
+				contactEmail,
+				contactPhone,
+				allPhotoIds: []
 			};
 		}
 	}
@@ -46,8 +57,12 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	recordAnalyticsEvent(album.id, 'page_view');
 
 	const tagSlug = url.searchParams.get('tag') || undefined;
-	const photos = getPhotosByAlbum(album.id, tagSlug);
+	const sortOrder = album.sort_order || 'manual';
+	const photos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'manual' | 'newest' | 'oldest' | 'random');
 	const tags = getTagsByAlbum(album.id);
+	
+	// Get all photo IDs for select all functionality
+	const allPhotoIds = photos.map(p => p.id);
 
 	return {
 		album,
@@ -56,7 +71,10 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		requiresPassword: false,
 		isExpired: false,
 		expiresIn,
-		selectedTag: tagSlug
+		selectedTag: tagSlug,
+		contactEmail,
+		contactPhone,
+		allPhotoIds
 	};
 };
 

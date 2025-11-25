@@ -17,10 +17,9 @@ export const actions: Actions = {
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
 		const layout = (data.get('layout')?.toString() || 'grid') as 'grid' | 'masonry';
+		const sortOrder = (data.get('sortOrder')?.toString() || 'manual') as 'manual' | 'newest' | 'oldest' | 'random';
 		const albumDate = data.get('albumDate')?.toString() || null;
 		const expiresAt = data.get('expiresAt')?.toString() || null;
-		const contactEmail = data.get('contactEmail')?.toString() || null;
-		const contactPhone = data.get('contactPhone')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
 
 		if (!title.trim()) {
@@ -52,10 +51,9 @@ export const actions: Actions = {
 				showOnHome,
 				password || null,
 				layout,
+				sortOrder,
 				albumDate,
 				expiresAt,
-				contactEmail,
-				contactPhone,
 				primaryColor
 			);
 			redirect(303, `/admin/albums/${albumId}`);

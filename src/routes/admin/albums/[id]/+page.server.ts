@@ -15,7 +15,8 @@ import {
 	deleteTag,
 	addTagToPhoto,
 	removeTagFromPhoto,
-	getAlbumAnalytics
+	getAlbumAnalytics,
+	getPhotoDownloadCounts
 } from '$lib/server/db';
 import { processAndSaveImage, deleteImageFiles, renameAlbumDirectory } from '$lib/server/storage';
 import { slugify } from '$lib/utils';
@@ -36,13 +37,15 @@ export const load: PageServerLoad = async ({ params }) => {
 	const tags = getTagsByAlbum(albumId);
 	const photoTags = getPhotoTagRelationsByAlbum(albumId);
 	const analytics = getAlbumAnalytics(albumId);
+	const photoDownloads = getPhotoDownloadCounts(albumId);
 
 	return {
 		album,
 		photos,
 		tags,
 		photoTags,
-		analytics
+		analytics,
+		photoDownloads: Object.fromEntries(photoDownloads)
 	};
 };
 
@@ -66,11 +69,12 @@ export const actions: Actions = {
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
 		const layout = (data.get('layout')?.toString() || 'grid') as 'grid' | 'masonry';
+		const sortOrder = (data.get('sortOrder')?.toString() || 'manual') as 'manual' | 'newest' | 'oldest' | 'random';
 		const albumDate = data.get('albumDate')?.toString() || null;
 		const expiresAt = data.get('expiresAt')?.toString() || null;
-		const contactEmail = data.get('contactEmail')?.toString() || null;
-		const contactPhone = data.get('contactPhone')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
+		const backgroundPhotoIdStr = data.get('backgroundPhotoId')?.toString();
+		const backgroundPhotoId = backgroundPhotoIdStr ? parseInt(backgroundPhotoIdStr) : null;
 
 		if (!title.trim()) {
 			return fail(400, { error: 'Title is required' });
@@ -101,11 +105,11 @@ export const actions: Actions = {
 				showOnHome,
 				password || null,
 				layout,
+				sortOrder,
 				albumDate || null,
 				expiresAt || null,
-				contactEmail || null,
-				contactPhone || null,
-				primaryColor
+				primaryColor,
+				backgroundPhotoId
 			);
 			return { success: true, message: 'Album updated' };
 		} catch {

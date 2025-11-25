@@ -10,32 +10,24 @@
 	let isDownloading = $state(false);
 	let downloadProgress = $state(0);
 	let passwordInput = $state('');
-	let lastSelectedIndex: number | null = $state(null);
 
 	// Touch swipe state for lightbox
 	let touchStartX = $state(0);
 	let touchEndX = $state(0);
 	const minSwipeDistance = 50;
 
-	// Handle shift+click selection
+	// Check if layout is masonry - disable shift selection for masonry
+	const isMasonry = $derived(data.album.layout === 'masonry');
+
+	// Handle photo click - masonry only allows individual selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
 			openLightbox(index);
 			return;
 		}
 
-		if (event.shiftKey && lastSelectedIndex !== null) {
-			// Shift+click: select range
-			const start = Math.min(lastSelectedIndex, index);
-			const end = Math.max(lastSelectedIndex, index);
-			const rangeIds = data.photos.slice(start, end + 1).map((p) => p.id);
-			rangeIds.forEach((id) => selectedPhotos.add(id));
-			selectedPhotos = new Set(selectedPhotos);
-		} else {
-			// Normal click: toggle selection
-			toggleSelection(photoId);
-			lastSelectedIndex = index;
-		}
+		// Just toggle selection, no shift-select for simplicity on masonry
+		toggleSelection(photoId);
 	}
 
 	function toggleSelection(photoId: number) {
@@ -48,20 +40,19 @@
 	}
 
 	function selectAll() {
-		selectedPhotos = new Set(data.photos.map((p) => p.id));
+		// Use allPhotoIds from server to ensure all photos are selected even with lazy loading
+		selectedPhotos = new Set(data.allPhotoIds);
 	}
 
 	function clearSelection() {
 		selectedPhotos = new Set();
 		isSelecting = false;
-		lastSelectedIndex = null;
 	}
 
 	function toggleSelectMode() {
 		isSelecting = !isSelecting;
 		if (!isSelecting) {
 			selectedPhotos = new Set();
-			lastSelectedIndex = null;
 		}
 	}
 
@@ -192,8 +183,8 @@
 	}
 
 	// Track single photo download
-	function trackPhotoDownload() {
-		fetch(`/api/download/track-photo/${data.album.id}`, { method: 'POST' }).catch((e) =>
+	function trackPhotoDownload(photoId: number) {
+		fetch(`/api/download/track-photo/${data.album.id}/${photoId}`, { method: 'POST' }).catch((e) =>
 			console.warn('Analytics tracking failed:', e)
 		);
 	}
@@ -263,30 +254,30 @@
 			<h1 class="text-2xl font-bold mb-2">{data.album.title}</h1>
 			<p class="text-gray-400 mb-6">This gallery has expired and is no longer available.</p>
 			
-			{#if data.album.contact_email || data.album.contact_phone}
+			{#if data.contactEmail || data.contactPhone}
 				<div class="border-t border-[var(--color-border)] pt-6">
 					<p class="text-sm text-gray-400 mb-4">If you need access, please contact:</p>
-					{#if data.album.contact_email}
+					{#if data.contactEmail}
 						<a
-							href="mailto:{data.album.contact_email}"
+							href="mailto:{data.contactEmail}"
 							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 mb-2"
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
 								<polyline points="22,6 12,13 2,6"></polyline>
 							</svg>
-							{data.album.contact_email}
+							{data.contactEmail}
 						</a>
 					{/if}
-					{#if data.album.contact_phone}
+					{#if data.contactPhone}
 						<a
-							href="tel:{data.album.contact_phone}"
+							href="tel:{data.contactPhone}"
 							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300"
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
 							</svg>
-							{data.album.contact_phone}
+							{data.contactPhone}
 						</a>
 					{/if}
 				</div>
@@ -323,19 +314,33 @@
 		</div>
 	</div>
 {:else}
-	<div class="min-h-screen flex flex-col">
+	<div class="min-h-screen flex flex-col relative">
+		<!-- Background image if set -->
+		{#if data.album.background_filename}
+			<div 
+				class="fixed inset-0 z-0"
+				style="background-image: url('/api/photos/{data.album.slug}/{data.album.background_filename}/medium'); background-size: cover; background-position: center;"
+			>
+				<div class="absolute inset-0 backdrop-blur-2xl bg-[var(--color-bg)]/85"></div>
+			</div>
+		{/if}
+
 		<header
 			class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50"
 		>
 			<div class="container">
 				<div class="flex items-center justify-between py-4 gap-4">
 					<div class="min-w-0">
-						<h1 class="text-lg font-semibold">{data.album.title}</h1>
-						<div class="flex items-center gap-3 text-xs text-gray-500">
-							<span>{data.photos.length} photos</span>
+						<div class="flex items-center gap-3">
+							<h1 class="text-lg font-semibold">{data.album.title}</h1>
 							{#if data.album.album_date}
-								<span>• {new Date(data.album.album_date).toLocaleDateString()}</span>
+								<span class="text-sm font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20" style="color: var(--gallery-primary);">
+									{new Date(data.album.album_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+								</span>
 							{/if}
+						</div>
+						<div class="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+							<span>{data.photos.length} photos</span>
 							{#if data.expiresIn && data.expiresIn > 0}
 								<span class="text-amber-500">• Expires in {formatTimeRemaining(data.expiresIn)}</span>
 							{/if}
@@ -386,7 +391,7 @@
 		</header>
 
 		{#if isSelecting}
-			<div class="bg-blue-500 text-white py-3">
+			<div class="bg-blue-500 text-white py-3 relative z-10">
 				<div class="container flex items-center justify-between">
 					<span class="text-sm">{selectedPhotos.size} selected</span>
 					<div class="flex gap-4">
@@ -402,7 +407,7 @@
 			</div>
 		{/if}
 
-		<main class="flex-1 py-6">
+		<main class="flex-1 py-6 relative z-10">
 			<div class="container">
 				{#if data.album.description}
 					<div class="prose prose-invert prose-sm max-w-none mb-6 text-gray-300">
@@ -455,24 +460,19 @@
 						<p>Check back soon for new photos!</p>
 					</div>
 				{:else}
-					{#if isSelecting}
-						<p class="text-xs text-gray-500 mb-3">
-							<span class="font-medium">Tip:</span> Hold Shift and click to select a range of photos
-						</p>
-					{/if}
 					<div
 						class={data.album.layout === 'masonry'
-							? 'columns-2 sm:columns-3 lg:columns-4 gap-4 masonry-container'
+							? 'flex flex-wrap gap-3 masonry-flex-container'
 							: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'}
 					>
 						{#each data.photos as photo, index}
 							<button
 								class="group relative {data.album.layout === 'masonry'
-									? 'mb-4 break-inside-avoid block masonry-item'
-									: ''} w-full bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-shadow duration-200 {selectedPhotos.has(
+									? 'masonry-flex-item'
+									: ''} bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 {selectedPhotos.has(
 									photo.id
 								)
-									? 'ring-4 scale-[0.97]'
+									? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)]'
 									: ''}"
 								style={selectedPhotos.has(photo.id) ? `--tw-ring-color: var(--gallery-primary);` : ''}
 								onclick={(e) => handlePhotoClick(photo.id, index, e)}
@@ -482,7 +482,7 @@
 									alt={photo.original_filename}
 									loading="lazy"
 									class="w-full {data.album.layout === 'masonry'
-										? 'h-auto'
+										? 'h-auto block'
 										: 'aspect-square object-cover'}"
 								/>
 								{#if isSelecting}
@@ -623,7 +623,9 @@
 				style="background-color: var(--gallery-primary); color: white;"
 				onclick={(e) => {
 					e.stopPropagation();
-					trackPhotoDownload();
+					if (lightboxIndex !== null) {
+						trackPhotoDownload(data.photos[lightboxIndex].id);
+					}
 				}}
 			>
 				Download Photo

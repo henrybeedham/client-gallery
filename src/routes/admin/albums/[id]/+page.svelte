@@ -12,11 +12,11 @@
 	let showOnHome = $state(data.album.show_on_home === 1);
 	let password = $state(data.album.password || '');
 	let layout = $state(data.album.layout || 'grid');
+	let sortOrder = $state(data.album.sort_order || 'manual');
 	let albumDate = $state(data.album.album_date || '');
 	let expiresAt = $state(data.album.expires_at || '');
-	let contactEmail = $state(data.album.contact_email || '');
-	let contactPhone = $state(data.album.contact_phone || '');
 	let primaryColor = $state(data.album.primary_color || '#3b82f6');
+	let backgroundPhotoId = $state<number | null>(data.album.background_photo_id);
 	let showAdvancedSettings = $state(false);
 
 	let autoSlug = $derived(slugify(title));
@@ -30,6 +30,11 @@
 	let lastSelectedIndex: number | null = $state(null);
 
 	let fileInput: HTMLInputElement;
+
+	// Get download count for a photo
+	function getPhotoDownloads(photoId: number): number {
+		return data.photoDownloads?.[photoId] || 0;
+	}
 
 	// Get tags for a specific photo
 	function getPhotoTags(photoId: number): number[] {
@@ -467,7 +472,7 @@
 												<path
 													d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
 												></path>
-											</svg>
+										</svg>
 										</button>
 									{/if}
 								</div>
@@ -476,7 +481,12 @@
 								<p class="truncate text-gray-300" title={photo.original_filename}>
 									{photo.original_filename}
 								</p>
-								<span class="text-gray-500">{formatFileSize(photo.file_size || 0)}</span>
+								<div class="flex items-center gap-2 text-gray-500">
+									<span>{formatFileSize(photo.file_size || 0)}</span>
+									{#if getPhotoDownloads(photo.id) > 0}
+										<span class="text-green-400" title="Downloads">↓{getPhotoDownloads(photo.id)}</span>
+									{/if}
+								</div>
 								<div>
 									{#if getPhotoTags(photo.id).length > 0}
 										{#each getPhotoTags(photo.id) as tagId}
@@ -589,6 +599,16 @@
 						</div>
 
 						<div>
+							<label for="sortOrder" class="block text-sm font-medium mb-1.5">Photo Sort Order</label>
+							<select id="sortOrder" name="sortOrder" class="form-select" bind:value={sortOrder}>
+								<option value="manual">Manual (drag to reorder)</option>
+								<option value="newest">Newest first</option>
+								<option value="oldest">Oldest first</option>
+								<option value="random">Random</option>
+							</select>
+						</div>
+
+						<div>
 							<label for="albumDate" class="block text-sm font-medium mb-1.5">
 								Album Date
 								<span class="text-gray-500 font-normal">(optional)</span>
@@ -601,6 +621,16 @@
 								bind:value={albumDate}
 							/>
 						</div>
+
+						<!-- Hidden inputs to preserve advanced settings values when collapsed -->
+						{#if !showAdvancedSettings}
+							<input type="hidden" name="isPublic" value={isPublic ? 'on' : ''} />
+							<input type="hidden" name="showOnHome" value={showOnHome ? 'on' : ''} />
+							<input type="hidden" name="password" value={password} />
+							<input type="hidden" name="expiresAt" value={expiresAt} />
+							<input type="hidden" name="primaryColor" value={primaryColor} />
+							<input type="hidden" name="backgroundPhotoId" value={backgroundPhotoId || ''} />
+						{/if}
 
 						<!-- Advanced Settings Toggle -->
 						<button
@@ -684,36 +714,6 @@
 								</div>
 
 								<div>
-									<label for="contactEmail" class="block text-sm font-medium mb-1.5">
-										Contact Email
-										<span class="text-gray-500 font-normal">(shown on expired page)</span>
-									</label>
-									<input
-										type="email"
-										id="contactEmail"
-										name="contactEmail"
-										class="form-input"
-										bind:value={contactEmail}
-										placeholder="contact@example.com"
-									/>
-								</div>
-
-								<div>
-									<label for="contactPhone" class="block text-sm font-medium mb-1.5">
-										Contact Phone
-										<span class="text-gray-500 font-normal">(shown on expired page)</span>
-									</label>
-									<input
-										type="tel"
-										id="contactPhone"
-										name="contactPhone"
-										class="form-input"
-										bind:value={contactPhone}
-										placeholder="+1 234 567 8900"
-									/>
-								</div>
-
-								<div>
 									<label for="primaryColor" class="block text-sm font-medium mb-1.5">
 										Gallery Accent Color
 									</label>
@@ -732,6 +732,27 @@
 											placeholder="#3b82f6"
 										/>
 									</div>
+								</div>
+
+								<div>
+									<label for="backgroundPhotoId" class="block text-sm font-medium mb-1.5">
+										Background Photo
+										<span class="text-gray-500 font-normal">(optional)</span>
+									</label>
+									<select
+										id="backgroundPhotoId"
+										name="backgroundPhotoId"
+										class="form-select"
+										bind:value={backgroundPhotoId}
+									>
+										<option value="">None</option>
+										{#each data.photos as photo}
+											<option value={photo.id}>{photo.original_filename}</option>
+										{/each}
+									</select>
+									<p class="text-xs text-gray-500 mt-1">
+										Shows as a frosted translucent background on the gallery page
+									</p>
 								</div>
 							</div>
 						{/if}

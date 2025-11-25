@@ -16,14 +16,14 @@ db.exec(`
     slug TEXT NOT NULL UNIQUE,
     description TEXT,
     cover_photo_id INTEGER,
+    background_photo_id INTEGER,
     is_public INTEGER DEFAULT 1,
     show_on_home INTEGER DEFAULT 1,
     password TEXT,
     layout TEXT DEFAULT 'grid',
+    sort_order TEXT DEFAULT 'manual',
     album_date TEXT,
     expires_at TEXT,
-    contact_email TEXT,
-    contact_phone TEXT,
     primary_color TEXT DEFAULT '#3b82f6',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -107,17 +107,17 @@ try {
 	/* Column may already exist */
 }
 try {
-	db.exec(`ALTER TABLE albums ADD COLUMN contact_email TEXT`);
-} catch {
-	/* Column may already exist */
-}
-try {
-	db.exec(`ALTER TABLE albums ADD COLUMN contact_phone TEXT`);
-} catch {
-	/* Column may already exist */
-}
-try {
 	db.exec(`ALTER TABLE albums ADD COLUMN primary_color TEXT DEFAULT '#3b82f6'`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN background_photo_id INTEGER`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN sort_order TEXT DEFAULT 'manual'`);
 } catch {
 	/* Column may already exist */
 }
@@ -154,19 +154,20 @@ export interface Album {
 	slug: string;
 	description: string | null;
 	cover_photo_id: number | null;
+	background_photo_id: number | null;
 	is_public: number;
 	show_on_home: number;
 	password: string | null;
 	layout: 'grid' | 'masonry';
+	sort_order: 'manual' | 'newest' | 'oldest' | 'random';
 	album_date: string | null;
 	expires_at: string | null;
-	contact_email: string | null;
-	contact_phone: string | null;
 	primary_color: string;
 	created_at: string;
 	updated_at: string;
 	photo_count?: number;
 	cover_filename?: string;
+	background_filename?: string;
 }
 
 export interface Photo {
@@ -222,7 +223,8 @@ export function getAlbumBySlug(slug: string): Album | undefined {
     SELECT 
       a.*,
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
-      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename,
+      (SELECT filename FROM photos WHERE id = a.background_photo_id) as background_filename
     FROM albums a
     WHERE a.slug = ?
   `
@@ -237,7 +239,8 @@ export function getAlbumById(id: number): Album | undefined {
     SELECT 
       a.*,
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
-      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename,
+      (SELECT filename FROM photos WHERE id = a.background_photo_id) as background_filename
     FROM albums a
     WHERE a.id = ?
   `
@@ -253,15 +256,14 @@ export function createAlbum(
 	showOnHome: boolean,
 	password: string | null,
 	layout: 'grid' | 'masonry',
+	sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual',
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
-	contactEmail: string | null = null,
-	contactPhone: string | null = null,
 	primaryColor: string = '#3b82f6'
 ): number {
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout, album_date, expires_at, contact_email, contact_phone, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout, sort_order, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
 		.run(
 			title,
@@ -271,10 +273,9 @@ export function createAlbum(
 			showOnHome ? 1 : 0,
 			password || null,
 			layout,
+			sortOrder,
 			albumDate || null,
 			expiresAt || null,
-			contactEmail || null,
-			contactPhone || null,
 			primaryColor
 		);
 	return result.lastInsertRowid as number;
@@ -289,11 +290,11 @@ export function updateAlbum(
 	showOnHome: boolean,
 	password: string | null,
 	layout: 'grid' | 'masonry',
+	sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual',
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
-	contactEmail: string | null = null,
-	contactPhone: string | null = null,
-	primaryColor: string = '#3b82f6'
+	primaryColor: string = '#3b82f6',
+	backgroundPhotoId: number | null = null
 ): void {
 	db.prepare(
 		`UPDATE albums SET 
@@ -304,11 +305,11 @@ export function updateAlbum(
       show_on_home = ?,
       password = ?,
       layout = ?,
+      sort_order = ?,
       album_date = ?,
       expires_at = ?,
-      contact_email = ?,
-      contact_phone = ?,
       primary_color = ?,
+      background_photo_id = ?,
       updated_at = CURRENT_TIMESTAMP 
     WHERE id = ?`
 	).run(
@@ -319,11 +320,11 @@ export function updateAlbum(
 		showOnHome ? 1 : 0,
 		password || null,
 		layout,
+		sortOrder,
 		albumDate || null,
 		expiresAt || null,
-		contactEmail || null,
-		contactPhone || null,
 		primaryColor,
+		backgroundPhotoId,
 		id
 	);
 }
@@ -343,7 +344,22 @@ export function checkAlbumPassword(albumId: number, password: string): boolean {
 }
 
 // Photo operations
-export function getPhotosByAlbum(albumId: number, tagSlug?: string): Photo[] {
+export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'manual' | 'newest' | 'oldest' | 'random' = 'manual'): Photo[] {
+	let orderBy: string;
+	switch (sortOrder) {
+		case 'newest':
+			orderBy = 'p.created_at DESC';
+			break;
+		case 'oldest':
+			orderBy = 'p.created_at ASC';
+			break;
+		case 'random':
+			orderBy = 'RANDOM()';
+			break;
+		default:
+			orderBy = 'p.sort_order, p.created_at';
+	}
+
 	if (tagSlug) {
 		return db
 			.prepare(
@@ -352,13 +368,13 @@ export function getPhotosByAlbum(albumId: number, tagSlug?: string): Photo[] {
         INNER JOIN photo_tag_relations ptr ON p.id = ptr.photo_id
         INNER JOIN photo_tags pt ON ptr.tag_id = pt.id
         WHERE p.album_id = ? AND pt.slug = ?
-        ORDER BY p.sort_order, p.created_at
+        ORDER BY ${orderBy}
       `
 			)
 			.all(albumId, tagSlug) as Photo[];
 	}
 	return db
-		.prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order, created_at')
+		.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
 		.all(albumId) as Photo[];
 }
 
@@ -531,6 +547,23 @@ export function getAlbumAnalytics(
 			.get(albumId) as { count: number }
 	).count;
 	return { page_views: pageViews, downloads, album_downloads: albumDownloads };
+}
+
+export function getPhotoDownloadCounts(albumId: number): Map<number, number> {
+	const results = db
+		.prepare(
+			`SELECT photo_id, COUNT(*) as count 
+			 FROM analytics 
+			 WHERE album_id = ? AND event_type = 'download' AND photo_id IS NOT NULL
+			 GROUP BY photo_id`
+		)
+		.all(albumId) as { photo_id: number; count: number }[];
+	
+	const map = new Map<number, number>();
+	for (const row of results) {
+		map.set(row.photo_id, row.count);
+	}
+	return map;
 }
 
 export function getAllAnalytics(): {
