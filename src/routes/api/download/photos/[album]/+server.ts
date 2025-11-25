@@ -3,7 +3,10 @@ import { getPhotosByIds } from '$lib/server/db';
 import { getImagePath } from '$lib/server/storage';
 import { error } from '@sveltejs/kit';
 import archiver from 'archiver';
-import { createReadStream, statSync } from 'fs';
+import { createReadStream, statSync, existsSync } from 'fs';
+
+// Default file size estimate (1MB) when actual size is unknown
+const DEFAULT_FILE_SIZE_ESTIMATE = 1000000;
 
 export const GET: RequestHandler = async ({ url, params }) => {
 	const idsParam = url.searchParams.get('ids');
@@ -39,7 +42,7 @@ export const GET: RequestHandler = async ({ url, params }) => {
 			estimatedTotalSize += stats.size;
 		} catch {
 			// If file stats fail, use stored file_size or default
-			estimatedTotalSize += photo.file_size || 1000000;
+			estimatedTotalSize += photo.file_size || DEFAULT_FILE_SIZE_ESTIMATE;
 		}
 	}
 
@@ -61,14 +64,20 @@ export const GET: RequestHandler = async ({ url, params }) => {
 				controller.error(err);
 			});
 
-			// Add photos to archive
+			// Add photos to archive, skipping any files that don't exist
 			for (const photo of photos) {
 				const filePath = getImagePath(photo.filename, 'original', albumSlug);
-				archive.append(createReadStream(filePath), { name: photo.original_filename });
+				if (existsSync(filePath)) {
+					archive.append(createReadStream(filePath), { name: photo.original_filename });
+				}
 			}
 
 			// Finalize the archive
 			archive.finalize();
+		},
+		cancel() {
+			// Clean up the archive when the client cancels the download
+			archive.abort();
 		}
 	});
 
