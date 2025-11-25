@@ -36,16 +36,17 @@
 		}
 	}
 
-	async function downloadAlbum() {
+	async function downloadWithProgress(url: string, filename: string) {
 		isDownloading = true;
 		downloadProgress = 0;
 		try {
-			const response = await fetch(`/api/download/album/${data.album.id}`);
+			const response = await fetch(url);
 			if (!response.ok) throw new Error('Download failed');
 
 			const contentLength = response.headers.get('Content-Length');
 			const total = contentLength ? parseInt(contentLength, 10) : 0;
 
+			let blob: Blob;
 			if (total && response.body) {
 				const reader = response.body.getReader();
 				const chunks: BlobPart[] = [];
@@ -59,26 +60,19 @@
 					downloadProgress = Math.round((received / total) * 100);
 				}
 
-				const blob = new Blob(chunks, { type: 'application/zip' });
-				const url = window.URL.createObjectURL(blob);
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = `${data.album.slug}.zip`;
-				document.body.appendChild(a);
-				a.click();
-				window.URL.revokeObjectURL(url);
-				document.body.removeChild(a);
+				blob = new Blob(chunks, { type: 'application/zip' });
 			} else {
-				const blob = await response.blob();
-				const url = window.URL.createObjectURL(blob);
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = `${data.album.slug}.zip`;
-				document.body.appendChild(a);
-				a.click();
-				window.URL.revokeObjectURL(url);
-				document.body.removeChild(a);
+				blob = await response.blob();
 			}
+
+			const blobUrl = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = blobUrl;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(blobUrl);
+			document.body.removeChild(a);
 		} catch (e) {
 			console.error('Download failed:', e);
 			alert('Download failed. Please try again.');
@@ -87,58 +81,20 @@
 		downloadProgress = 0;
 	}
 
+	async function downloadAlbum() {
+		await downloadWithProgress(
+			`/api/download/album/${data.album.id}`,
+			`${data.album.slug}.zip`
+		);
+	}
+
 	async function downloadSelected() {
 		if (selectedPhotos.size === 0) return;
-
-		isDownloading = true;
-		downloadProgress = 0;
-		try {
-			const ids = Array.from(selectedPhotos).join(',');
-			const response = await fetch(`/api/download/photos/${data.album.slug}?ids=${ids}`);
-			if (!response.ok) throw new Error('Download failed');
-
-			const contentLength = response.headers.get('Content-Length');
-			const total = contentLength ? parseInt(contentLength, 10) : 0;
-
-			if (total && response.body) {
-				const reader = response.body.getReader();
-				const chunks: BlobPart[] = [];
-				let received = 0;
-
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-					chunks.push(value);
-					received += value.length;
-					downloadProgress = Math.round((received / total) * 100);
-				}
-
-				const blob = new Blob(chunks, { type: 'application/zip' });
-				const url = window.URL.createObjectURL(blob);
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = `${data.album.slug}-selected.zip`;
-				document.body.appendChild(a);
-				a.click();
-				window.URL.revokeObjectURL(url);
-				document.body.removeChild(a);
-			} else {
-				const blob = await response.blob();
-				const url = window.URL.createObjectURL(blob);
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = `${data.album.slug}-selected.zip`;
-				document.body.appendChild(a);
-				a.click();
-				window.URL.revokeObjectURL(url);
-				document.body.removeChild(a);
-			}
-		} catch (e) {
-			console.error('Download failed:', e);
-			alert('Download failed. Please try again.');
-		}
-		isDownloading = false;
-		downloadProgress = 0;
+		const ids = Array.from(selectedPhotos).join(',');
+		await downloadWithProgress(
+			`/api/download/photos/${data.album.slug}?ids=${ids}`,
+			`${data.album.slug}-selected.zip`
+		);
 	}
 
 	function openLightbox(index: number) {
