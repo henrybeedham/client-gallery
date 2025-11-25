@@ -8,7 +8,13 @@
 	let isSelecting = $state(false);
 	let lightboxIndex: number | null = $state(null);
 	let isDownloading = $state(false);
+	let downloadProgress = $state(0);
 	let passwordInput = $state('');
+
+	// Touch swipe state for lightbox
+	let touchStartX = $state(0);
+	let touchEndX = $state(0);
+	const minSwipeDistance = 50;
 
 	function toggleSelection(photoId: number) {
 		if (selectedPhotos.has(photoId)) {
@@ -35,51 +41,65 @@
 		}
 	}
 
-	async function downloadAlbum() {
+	async function downloadWithProgress(url: string, filename: string) {
 		isDownloading = true;
+		downloadProgress = 0;
 		try {
-			const response = await fetch(`/api/download/album/${data.album.id}`);
+			const response = await fetch(url);
 			if (!response.ok) throw new Error('Download failed');
 
-			const blob = await response.blob();
-			const url = window.URL.createObjectURL(blob);
+			const contentLength = response.headers.get('Content-Length');
+			const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+			let blob: Blob;
+			if (total && response.body) {
+				const reader = response.body.getReader();
+				const chunks: BlobPart[] = [];
+				let received = 0;
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					chunks.push(value);
+					received += value.length;
+					downloadProgress = Math.round((received / total) * 100);
+				}
+
+				blob = new Blob(chunks, { type: 'application/zip' });
+			} else {
+				blob = await response.blob();
+			}
+
+			const blobUrl = window.URL.createObjectURL(blob);
 			const a = document.createElement('a');
-			a.href = url;
-			a.download = `${data.album.slug}.zip`;
+			a.href = blobUrl;
+			a.download = filename;
 			document.body.appendChild(a);
 			a.click();
-			window.URL.revokeObjectURL(url);
+			window.URL.revokeObjectURL(blobUrl);
 			document.body.removeChild(a);
 		} catch (e) {
 			console.error('Download failed:', e);
 			alert('Download failed. Please try again.');
 		}
 		isDownloading = false;
+		downloadProgress = 0;
+	}
+
+	async function downloadAlbum() {
+		await downloadWithProgress(
+			`/api/download/album/${data.album.id}`,
+			`${data.album.slug}.zip`
+		);
 	}
 
 	async function downloadSelected() {
 		if (selectedPhotos.size === 0) return;
-
-		isDownloading = true;
-		try {
-			const ids = Array.from(selectedPhotos).join(',');
-			const response = await fetch(`/api/download/photos/${data.album.slug}?ids=${ids}`);
-			if (!response.ok) throw new Error('Download failed');
-
-			const blob = await response.blob();
-			const url = window.URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `${data.album.slug}-selected.zip`;
-			document.body.appendChild(a);
-			a.click();
-			window.URL.revokeObjectURL(url);
-			document.body.removeChild(a);
-		} catch (e) {
-			console.error('Download failed:', e);
-			alert('Download failed. Please try again.');
-		}
-		isDownloading = false;
+		const ids = Array.from(selectedPhotos).join(',');
+		await downloadWithProgress(
+			`/api/download/photos/${data.album.slug}?ids=${ids}`,
+			`${data.album.slug}-selected.zip`
+		);
 	}
 
 	function openLightbox(index: number) {
@@ -110,6 +130,29 @@
 		if (e.key === 'Escape') closeLightbox();
 		if (e.key === 'ArrowRight') nextPhoto();
 		if (e.key === 'ArrowLeft') prevPhoto();
+	}
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.touches[0].clientX;
+	}
+
+	function handleTouchMove(e: TouchEvent) {
+		touchEndX = e.touches[0].clientX;
+	}
+
+	function handleTouchEnd() {
+		if (lightboxIndex === null) return;
+
+		const swipeDistance = touchStartX - touchEndX;
+		if (Math.abs(swipeDistance) >= minSwipeDistance) {
+			if (swipeDistance > 0) {
+				nextPhoto();
+			} else {
+				prevPhoto();
+			}
+		}
+		touchStartX = 0;
+		touchEndX = 0;
 	}
 </script>
 
@@ -165,19 +208,35 @@
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
 							<button
-								class="btn btn-primary text-sm"
+								class="btn btn-primary text-sm relative overflow-hidden"
 								onclick={downloadSelected}
 								disabled={isDownloading}
 							>
-								{isDownloading ? 'Downloading...' : `Download (${selectedPhotos.size})`}
+								{#if isDownloading}
+									<span class="relative z-10">Downloading... {downloadProgress}%</span>
+									<span
+										class="absolute inset-0 bg-blue-600 transition-all duration-200"
+										style="width: {downloadProgress}%"
+									></span>
+								{:else}
+									Download ({selectedPhotos.size})
+								{/if}
 							</button>
 						{:else if !isSelecting}
 							<button
-								class="btn btn-primary text-sm"
+								class="btn btn-primary text-sm relative overflow-hidden"
 								onclick={downloadAlbum}
 								disabled={isDownloading}
 							>
-								{isDownloading ? 'Downloading...' : 'Download All'}
+								{#if isDownloading}
+									<span class="relative z-10">Downloading... {downloadProgress}%</span>
+									<span
+										class="absolute inset-0 bg-blue-600 transition-all duration-200"
+										style="width: {downloadProgress}%"
+									></span>
+								{:else}
+									Download All
+								{/if}
 							</button>
 						{/if}
 					</div>
@@ -351,6 +410,9 @@
 		<div
 			class="flex-1 flex items-center justify-center relative px-12 min-h-0 overflow-hidden"
 			onclick={(e) => e.stopPropagation()}
+			ontouchstart={handleTouchStart}
+			ontouchmove={handleTouchMove}
+			ontouchend={handleTouchEnd}
 		>
 			<button
 				class="absolute left-2 top-1/2 -translate-y-1/2 p-3 text-white opacity-70 hover:opacity-100 disabled:opacity-30 transition-opacity z-10"
