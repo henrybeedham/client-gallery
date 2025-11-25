@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package.json and bun.lockb (if it exists)
 COPY package.json bun.lockb* ./
 
-# Install all dependencies (including devDependencies for building)
-RUN bun install --frozen-lockfile
+# Install all dependencies (removed --frozen-lockfile to prevent failure if lockfile is missing/outdated)
+RUN bun install
 
 COPY . .
 RUN bun run build
