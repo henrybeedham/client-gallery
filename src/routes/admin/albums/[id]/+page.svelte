@@ -78,48 +78,61 @@
 
 		uploading = true;
 		uploadProgress = 0;
-		uploadStatus = `Uploading ${files.length} file(s)...`;
 
-		const formData = new FormData();
-		for (const file of files) {
-			formData.append('photos', file);
-		}
+		const fileArray = Array.from(files);
+		const totalFiles = fileArray.length;
+		const BATCH_SIZE = 5; // Upload 5 files at a time to avoid timeout/memory issues
+
+		let uploadedCount = 0;
+		let failedCount = 0;
+
+		uploadStatus = `Uploading ${totalFiles} file(s)...`;
 
 		try {
-			const xhr = new XMLHttpRequest();
+			// Process files in batches
+			for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+				const batch = fileArray.slice(i, i + BATCH_SIZE);
+				const formData = new FormData();
 
-			xhr.upload.addEventListener('progress', (e) => {
-				if (e.lengthComputable) {
-					uploadProgress = Math.round((e.loaded / e.total) * 100);
-					uploadStatus = `Uploading... ${uploadProgress}%`;
+				for (const file of batch) {
+					formData.append('photos', file);
 				}
-			});
 
-			xhr.addEventListener('load', async () => {
-				if (xhr.status >= 200 && xhr.status < 300) {
-					uploadStatus = 'Upload complete! Processing...';
-					await invalidateAll();
-					uploadStatus = 'Upload complete!';
-				} else {
-					uploadStatus = 'Upload failed';
+				try {
+					const response = await fetch(`/admin/albums/${data.album.id}?/uploadPhotos`, {
+						method: 'POST',
+						body: formData
+					});
+
+					if (response.ok) {
+						uploadedCount += batch.length;
+					} else {
+						failedCount += batch.length;
+					}
+				} catch {
+					failedCount += batch.length;
 				}
-				uploading = false;
-				setTimeout(() => {
-					uploadProgress = 0;
-					uploadStatus = '';
-				}, 3000);
-			});
 
-			xhr.addEventListener('error', () => {
-				uploadStatus = 'Upload failed';
-				uploading = false;
-			});
+				// Update progress based on files processed
+				uploadProgress = Math.round(((i + batch.length) / totalFiles) * 100);
+				uploadStatus = `Uploading... ${uploadProgress}% (${uploadedCount}/${totalFiles})`;
+			}
 
-			xhr.open('POST', `/admin/albums/${data.album.id}?/uploadPhotos`);
-			xhr.send(formData);
+			if (failedCount === 0) {
+				uploadStatus = `Upload complete! ${uploadedCount} photo(s) uploaded.`;
+			} else {
+				uploadStatus = `Upload finished: ${uploadedCount} succeeded, ${failedCount} failed.`;
+			}
+
+			await invalidateAll();
 		} catch {
 			uploadStatus = 'Upload failed';
+		} finally {
 			uploading = false;
+			setTimeout(() => {
+				uploadProgress = 0;
+				uploadStatus = '';
+			}, 3000);
 		}
 
 		input.value = '';
@@ -921,6 +934,59 @@
 							></path>
 						</svg>
 						{loading ? 'Regenerating...' : 'Regenerate Images & Data'}
+					</button>
+				</form>
+			</div>
+			<!-- Import from Folder section -->
+			<div
+				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
+			>
+				<h2 class="text-lg font-semibold mb-4">Import from Folder</h2>
+				<p class="text-sm text-gray-400 mb-4">
+					Import photos from the server's import folder (/opt/client-gallery/import). Files will be
+					moved to the album after import.
+				</p>
+				{#if data.importFiles && data.importFiles.length > 0}
+					<p class="text-sm text-blue-400 mb-4">
+						{data.importFiles.length} file(s) found in import folder
+					</p>
+				{:else}
+					<p class="text-sm text-gray-500 mb-4">No files found in import folder</p>
+				{/if}
+				<form
+					method="POST"
+					action="?/importFromFolder"
+					use:enhance={() => {
+						loading = true;
+						return async ({ update }) => {
+							loading = false;
+							await update({ reset: false });
+						};
+					}}
+				>
+					<button
+						type="submit"
+						class="btn btn-secondary w-full"
+						disabled={loading || !data.importFiles || data.importFiles.length === 0}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="18"
+							height="18"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="inline-block mr-2"
+						>
+							<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+							></path>
+							<line x1="12" y1="11" x2="12" y2="17"></line>
+							<polyline points="9 14 12 11 15 14"></polyline>
+						</svg>
+						{loading ? 'Importing...' : 'Import from Import Folder'}
 					</button>
 				</form>
 			</div>

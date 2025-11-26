@@ -24,7 +24,10 @@ import {
 	processAndSaveImage,
 	deleteImageFiles,
 	renameAlbumDirectory,
-	regenerateImageFromOriginal
+	regenerateImageFromOriginal,
+	getImportFolderFiles,
+	processImageFromImportFolder,
+	deleteFileFromImportFolder
 } from '$lib/server/storage';
 import { slugify } from '$lib/utils';
 import { error, fail } from '@sveltejs/kit';
@@ -45,6 +48,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	const photoTags = getPhotoTagRelationsByAlbum(albumId);
 	const analytics = getAlbumAnalytics(albumId);
 	const photoDownloads = getPhotoDownloadCounts(albumId);
+	const importFiles = await getImportFolderFiles();
 
 	return {
 		album,
@@ -52,7 +56,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		tags,
 		photoTags,
 		analytics,
-		photoDownloads: Object.fromEntries(photoDownloads)
+		photoDownloads: Object.fromEntries(photoDownloads),
+		importFiles
 	};
 };
 
@@ -408,5 +413,66 @@ export const actions: Actions = {
 			return { success: true, message: `Regenerated ${regenerated} image(s), ${failed} failed` };
 		}
 		return { success: true, message: `Regenerated ${regenerated} image(s)` };
+	},
+
+	importFromFolder: async ({ params }) => {
+		const albumId = parseInt(params.id);
+		if (isNaN(albumId)) {
+			return fail(400, { error: 'Invalid album ID' });
+		}
+
+		const album = getAlbumById(albumId);
+		if (!album) {
+			return fail(404, { error: 'Album not found' });
+		}
+
+		const importFiles = await getImportFolderFiles();
+		if (importFiles.length === 0) {
+			return fail(400, { error: 'No files found in import folder' });
+		}
+
+		let imported = 0;
+		let failed = 0;
+		let firstPhotoId: number | null = null;
+
+		for (const file of importFiles) {
+			try {
+				const processed = await processImageFromImportFolder(file.path, album.slug);
+				const photoId = createPhoto(
+					albumId,
+					processed.filename,
+					file.name,
+					processed.width,
+					processed.height,
+					processed.fileSize,
+					processed.mimeType,
+					processed.dateTaken
+				);
+
+				if (!firstPhotoId) {
+					firstPhotoId = photoId;
+				}
+
+				// Delete the file from import folder after successful import
+				await deleteFileFromImportFolder(file.path);
+				imported++;
+			} catch (e) {
+				console.error(`Failed to import image ${file.name}:`, e);
+				failed++;
+			}
+		}
+
+		// Set cover photo if album doesn't have one
+		if (firstPhotoId) {
+			const updatedAlbum = getAlbumById(albumId);
+			if (updatedAlbum && !updatedAlbum.cover_photo_id) {
+				setAlbumCover(albumId, firstPhotoId);
+			}
+		}
+
+		if (failed > 0) {
+			return { success: true, message: `Imported ${imported} photo(s), ${failed} failed` };
+		}
+		return { success: true, message: `Imported ${imported} photo(s) from import folder` };
 	}
 };
