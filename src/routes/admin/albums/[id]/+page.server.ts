@@ -9,12 +9,15 @@ import {
 	createPhoto,
 	deletePhoto,
 	setAlbumCover,
+	setAlbumBackground,
 	updatePhotoOrder,
 	getPhotoById,
 	createTag,
 	deleteTag,
 	addTagToPhoto,
-	removeTagFromPhoto
+	removeTagFromPhoto,
+	getAlbumAnalytics,
+	getPhotoDownloadCounts
 } from '$lib/server/db';
 import { processAndSaveImage, deleteImageFiles, renameAlbumDirectory } from '$lib/server/storage';
 import { slugify } from '$lib/utils';
@@ -34,12 +37,16 @@ export const load: PageServerLoad = async ({ params }) => {
 	const photos = getPhotosByAlbum(albumId);
 	const tags = getTagsByAlbum(albumId);
 	const photoTags = getPhotoTagRelationsByAlbum(albumId);
+	const analytics = getAlbumAnalytics(albumId);
+	const photoDownloads = getPhotoDownloadCounts(albumId);
 
 	return {
 		album,
 		photos,
 		tags,
-		photoTags
+		photoTags,
+		analytics,
+		photoDownloads: Object.fromEntries(photoDownloads)
 	};
 };
 
@@ -62,7 +69,20 @@ export const actions: Actions = {
 		const isPublic = data.get('isPublic') === 'on';
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
-		const layout = (data.get('layout')?.toString() || 'grid') as 'grid' | 'masonry';
+		const sortOrder = (data.get('sortOrder')?.toString() || 'newest') as 'newest' | 'oldest' | 'random';
+		const albumDate = data.get('albumDate')?.toString() || null;
+		const expiresAt = data.get('expiresAt')?.toString() || null;
+		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
+		const backgroundPhotoIdStr = data.get('backgroundPhotoId')?.toString();
+		let backgroundPhotoId = backgroundPhotoIdStr ? parseInt(backgroundPhotoIdStr) : null;
+
+		// Validate that backgroundPhotoId belongs to this album
+		if (backgroundPhotoId !== null) {
+			const photo = getPhotoById(backgroundPhotoId);
+			if (!photo || photo.album_id !== albumId) {
+				backgroundPhotoId = null; // Invalid photo, reset to null
+			}
+		}
 
 		if (!title.trim()) {
 			return fail(400, { error: 'Title is required' });
@@ -92,7 +112,11 @@ export const actions: Actions = {
 				isPublic,
 				showOnHome,
 				password || null,
-				layout
+				sortOrder,
+				albumDate || null,
+				expiresAt || null,
+				primaryColor,
+				backgroundPhotoId
 			);
 			return { success: true, message: 'Album updated' };
 		} catch {
@@ -142,7 +166,8 @@ export const actions: Actions = {
 					processed.width,
 					processed.height,
 					processed.fileSize,
-					processed.mimeType
+					processed.mimeType,
+					processed.dateTaken
 				);
 
 				if (!firstPhotoId) {
@@ -207,6 +232,44 @@ export const actions: Actions = {
 			return { success: true, message: 'Cover photo updated' };
 		} catch {
 			return fail(500, { error: 'Failed to set cover photo' });
+		}
+	},
+
+	setBackground: async ({ params, request }) => {
+		const albumId = parseInt(params.id);
+		const data = await request.formData();
+		const photoId = parseInt(data.get('photoId')?.toString() || '');
+
+		if (isNaN(albumId) || isNaN(photoId)) {
+			return fail(400, { error: 'Invalid IDs' });
+		}
+
+		// Validate photo belongs to album
+		const photo = getPhotoById(photoId);
+		if (!photo || photo.album_id !== albumId) {
+			return fail(400, { error: 'Photo not found in album' });
+		}
+
+		try {
+			setAlbumBackground(albumId, photoId);
+			return { success: true, message: 'Background photo updated' };
+		} catch {
+			return fail(500, { error: 'Failed to set background photo' });
+		}
+	},
+
+	clearBackground: async ({ params }) => {
+		const albumId = parseInt(params.id);
+
+		if (isNaN(albumId)) {
+			return fail(400, { error: 'Invalid album ID' });
+		}
+
+		try {
+			setAlbumBackground(albumId, null);
+			return { success: true, message: 'Background cleared' };
+		} catch {
+			return fail(500, { error: 'Failed to clear background' });
 		}
 	},
 

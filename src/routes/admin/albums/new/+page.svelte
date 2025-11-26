@@ -105,14 +105,6 @@
 					>
 				</div>
 
-				<div>
-					<label for="layout" class="block text-sm font-medium mb-1.5">Gallery Layout</label>
-					<select id="layout" name="layout" class="form-select">
-						<option value="grid">Grid</option>
-						<option value="masonry">Masonry</option>
-					</select>
-				</div>
-
 				<div class="flex flex-col gap-3">
 					<label class="flex items-center gap-2 cursor-pointer">
 						<input type="checkbox" name="isPublic" checked class="w-4 h-4 accent-blue-500" />

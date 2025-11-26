@@ -16,10 +16,14 @@ db.exec(`
     slug TEXT NOT NULL UNIQUE,
     description TEXT,
     cover_photo_id INTEGER,
+    background_photo_id INTEGER,
     is_public INTEGER DEFAULT 1,
     show_on_home INTEGER DEFAULT 1,
     password TEXT,
-    layout TEXT DEFAULT 'grid',
+    sort_order TEXT DEFAULT 'newest',
+    album_date TEXT,
+    expires_at TEXT,
+    primary_color TEXT DEFAULT '#3b82f6',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -33,6 +37,7 @@ db.exec(`
     height INTEGER,
     file_size INTEGER,
     mime_type TEXT,
+    date_taken DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     sort_order INTEGER DEFAULT 0,
     FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE
@@ -56,9 +61,21 @@ db.exec(`
     FOREIGN KEY (tag_id) REFERENCES photo_tags(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    album_id INTEGER NOT NULL,
+    photo_id INTEGER,
+    event_type TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
+    FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_photos_album_id ON photos(album_id);
   CREATE INDEX IF NOT EXISTS idx_albums_slug ON albums(slug);
   CREATE INDEX IF NOT EXISTS idx_photo_tags_album_id ON photo_tags(album_id);
+  CREATE INDEX IF NOT EXISTS idx_analytics_album_id ON analytics(album_id);
+  CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics(created_at);
 `);
 
 // Migration: Add new columns if they don't exist
@@ -78,6 +95,66 @@ try {
 	/* Column may already exist */
 }
 
+// New column migrations for album date, expiration, contact info, and styling
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN album_date TEXT`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN expires_at TEXT`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN primary_color TEXT DEFAULT '#3b82f6'`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN background_photo_id INTEGER`);
+} catch {
+	/* Column may already exist */
+}
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN sort_order TEXT DEFAULT 'newest'`);
+} catch {
+	/* Column may already exist */
+}
+
+// Migration: Update existing albums with 'manual' sort_order to 'newest'
+try {
+	db.exec(`UPDATE albums SET sort_order = 'newest' WHERE sort_order = 'manual'`);
+} catch {
+	/* Table may not exist yet */
+}
+
+// Migration: Add date_taken column to photos for EXIF data
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN date_taken DATETIME`);
+} catch {
+	/* Column may already exist */
+}
+
+// Create analytics table if not exists (for migrations)
+try {
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS analytics (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			album_id INTEGER NOT NULL,
+			photo_id INTEGER,
+			event_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE,
+			FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
+		);
+		CREATE INDEX IF NOT EXISTS idx_analytics_album_id ON analytics(album_id);
+		CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics(created_at);
+	`);
+} catch {
+	/* Table may already exist */
+}
+
 // Drop old categories table if exists (migration)
 try {
 	db.exec(`DROP TABLE IF EXISTS categories`);
@@ -91,14 +168,19 @@ export interface Album {
 	slug: string;
 	description: string | null;
 	cover_photo_id: number | null;
+	background_photo_id: number | null;
 	is_public: number;
 	show_on_home: number;
 	password: string | null;
-	layout: 'grid' | 'masonry';
+	sort_order: 'newest' | 'oldest' | 'random';
+	album_date: string | null;
+	expires_at: string | null;
+	primary_color: string;
 	created_at: string;
 	updated_at: string;
 	photo_count?: number;
 	cover_filename?: string;
+	background_filename?: string;
 }
 
 export interface Photo {
@@ -110,6 +192,7 @@ export interface Photo {
 	height: number | null;
 	file_size: number | null;
 	mime_type: string | null;
+	date_taken: string | null;
 	created_at: string;
 	sort_order: number;
 	tags?: PhotoTag[];
@@ -154,7 +237,8 @@ export function getAlbumBySlug(slug: string): Album | undefined {
     SELECT 
       a.*,
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
-      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename,
+      (SELECT filename FROM photos WHERE id = a.background_photo_id) as background_filename
     FROM albums a
     WHERE a.slug = ?
   `
@@ -169,7 +253,8 @@ export function getAlbumById(id: number): Album | undefined {
     SELECT 
       a.*,
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
-      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename,
+      (SELECT filename FROM photos WHERE id = a.background_photo_id) as background_filename
     FROM albums a
     WHERE a.id = ?
   `
@@ -184,13 +269,27 @@ export function createAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	layout: 'grid' | 'masonry'
+	sortOrder: 'newest' | 'oldest' | 'random' = 'newest',
+	albumDate: string | null = null,
+	expiresAt: string | null = null,
+	primaryColor: string = '#3b82f6'
 ): number {
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, layout) VALUES (?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, sort_order, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
-		.run(title, slug, description, isPublic ? 1 : 0, showOnHome ? 1 : 0, password || null, layout);
+		.run(
+			title,
+			slug,
+			description,
+			isPublic ? 1 : 0,
+			showOnHome ? 1 : 0,
+			password || null,
+			sortOrder,
+			albumDate || null,
+			expiresAt || null,
+			primaryColor
+		);
 	return result.lastInsertRowid as number;
 }
 
@@ -202,7 +301,11 @@ export function updateAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	layout: 'grid' | 'masonry'
+	sortOrder: 'newest' | 'oldest' | 'random' = 'newest',
+	albumDate: string | null = null,
+	expiresAt: string | null = null,
+	primaryColor: string = '#3b82f6',
+	backgroundPhotoId: number | null = null
 ): void {
 	db.prepare(
 		`UPDATE albums SET 
@@ -212,7 +315,11 @@ export function updateAlbum(
       is_public = ?,
       show_on_home = ?,
       password = ?,
-      layout = ?,
+      sort_order = ?,
+      album_date = ?,
+      expires_at = ?,
+      primary_color = ?,
+      background_photo_id = ?,
       updated_at = CURRENT_TIMESTAMP 
     WHERE id = ?`
 	).run(
@@ -222,7 +329,11 @@ export function updateAlbum(
 		isPublic ? 1 : 0,
 		showOnHome ? 1 : 0,
 		password || null,
-		layout,
+		sortOrder,
+		albumDate || null,
+		expiresAt || null,
+		primaryColor,
+		backgroundPhotoId,
 		id
 	);
 }
@@ -235,6 +346,10 @@ export function setAlbumCover(albumId: number, photoId: number | null): void {
 	db.prepare('UPDATE albums SET cover_photo_id = ? WHERE id = ?').run(photoId, albumId);
 }
 
+export function setAlbumBackground(albumId: number, photoId: number | null): void {
+	db.prepare('UPDATE albums SET background_photo_id = ? WHERE id = ?').run(photoId, albumId);
+}
+
 export function checkAlbumPassword(albumId: number, password: string): boolean {
 	const album = getAlbumById(albumId);
 	if (!album || !album.password) return true;
@@ -242,23 +357,75 @@ export function checkAlbumPassword(albumId: number, password: string): boolean {
 }
 
 // Photo operations
-export function getPhotosByAlbum(albumId: number, tagSlug?: string): Photo[] {
+// For deterministic random order, we use a hash of album_id + photo_id
+// This ensures the same "random" order every time for a given album
+
+// Simple hash function that creates a pseudo-random but deterministic value
+function hashCode(albumId: number, photoId: number): number {
+	// Combine album and photo IDs into a seed
+	let hash = albumId * 2654435761 + photoId; // Golden ratio prime
+	// Mix bits using xorshift-like operations
+	hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
+	hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
+	hash = (hash >>> 16) ^ hash;
+	return hash >>> 0; // Convert to unsigned 32-bit integer
+}
+
+function getSeededRandomOrder(photos: Photo[], albumId: number): Photo[] {
+	// Deterministic shuffle using album_id as seed
+	const shuffled = [...photos];
+	shuffled.sort((a, b) => {
+		const hashA = hashCode(albumId, a.id);
+		const hashB = hashCode(albumId, b.id);
+		return hashA - hashB;
+	});
+	return shuffled;
+}
+
+// Allowlist of valid order by clauses for getPhotosByAlbum
+const VALID_ORDER_BY_WITH_ALIAS = {
+	'newest': 'COALESCE(p.date_taken, p.created_at) DESC',
+	'oldest': 'COALESCE(p.date_taken, p.created_at) ASC',
+	'random': 'p.id' // We'll shuffle in JS for deterministic random
+} as const;
+
+const VALID_ORDER_BY_NO_ALIAS = {
+	'newest': 'COALESCE(date_taken, created_at) DESC',
+	'oldest': 'COALESCE(date_taken, created_at) ASC',
+	'random': 'id' // We'll shuffle in JS for deterministic random
+} as const;
+
+export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'newest' | 'oldest' | 'random' = 'newest'): Photo[] {
+	let photos: Photo[];
+	
 	if (tagSlug) {
-		return db
+		// Use allowlist to prevent SQL injection (with alias)
+		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['newest'];
+		photos = db
 			.prepare(
 				`
         SELECT p.* FROM photos p
         INNER JOIN photo_tag_relations ptr ON p.id = ptr.photo_id
         INNER JOIN photo_tags pt ON ptr.tag_id = pt.id
         WHERE p.album_id = ? AND pt.slug = ?
-        ORDER BY p.sort_order, p.created_at
+        ORDER BY ${orderBy}
       `
 			)
 			.all(albumId, tagSlug) as Photo[];
+	} else {
+		// Use allowlist to prevent SQL injection (without alias)
+		const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['newest'];
+		photos = db
+			.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
+			.all(albumId) as Photo[];
 	}
-	return db
-		.prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order, created_at')
-		.all(albumId) as Photo[];
+	
+	// Apply deterministic random shuffle if needed
+	if (sortOrder === 'random') {
+		return getSeededRandomOrder(photos, albumId);
+	}
+	
+	return photos;
 }
 
 export function getPhotoById(id: number): Photo | undefined {
@@ -278,7 +445,8 @@ export function createPhoto(
 	width: number | null,
 	height: number | null,
 	fileSize: number | null,
-	mimeType: string | null
+	mimeType: string | null,
+	dateTaken: string | null = null
 ): number {
 	const maxOrder = db
 		.prepare('SELECT MAX(sort_order) as max_order FROM photos WHERE album_id = ?')
@@ -288,10 +456,10 @@ export function createPhoto(
 	const result = db
 		.prepare(
 			`INSERT INTO photos 
-      (album_id, filename, original_filename, width, height, file_size, mime_type, sort_order) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      (album_id, filename, original_filename, width, height, file_size, mime_type, date_taken, sort_order) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
-		.run(albumId, filename, originalFilename, width, height, fileSize, mimeType, sortOrder);
+		.run(albumId, filename, originalFilename, width, height, fileSize, mimeType, dateTaken, sortOrder);
 	return result.lastInsertRowid as number;
 }
 
@@ -376,6 +544,108 @@ export function getStats(): { albums: number; photos: number; tags: number } {
 	const tags = (db.prepare('SELECT COUNT(*) as count FROM photo_tags').get() as { count: number })
 		.count;
 	return { albums, photos, tags };
+}
+
+// Analytics operations
+export type AnalyticsEventType = 'page_view' | 'download' | 'album_download';
+
+export interface AnalyticsEvent {
+	id: number;
+	album_id: number;
+	photo_id: number | null;
+	event_type: AnalyticsEventType;
+	created_at: string;
+}
+
+export function recordAnalyticsEvent(
+	albumId: number,
+	eventType: AnalyticsEventType,
+	photoId: number | null = null
+): void {
+	try {
+		db.prepare('INSERT INTO analytics (album_id, photo_id, event_type) VALUES (?, ?, ?)').run(
+			albumId,
+			photoId,
+			eventType
+		);
+	} catch (e) {
+		console.warn('Failed to record analytics event:', e);
+	}
+}
+
+export function getAlbumAnalytics(
+	albumId: number
+): { page_views: number; downloads: number; album_downloads: number } {
+	const pageViews = (
+		db
+			.prepare(
+				"SELECT COUNT(*) as count FROM analytics WHERE album_id = ? AND event_type = 'page_view'"
+			)
+			.get(albumId) as { count: number }
+	).count;
+	const downloads = (
+		db
+			.prepare(
+				"SELECT COUNT(*) as count FROM analytics WHERE album_id = ? AND event_type = 'download'"
+			)
+			.get(albumId) as { count: number }
+	).count;
+	const albumDownloads = (
+		db
+			.prepare(
+				"SELECT COUNT(*) as count FROM analytics WHERE album_id = ? AND event_type = 'album_download'"
+			)
+			.get(albumId) as { count: number }
+	).count;
+	return { page_views: pageViews, downloads, album_downloads: albumDownloads };
+}
+
+export function getPhotoDownloadCounts(albumId: number): Map<number, number> {
+	const results = db
+		.prepare(
+			`SELECT photo_id, COUNT(*) as count 
+			 FROM analytics 
+			 WHERE album_id = ? AND event_type = 'download' AND photo_id IS NOT NULL
+			 GROUP BY photo_id`
+		)
+		.all(albumId) as { photo_id: number; count: number }[];
+	
+	const map = new Map<number, number>();
+	for (const row of results) {
+		map.set(row.photo_id, row.count);
+	}
+	return map;
+}
+
+export function getAllAnalytics(): {
+	album_id: number;
+	title: string;
+	page_views: number;
+	downloads: number;
+	album_downloads: number;
+}[] {
+	return db
+		.prepare(
+			`
+			SELECT 
+				a.id as album_id,
+				a.title,
+				COALESCE(SUM(CASE WHEN an.event_type = 'page_view' THEN 1 ELSE 0 END), 0) as page_views,
+				COALESCE(SUM(CASE WHEN an.event_type = 'download' THEN 1 ELSE 0 END), 0) as downloads,
+				COALESCE(SUM(CASE WHEN an.event_type = 'album_download' THEN 1 ELSE 0 END), 0) as album_downloads
+			FROM albums a
+			LEFT JOIN analytics an ON a.id = an.album_id
+			GROUP BY a.id, a.title
+			ORDER BY page_views DESC
+		`
+		)
+		.all() as {
+		album_id: number;
+		title: string;
+		page_views: number;
+		downloads: number;
+		album_downloads: number;
+	}[];
 }
 
 export default db;

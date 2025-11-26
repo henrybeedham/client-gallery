@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { renderMarkdown } from '$lib/utils';
+	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
+	import { onMount } from 'svelte';
 
 	let { data, form } = $props();
 
@@ -10,11 +11,90 @@
 	let isDownloading = $state(false);
 	let downloadProgress = $state(0);
 	let passwordInput = $state('');
+	let lastSelectedIndex: number | null = $state(null);
+
+	// Lazy loading state - use $derived to reset when data changes (e.g., tag filter changes)
+	let displayedPhotos = $state([...data.photos]);
+	let isLoadingMore = $state(false);
+	let hasMore = $state(data.hasMore);
+	let loadMoreTrigger: HTMLDivElement;
+
+	// Reset displayed photos when data changes (e.g., tag filter or sort changes)
+	$effect(() => {
+		displayedPhotos = [...data.photos];
+		hasMore = data.hasMore;
+		selectedPhotos = new Set();
+		isSelecting = false;
+		lastSelectedIndex = null;
+	});
 
 	// Touch swipe state for lightbox
 	let touchStartX = $state(0);
 	let touchEndX = $state(0);
 	const minSwipeDistance = 50;
+
+	// Set up intersection observer for infinite scroll
+	onMount(() => {
+		if (!loadMoreTrigger) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+					loadMorePhotos();
+				}
+			},
+			{ rootMargin: '200px' }
+		);
+
+		observer.observe(loadMoreTrigger);
+
+		return () => observer.disconnect();
+	});
+
+	async function loadMorePhotos() {
+		if (isLoadingMore || !hasMore) return;
+
+		isLoadingMore = true;
+		try {
+			const url = new URL(`/api/photos/${data.album.slug}/list`, window.location.origin);
+			url.searchParams.set('offset', String(displayedPhotos.length));
+			url.searchParams.set('sort', data.selectedSort);
+			if (data.selectedTag) {
+				url.searchParams.set('tag', data.selectedTag);
+			}
+
+			const response = await fetch(url.toString());
+			if (!response.ok) throw new Error('Failed to load more photos');
+
+			const result = await response.json();
+			displayedPhotos = [...displayedPhotos, ...result.photos];
+			hasMore = result.hasMore;
+		} catch (e) {
+			console.error('Failed to load more photos:', e);
+		}
+		isLoadingMore = false;
+	}
+
+	// Handle shift+click selection
+	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
+		if (!isSelecting) {
+			openLightbox(index);
+			return;
+		}
+
+		if (event.shiftKey && lastSelectedIndex !== null) {
+			// Shift+click: select range
+			const start = Math.min(lastSelectedIndex, index);
+			const end = Math.max(lastSelectedIndex, index);
+			const rangeIds = data.photos.slice(start, end + 1).map((p) => p.id);
+			rangeIds.forEach((id) => selectedPhotos.add(id));
+			selectedPhotos = new Set(selectedPhotos);
+		} else {
+			// Normal click: toggle selection
+			toggleSelection(photoId);
+			lastSelectedIndex = index;
+		}
+	}
 
 	function toggleSelection(photoId: number) {
 		if (selectedPhotos.has(photoId)) {
@@ -26,25 +106,35 @@
 	}
 
 	function selectAll() {
-		selectedPhotos = new Set(data.photos.map((p) => p.id));
+		// Use allPhotoIds from server to ensure all photos are selected even with lazy loading
+		selectedPhotos = new Set(data.allPhotoIds);
 	}
 
 	function clearSelection() {
 		selectedPhotos = new Set();
 		isSelecting = false;
+		lastSelectedIndex = null;
 	}
 
 	function toggleSelectMode() {
 		isSelecting = !isSelecting;
 		if (!isSelecting) {
 			selectedPhotos = new Set();
+			lastSelectedIndex = null;
 		}
 	}
 
-	async function downloadWithProgress(url: string, filename: string) {
+	async function downloadWithProgress(url: string, filename: string, trackDownload = false) {
 		isDownloading = true;
 		downloadProgress = 0;
 		try {
+			// Track download analytics
+			if (trackDownload) {
+				fetch(`/api/download/track/${data.album.id}`, { method: 'POST' }).catch((e) =>
+					console.warn('Analytics tracking failed:', e)
+				);
+			}
+
 			const response = await fetch(url);
 			if (!response.ok) throw new Error('Download failed');
 
@@ -96,7 +186,11 @@
 	}
 
 	async function downloadAlbum() {
-		await downloadWithProgress(`/api/download/album/${data.album.id}`, `${data.album.slug}.zip`);
+		await downloadWithProgress(
+			`/api/download/album/${data.album.id}`,
+			`${data.album.slug}.zip`,
+			true
+		);
 	}
 
 	async function downloadSelected() {
@@ -104,14 +198,13 @@
 		const ids = Array.from(selectedPhotos).join(',');
 		await downloadWithProgress(
 			`/api/download/photos/${data.album.slug}?ids=${ids}`,
-			`${data.album.slug}-selected.zip`
+			`${data.album.slug}-selected.zip`,
+			true
 		);
 	}
 
 	function openLightbox(index: number) {
-		if (!isSelecting) {
-			lightboxIndex = index;
-		}
+		lightboxIndex = index;
 	}
 
 	function closeLightbox() {
@@ -119,7 +212,7 @@
 	}
 
 	function nextPhoto() {
-		if (lightboxIndex !== null && lightboxIndex < data.photos.length - 1) {
+		if (lightboxIndex !== null && lightboxIndex < displayedPhotos.length - 1) {
 			lightboxIndex++;
 		}
 	}
@@ -160,15 +253,148 @@
 		touchStartX = 0;
 		touchEndX = 0;
 	}
+
+	// Track single photo download
+	function trackPhotoDownload(photoId: number) {
+		fetch(`/api/download/track-photo/${data.album.id}/${photoId}`, { method: 'POST' }).catch((e) =>
+			console.warn('Analytics tracking failed:', e)
+		);
+	}
+
+	// Sanitize color to prevent XSS
+	function sanitizeColor(color: string): string {
+		// Only allow valid hex colors or standard color names
+		const hexPattern = /^#[0-9A-Fa-f]{3,8}$/;
+		const colorNames = /^(red|blue|green|yellow|orange|purple|pink|cyan|white|black|gray|grey)$/i;
+		if (hexPattern.test(color) || colorNames.test(color)) {
+			return color;
+		}
+		return '#3b82f6'; // Default blue if invalid
+	}
+
+	let safeColor = $derived(sanitizeColor(data.album.primary_color || '#3b82f6'));
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
 	<title>{data.album.title} - Gallery</title>
+	<meta
+		name="description"
+		content={data.album.description || `View ${data.album.title} photo gallery`}
+	/>
+
+	<!-- Open Graph / Facebook -->
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content={data.album.title} />
+	<meta
+		property="og:description"
+		content={data.album.description || `View ${data.album.title} photo gallery`}
+	/>
+	{#if data.album.cover_filename}
+		<meta
+			property="og:image"
+			content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium"
+		/>
+	{/if}
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={data.album.title} />
+	<meta
+		name="twitter:description"
+		content={data.album.description || `View ${data.album.title} photo gallery`}
+	/>
+	{#if data.album.cover_filename}
+		<meta
+			name="twitter:image"
+			content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium"
+		/>
+	{/if}
+
+	<!-- Custom color scheme -->
+	{@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
 </svelte:head>
 
-{#if data.requiresPassword}
+{#if data.isExpired}
+	<!-- Expired gallery page -->
+	<div class="min-h-screen flex items-center justify-center p-4">
+		<div
+			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full text-center"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="64"
+				height="64"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="mx-auto mb-4 text-gray-500"
+			>
+				<circle cx="12" cy="12" r="10"></circle>
+				<polyline points="12 6 12 12 16 14"></polyline>
+			</svg>
+			<h1 class="text-2xl font-bold mb-2">{data.album.title}</h1>
+			<p class="text-gray-400 mb-6">This gallery has expired and is no longer available.</p>
+
+			{#if data.contactEmail || data.contactPhone}
+				<div class="border-t border-[var(--color-border)] pt-6">
+					<p class="text-sm text-gray-400 mb-4">If you need access, please contact:</p>
+					{#if data.contactEmail}
+						<a
+							href="mailto:{data.contactEmail}"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 mb-2"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+								></path>
+								<polyline points="22,6 12,13 2,6"></polyline>
+							</svg>
+							{data.contactEmail}
+						</a>
+					{/if}
+					{#if data.contactPhone}
+						<a
+							href="tel:{data.contactPhone}"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+								></path>
+							</svg>
+							{data.contactPhone}
+						</a>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</div>
+{:else if data.requiresPassword}
 	<div class="min-h-screen flex items-center justify-center p-4">
 		<div
 			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full"
@@ -193,36 +419,75 @@
 					bind:value={passwordInput}
 					required
 				/>
-				<button type="submit" class="btn btn-primary w-full"> Unlock Album </button>
+				<button type="submit" class="btn btn-primary w-full"> Unlock Gallery </button>
 			</form>
 		</div>
 	</div>
 {:else}
-	<div class="min-h-screen flex flex-col">
+	<div class="min-h-screen flex flex-col relative">
+		<!-- Background image if set -->
+		{#if data.album.background_filename}
+			<div
+				class="fixed inset-0 z-0"
+				style="background-image: url('/api/photos/{data.album.slug}/{data.album
+					.background_filename}/medium'); background-size: cover; background-position: center;"
+			>
+				<div class="absolute inset-0 backdrop-blur-2xl bg-[var(--color-bg)]/85"></div>
+			</div>
+		{/if}
+
 		<header
 			class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50"
 		>
 			<div class="container">
 				<div class="flex items-center justify-between py-4 gap-4">
 					<div class="min-w-0">
-						<h1 class="text-lg font-semibold">{data.album.title}</h1>
-						<span class="text-xs text-gray-500">{data.photos.length} photos</span>
+						<div class="flex items-center gap-3">
+							<h1 class="text-lg font-semibold">{data.album.title}</h1>
+							{#if data.album.album_date}
+								<span
+									class="text-sm font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20"
+									style="color: var(--gallery-primary);"
+								>
+									{new Date(data.album.album_date).toLocaleDateString('en-US', {
+										year: 'numeric',
+										month: 'long',
+										day: 'numeric'
+									})}
+								</span>
+							{/if}
+						</div>
+						<div class="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+							<span>{data.totalCount} photos</span>
+							{#if data.expiresIn && data.expiresIn > 0}
+								<span class="text-amber-500"
+									>• Expires in {formatTimeRemaining(data.expiresIn)}</span
+								>
+							{/if}
+						</div>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
-						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode}>
+						<button
+							class="btn btn-secondary text-sm"
+							onclick={toggleSelectMode}
+							style="background-color: {isSelecting
+								? 'var(--gallery-primary)'
+								: ''}; color: {isSelecting ? 'white' : ''};"
+						>
 							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
 							<button
-								class="btn btn-primary text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden"
+								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadSelected}
 								disabled={isDownloading}
 							>
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 bg-blue-600 transition-all duration-200"
-										style="width: {downloadProgress}%"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
 									Download ({selectedPhotos.size})
@@ -230,15 +495,16 @@
 							</button>
 						{:else if !isSelecting}
 							<button
-								class="btn btn-primary text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden"
+								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadAlbum}
 								disabled={isDownloading}
 							>
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 bg-blue-600 transition-all duration-200"
-										style="width: {downloadProgress}%"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
 									Download All
@@ -251,7 +517,7 @@
 		</header>
 
 		{#if isSelecting}
-			<div class="bg-blue-500 text-white py-3">
+			<div class="text-white py-3 relative z-10" style="background-color: var(--gallery-primary);">
 				<div class="container flex items-center justify-between">
 					<span class="text-sm">{selectedPhotos.size} selected</span>
 					<div class="flex gap-4">
@@ -267,7 +533,7 @@
 			</div>
 		{/if}
 
-		<main class="flex-1 py-6">
+		<main class="flex-1 py-6 relative z-10">
 			<div class="container">
 				{#if data.album.description}
 					<div class="prose prose-invert prose-sm max-w-none mb-6 text-gray-300">
@@ -278,20 +544,24 @@
 				{#if data.tags && data.tags.length > 0}
 					<div class="flex flex-wrap gap-2 mb-6">
 						<a
-							href="/album/{data.album.slug}"
+							href="/album/{data.album.slug}?sort={data.selectedSort}"
 							class="px-3 py-1.5 rounded-full text-sm transition-colors {!data.selectedTag
-								? 'bg-blue-500 text-white'
+								? ' text-white'
 								: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
+							style={!data.selectedTag ? `background-color: var(--gallery-primary);` : ''}
 						>
 							All
 						</a>
 						{#each data.tags as tag}
 							<a
-								href="/album/{data.album.slug}?tag={tag.slug}"
+								href="/album/{data.album.slug}?tag={tag.slug}&sort={data.selectedSort}"
 								class="px-3 py-1.5 rounded-full text-sm transition-colors {data.selectedTag ===
 								tag.slug
-									? 'bg-blue-500 text-white'
+									? ' text-white'
 									: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
+								style={data.selectedTag === tag.slug
+									? `background-color: var(--gallery-primary);`
+									: ''}
 							>
 								{tag.name}
 							</a>
@@ -299,7 +569,29 @@
 					</div>
 				{/if}
 
-				{#if data.photos.length === 0}
+				<!-- Sort dropdown -->
+				<div class="flex items-center gap-2 mb-4">
+					<label for="sortSelect" class="text-sm text-gray-400">Sort:</label>
+					<select
+						id="sortSelect"
+						class="form-select text-sm py-1 px-2 bg-[var(--color-bg-secondary)] border-[var(--color-border)] rounded"
+						onchange={(e) => {
+							const target = e.target as HTMLSelectElement;
+							const url = new URL(window.location.href);
+							url.searchParams.set('sort', target.value);
+							if (data.selectedTag) {
+								url.searchParams.set('tag', data.selectedTag);
+							}
+							window.location.href = url.toString();
+						}}
+					>
+						<option value="newest" selected={data.selectedSort === 'newest'}>Newest first</option>
+						<option value="oldest" selected={data.selectedSort === 'oldest'}>Oldest first</option>
+						<option value="random" selected={data.selectedSort === 'random'}>Random Order</option>
+					</select>
+				</div>
+
+				{#if displayedPhotos.length === 0}
 					<div class="empty-state">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -320,37 +612,35 @@
 						<p>Check back soon for new photos!</p>
 					</div>
 				{:else}
-					<div
-						class={data.album.layout === 'masonry'
-							? 'columns-2 sm:columns-3 lg:columns-4 gap-3'
-							: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'}
-					>
-						{#each data.photos as photo, index}
+					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
+						{#each displayedPhotos as photo, index}
 							<button
-								class="group relative {data.album.layout === 'masonry'
-									? 'mb-3 break-inside-avoid block'
-									: ''} w-full bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.02] {selectedPhotos.has(
+								class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 									photo.id
 								)
-									? 'ring-4 ring-blue-500 scale-[0.97]'
+									? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
 									: ''}"
-								onclick={() => (isSelecting ? toggleSelection(photo.id) : openLightbox(index))}
+								style={selectedPhotos.has(photo.id)
+									? `--tw-ring-color: var(--gallery-primary);`
+									: ''}
+								onclick={(e) => handlePhotoClick(photo.id, index, e)}
 							>
 								<img
 									src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
 									alt={photo.original_filename}
 									loading="lazy"
-									class="w-full {data.album.layout === 'masonry'
-										? 'h-auto'
-										: 'aspect-square object-cover'}"
+									class="w-full aspect-square object-cover"
 								/>
 								{#if isSelecting}
 									<div
 										class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
 											photo.id
 										)
-											? 'bg-blue-500 text-white'
+											? 'text-white'
 											: 'bg-white/90 border-2 border-gray-300'}"
+										style={selectedPhotos.has(photo.id)
+											? `background-color: var(--gallery-primary);`
+											: ''}
 									>
 										{#if selectedPhotos.has(photo.id)}
 											<svg
@@ -372,6 +662,41 @@
 							</button>
 						{/each}
 					</div>
+
+					<!-- Load more trigger and loading indicator -->
+					<div bind:this={loadMoreTrigger} class="py-8 flex justify-center">
+						{#if isLoadingMore}
+							<div class="flex items-center gap-2 text-gray-400">
+								<svg
+									class="animate-spin h-5 w-5"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+								<span>Loading more photos...</span>
+							</div>
+						{:else if hasMore}
+							<button class="btn btn-secondary text-sm" onclick={loadMorePhotos}>
+								Load More
+							</button>
+						{:else if displayedPhotos.length > 0}
+							<span class="text-gray-500 text-sm">All {data.totalCount} photos loaded</span>
+						{/if}
+					</div>
 				{/if}
 			</div>
 		</main>
@@ -389,7 +714,7 @@
 		aria-label="Photo lightbox"
 	>
 		<div class="flex items-center justify-between p-4 text-white flex-shrink-0">
-			<span class="text-sm opacity-80">{lightboxIndex + 1} / {data.photos.length}</span>
+			<span class="text-sm opacity-80">{lightboxIndex + 1} / {displayedPhotos.length}</span>
 			<button
 				class="p-2 opacity-80 hover:opacity-100 transition-opacity"
 				onclick={closeLightbox}
@@ -444,8 +769,8 @@
 				</svg>
 			</button>
 			<img
-				src="/api/photos/{data.album.slug}/{data.photos[lightboxIndex].filename}/medium"
-				alt={data.photos[lightboxIndex].original_filename}
+				src="/api/photos/{data.album.slug}/{displayedPhotos[lightboxIndex].filename}/medium"
+				alt={displayedPhotos[lightboxIndex].original_filename}
 				class="max-w-full max-h-full object-contain"
 				style="max-height: calc(100vh - 140px);"
 			/>
@@ -455,7 +780,7 @@
 					e.stopPropagation();
 					nextPhoto();
 				}}
-				disabled={lightboxIndex === data.photos.length - 1}
+				disabled={lightboxIndex === displayedPhotos.length - 1}
 				aria-label="Next photo"
 			>
 				<svg
@@ -475,10 +800,16 @@
 		</div>
 		<div class="flex justify-center p-4 flex-shrink-0">
 			<a
-				href="/api/photos/{data.album.slug}/{data.photos[lightboxIndex].filename}/original"
-				download={data.photos[lightboxIndex].original_filename}
-				class="btn btn-primary"
-				onclick={(e) => e.stopPropagation()}
+				href="/api/photos/{data.album.slug}/{displayedPhotos[lightboxIndex].filename}/original"
+				download={displayedPhotos[lightboxIndex].original_filename}
+				class="btn"
+				style="background-color: var(--gallery-primary); color: white;"
+				onclick={(e) => {
+					e.stopPropagation();
+					if (lightboxIndex !== null) {
+						trackPhotoDownload(displayedPhotos[lightboxIndex].id);
+					}
+				}}
 			>
 				Download Photo
 			</a>
