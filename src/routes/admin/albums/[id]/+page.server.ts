@@ -17,9 +17,15 @@ import {
 	addTagToPhoto,
 	removeTagFromPhoto,
 	getAlbumAnalytics,
-	getPhotoDownloadCounts
+	getPhotoDownloadCounts,
+	updatePhotoMetadata
 } from '$lib/server/db';
-import { processAndSaveImage, deleteImageFiles, renameAlbumDirectory } from '$lib/server/storage';
+import {
+	processAndSaveImage,
+	deleteImageFiles,
+	renameAlbumDirectory,
+	regenerateImageFromOriginal
+} from '$lib/server/storage';
 import { slugify } from '$lib/utils';
 import { error, fail } from '@sveltejs/kit';
 
@@ -69,7 +75,10 @@ export const actions: Actions = {
 		const isPublic = data.get('isPublic') === 'on';
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
-		const sortOrder = (data.get('sortOrder')?.toString() || 'newest') as 'newest' | 'oldest' | 'random';
+		const sortOrder = (data.get('sortOrder')?.toString() || 'newest') as
+			| 'newest'
+			| 'oldest'
+			| 'random';
 		const albumDate = data.get('albumDate')?.toString() || null;
 		const expiresAt = data.get('expiresAt')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
@@ -360,5 +369,44 @@ export const actions: Actions = {
 		} catch {
 			return fail(500, { error: 'Failed to remove tag' });
 		}
+	},
+
+	regenerateImages: async ({ params }) => {
+		const albumId = parseInt(params.id);
+		if (isNaN(albumId)) {
+			return fail(400, { error: 'Invalid album ID' });
+		}
+
+		const album = getAlbumById(albumId);
+		if (!album) {
+			return fail(404, { error: 'Album not found' });
+		}
+
+		const photos = getPhotosByAlbum(albumId);
+		let regenerated = 0;
+		let failed = 0;
+
+		for (const photo of photos) {
+			try {
+				const result = await regenerateImageFromOriginal(photo.filename, album.slug);
+				updatePhotoMetadata(
+					photo.id,
+					result.width,
+					result.height,
+					result.fileSize,
+					result.mimeType,
+					result.dateTaken
+				);
+				regenerated++;
+			} catch (e) {
+				console.error(`Failed to regenerate image ${photo.filename}:`, e);
+				failed++;
+			}
+		}
+
+		if (failed > 0) {
+			return { success: true, message: `Regenerated ${regenerated} image(s), ${failed} failed` };
+		}
+		return { success: true, message: `Regenerated ${regenerated} image(s)` };
 	}
 };

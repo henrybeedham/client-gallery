@@ -809,6 +809,52 @@
 				</form>
 			</div>
 
+			<!-- Regenerate Images section -->
+			<div
+				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
+			>
+				<h2 class="text-lg font-semibold mb-4">Maintenance</h2>
+				<p class="text-sm text-gray-400 mb-4">
+					Regenerate thumbnails and medium-sized images from originals, and re-extract photo
+					metadata (dimensions, file size, EXIF date).
+				</p>
+				<form
+					method="POST"
+					action="?/regenerateImages"
+					use:enhance={() => {
+						loading = true;
+						return async ({ result, update }) => {
+							loading = false;
+							await update({ reset: false });
+						};
+					}}
+				>
+					<button
+						type="submit"
+						class="btn btn-secondary w-full"
+						disabled={loading || data.photos.length === 0}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="18"
+							height="18"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="inline-block mr-2"
+						>
+							<path
+								d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+							></path>
+						</svg>
+						{loading ? 'Regenerating...' : 'Regenerate Images & Data'}
+					</button>
+				</form>
+			</div>
+
 			{#if data.tags.length > 0 || true}
 				<div
 					class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 top-[calc(1.5rem+600px)]"
