@@ -719,7 +719,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_interactive_supports_focus -->
 	<div
-		class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[1000] flex flex-col"
+		class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1000] flex flex-col"
 		onclick={closeLightbox}
 		role="dialog"
 		aria-modal="true"
@@ -727,6 +727,9 @@
 	>
 		<div class="flex items-center justify-between p-4 text-white flex-shrink-0">
 			<span class="text-sm opacity-80">{lightboxIndex + 1} / {displayedPhotos.length}</span>
+			<span class="text-sm font-bold opacity-80"
+				>{displayedPhotos[lightboxIndex].original_filename}</span
+			>
 			<button
 				class="p-2 opacity-80 hover:opacity-100 transition-opacity"
 				onclick={closeLightbox}
