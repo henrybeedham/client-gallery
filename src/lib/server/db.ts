@@ -384,20 +384,24 @@ function getSeededRandomOrder(photos: Photo[], albumId: number): Photo[] {
 
 // Allowlist of valid order by clauses for getPhotosByAlbum
 const VALID_ORDER_BY_WITH_ALIAS = {
-	'newest': 'COALESCE(p.date_taken, p.created_at) DESC',
-	'oldest': 'COALESCE(p.date_taken, p.created_at) ASC',
-	'random': 'p.id' // We'll shuffle in JS for deterministic random
+	newest: 'COALESCE(p.date_taken, p.created_at) DESC',
+	oldest: 'COALESCE(p.date_taken, p.created_at) ASC',
+	random: 'p.id' // We'll shuffle in JS for deterministic random
 } as const;
 
 const VALID_ORDER_BY_NO_ALIAS = {
-	'newest': 'COALESCE(date_taken, created_at) DESC',
-	'oldest': 'COALESCE(date_taken, created_at) ASC',
-	'random': 'id' // We'll shuffle in JS for deterministic random
+	newest: 'COALESCE(date_taken, created_at) DESC',
+	oldest: 'COALESCE(date_taken, created_at) ASC',
+	random: 'id' // We'll shuffle in JS for deterministic random
 } as const;
 
-export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: 'newest' | 'oldest' | 'random' = 'newest'): Photo[] {
+export function getPhotosByAlbum(
+	albumId: number,
+	tagSlug?: string,
+	sortOrder: 'newest' | 'oldest' | 'random' = 'newest'
+): Photo[] {
 	let photos: Photo[];
-	
+
 	if (tagSlug) {
 		// Use allowlist to prevent SQL injection (with alias)
 		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['newest'];
@@ -419,12 +423,12 @@ export function getPhotosByAlbum(albumId: number, tagSlug?: string, sortOrder: '
 			.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
 			.all(albumId) as Photo[];
 	}
-	
+
 	// Apply deterministic random shuffle if needed
 	if (sortOrder === 'random') {
 		return getSeededRandomOrder(photos, albumId);
 	}
-	
+
 	return photos;
 }
 
@@ -459,7 +463,17 @@ export function createPhoto(
       (album_id, filename, original_filename, width, height, file_size, mime_type, date_taken, sort_order) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
-		.run(albumId, filename, originalFilename, width, height, fileSize, mimeType, dateTaken, sortOrder);
+		.run(
+			albumId,
+			filename,
+			originalFilename,
+			width,
+			height,
+			fileSize,
+			mimeType,
+			dateTaken,
+			sortOrder
+		);
 	return result.lastInsertRowid as number;
 }
 
@@ -475,6 +489,25 @@ export function updatePhotoOrder(photos: { id: number; sort_order: number }[]): 
 		}
 	});
 	transaction();
+}
+
+export function updatePhotoMetadata(
+	id: number,
+	width: number | null,
+	height: number | null,
+	fileSize: number | null,
+	mimeType: string | null,
+	dateTaken: string | null
+): void {
+	db.prepare(
+		`UPDATE photos SET 
+			width = ?, 
+			height = ?, 
+			file_size = ?, 
+			mime_type = ?, 
+			date_taken = ? 
+		WHERE id = ?`
+	).run(width, height, fileSize, mimeType, dateTaken, id);
 }
 
 // Photo Tag operations
@@ -573,9 +606,11 @@ export function recordAnalyticsEvent(
 	}
 }
 
-export function getAlbumAnalytics(
-	albumId: number
-): { page_views: number; downloads: number; album_downloads: number } {
+export function getAlbumAnalytics(albumId: number): {
+	page_views: number;
+	downloads: number;
+	album_downloads: number;
+} {
 	const pageViews = (
 		db
 			.prepare(
@@ -609,7 +644,7 @@ export function getPhotoDownloadCounts(albumId: number): Map<number, number> {
 			 GROUP BY photo_id`
 		)
 		.all(albumId) as { photo_id: number; count: number }[];
-	
+
 	const map = new Map<number, number>();
 	for (const row of results) {
 		map.set(row.photo_id, row.count);

@@ -809,83 +809,121 @@
 				</form>
 			</div>
 
-			{#if data.tags.length > 0 || true}
-				<div
-					class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 top-[calc(1.5rem+600px)]"
-					style="max-height: calc(100vh - 3rem); overflow-y: auto;"
-				>
-					<h2 class="text-lg font-semibold mb-4">Photo Tags</h2>
-					<form method="POST" action="?/createTag" use:enhance class="flex gap-2 mb-4">
-						<input
-							type="text"
-							name="name"
-							class="form-input flex-1"
-							placeholder="New tag name..."
-						/>
-						<button type="submit" class="btn btn-secondary">Add</button>
-					</form>
-					{#if data.tags.length > 0}
-						<div class="flex flex-wrap gap-2 mb-4">
-							{#each data.tags as tag}
-								<form method="POST" action="?/deleteTag" use:enhance class="inline">
-									<input type="hidden" name="tagId" value={tag.id} />
+			<div
+				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 top-[calc(1.5rem+600px)]"
+				style="max-height: calc(100vh - 3rem); overflow-y: auto;"
+			>
+				<h2 class="text-lg font-semibold mb-4">Photo Tags</h2>
+				<form method="POST" action="?/createTag" use:enhance class="flex gap-2 mb-4">
+					<input type="text" name="name" class="form-input flex-1" placeholder="New tag name..." />
+					<button type="submit" class="btn btn-secondary">Add</button>
+				</form>
+				{#if data.tags.length > 0}
+					<div class="flex flex-wrap gap-2 mb-4">
+						{#each data.tags as tag}
+							<form method="POST" action="?/deleteTag" use:enhance class="inline">
+								<input type="hidden" name="tagId" value={tag.id} />
+								<button
+									type="submit"
+									class="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-bg-tertiary)] rounded-full text-sm hover:bg-red-500/20 group transition-colors"
+								>
+									{tag.name}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="12"
+										height="12"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										class="opacity-50 group-hover:opacity-100"
+									>
+										<line x1="18" y1="6" x2="6" y2="18"></line>
+										<line x1="6" y1="6" x2="18" y2="18"></line>
+									</svg>
+								</button>
+							</form>
+						{/each}
+					</div>
+					{#if selectedPhoto && selectedPhoto.length > 0}
+						<div class="border-t border-[var(--color-border)] pt-4">
+							<p class="text-sm text-gray-400 mb-2">
+								Click tags to add/remove from selected photo:
+							</p>
+							<div class="flex flex-wrap gap-2">
+								{#each data.tags as tag}
 									<button
-										type="submit"
-										class="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-bg-tertiary)] rounded-full text-sm hover:bg-red-500/20 group transition-colors"
+										type="button"
+										onclick={() => togglePhotoTag(selectedPhoto!, tag.id)}
+										class="px-3 py-1 rounded-full text-sm transition-colors {isTagAppliedToAllSelected(
+											tag.id
+										)
+											? 'bg-blue-500 text-white'
+											: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
 									>
 										{tag.name}
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="12"
-											height="12"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											class="opacity-50 group-hover:opacity-100"
-										>
-											<line x1="18" y1="6" x2="6" y2="18"></line>
-											<line x1="6" y1="6" x2="18" y2="18"></line>
-										</svg>
 									</button>
-								</form>
-							{/each}
-						</div>
-						{#if selectedPhoto && selectedPhoto.length > 0}
-							<div class="border-t border-[var(--color-border)] pt-4">
-								<p class="text-sm text-gray-400 mb-2">
-									Click tags to add/remove from selected photo:
-								</p>
-								<div class="flex flex-wrap gap-2">
-									{#each data.tags as tag}
-										<button
-											type="button"
-											onclick={() => togglePhotoTag(selectedPhoto!, tag.id)}
-											class="px-3 py-1 rounded-full text-sm transition-colors {isTagAppliedToAllSelected(
-												tag.id
-											)
-												? 'bg-blue-500 text-white'
-												: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
-										>
-											{tag.name}
-										</button>
-									{/each}
-								</div>
+								{/each}
 							</div>
-						{:else}
-							<p class="text-sm text-gray-500 border-t border-[var(--color-border)] pt-4">
-								Select a photo to assign tags to it.
-							</p>
-						{/if}
+						</div>
 					{:else}
-						<p class="text-sm text-gray-500">
-							No tags yet. Add tags to categorize photos within this album.
+						<p class="text-sm text-gray-500 border-t border-[var(--color-border)] pt-4">
+							Select a photo to assign tags to it.
 						</p>
 					{/if}
-				</div>
-			{/if}
+				{:else}
+					<p class="text-sm text-gray-500">
+						No tags yet. Add tags to categorize photos within this album.
+					</p>
+				{/if}
+			</div>
+			<!-- Regenerate Images section -->
+			<div
+				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
+			>
+				<h2 class="text-lg font-semibold mb-4">Maintenance</h2>
+				<p class="text-sm text-gray-400 mb-4">
+					Regenerate thumbnails and medium-sized images from originals, and re-extract photo
+					metadata (dimensions, file size, EXIF date).
+				</p>
+				<form
+					method="POST"
+					action="?/regenerateImages"
+					use:enhance={() => {
+						loading = true;
+						return async ({ result, update }) => {
+							loading = false;
+							await update({ reset: false });
+						};
+					}}
+				>
+					<button
+						type="submit"
+						class="btn btn-secondary w-full"
+						disabled={loading || data.photos.length === 0}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="18"
+							height="18"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="inline-block mr-2"
+						>
+							<path
+								d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+							></path>
+						</svg>
+						{loading ? 'Regenerating...' : 'Regenerate Images & Data'}
+					</button>
+				</form>
+			</div>
 		</div>
 	</div>
 </div>
