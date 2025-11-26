@@ -503,7 +503,8 @@ export function getStats(): {
 	albums: number;
 	photos: number;
 	pageViews: number;
-	downloads: number;
+	photoDownloads: number;
+	albumDownloads: number;
 } {
 	const albums = (db.prepare('SELECT COUNT(*) as count FROM albums').get() as { count: number })
 		.count;
@@ -514,12 +515,19 @@ export function getStats(): {
 			count: number;
 		}
 	).count;
-	const downloads = (
+	const photoDownloads = (
 		db.prepare("SELECT COUNT(*) as count FROM analytics WHERE event_type = 'download'").get() as {
 			count: number;
 		}
 	).count;
-	return { albums, photos, pageViews, downloads };
+	const albumDownloads = (
+		db
+			.prepare("SELECT COUNT(*) as count FROM analytics WHERE event_type = 'album_download'")
+			.get() as {
+			count: number;
+		}
+	).count;
+	return { albums, photos, pageViews, photoDownloads, albumDownloads };
 }
 
 // Analytics operations
