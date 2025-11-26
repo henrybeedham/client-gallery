@@ -16,7 +16,10 @@ export const actions: Actions = {
 		const isPublic = data.get('isPublic') === 'on';
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
-		const sortOrder = (data.get('sortOrder')?.toString() || 'newest') as 'newest' | 'oldest' | 'random';
+		const sortOrder = (data.get('sortOrder')?.toString() || 'oldest') as
+			| 'newest'
+			| 'oldest'
+			| 'random';
 		const albumDate = data.get('albumDate')?.toString() || null;
 		const expiresAt = data.get('expiresAt')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';

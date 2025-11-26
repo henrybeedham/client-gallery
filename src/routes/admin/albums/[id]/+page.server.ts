@@ -81,7 +81,7 @@ export const actions: Actions = {
 		const isPublic = data.get('isPublic') === 'on';
 		const showOnHome = data.get('showOnHome') === 'on';
 		const password = data.get('password')?.toString() || '';
-		const sortOrder = (data.get('sortOrder')?.toString() || 'newest') as
+		const sortOrder = (data.get('sortOrder')?.toString() || 'oldest') as
 			| 'newest'
 			| 'oldest'
 			| 'random';

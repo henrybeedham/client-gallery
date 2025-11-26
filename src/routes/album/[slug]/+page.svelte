@@ -296,7 +296,7 @@
 		content={data.album.description || `View ${data.album.title} photo gallery`}
 	/>
 
-	<!-- Open Graph / Facebook -->
+	<!-- Open Graph -->
 	<meta property="og:type" content="website" />
 	<meta property="og:title" content={data.album.title} />
 	<meta
@@ -597,8 +597,8 @@
 							window.location.href = url.toString();
 						}}
 					>
-						<option value="newest" selected={data.selectedSort === 'newest'}>Newest first</option>
 						<option value="oldest" selected={data.selectedSort === 'oldest'}>Oldest first</option>
+						<option value="newest" selected={data.selectedSort === 'newest'}>Newest first</option>
 						<option value="random" selected={data.selectedSort === 'random'}>Random Order</option>
 					</select>
 				</div>

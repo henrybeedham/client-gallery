@@ -6,7 +6,7 @@ const PHOTOS_PER_PAGE = 24;
 
 export const GET: RequestHandler = async ({ params, url, cookies }) => {
 	const album = getAlbumBySlug(params.slug);
-	
+
 	if (!album || !album.is_public) {
 		throw error(404, 'Album not found');
 	}
@@ -28,14 +28,19 @@ export const GET: RequestHandler = async ({ params, url, cookies }) => {
 	const tagSlug = url.searchParams.get('tag') || undefined;
 	const sortParam = url.searchParams.get('sort');
 	const validSorts = ['newest', 'oldest', 'random'];
-	const sortOrder = sortParam && validSorts.includes(sortParam) ? sortParam : (album.sort_order || 'newest');
-	
+	const sortOrder =
+		sortParam && validSorts.includes(sortParam) ? sortParam : album.sort_order || 'oldest';
+
 	const offset = parseInt(url.searchParams.get('offset') || '0', 10);
 	const limit = parseInt(url.searchParams.get('limit') || String(PHOTOS_PER_PAGE), 10);
 
 	// Get all photos with the current sorting
-	const allPhotos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'newest' | 'oldest' | 'random');
-	
+	const allPhotos = getPhotosByAlbum(
+		album.id,
+		tagSlug,
+		sortOrder as 'newest' | 'oldest' | 'random'
+	);
+
 	// Slice for pagination
 	const photos = allPhotos.slice(offset, offset + limit);
 	const hasMore = offset + limit < allPhotos.length;

@@ -11,7 +11,7 @@
 	let isPublic = $state(data.album.is_public === 1);
 	let showOnHome = $state(data.album.show_on_home === 1);
 	let password = $state(data.album.password || '');
-	let sortOrder = $state(data.album.sort_order || 'newest');
+	let sortOrder = $state(data.album.sort_order || 'oldest');
 	let albumDate = $state(data.album.album_date || '');
 	let expiresAt = $state(data.album.expires_at || '');
 	let primaryColor = $state(data.album.primary_color || '#3b82f6');
@@ -263,10 +263,17 @@
 						hidden
 					/>
 					{#if selectedPhoto && selectedPhoto.length > 0}
+						<button class="btn btn-danger"> Delete All </button>
 						<button onclick={() => (selectedPhoto = [])} class="btn btn-secondary">
 							Deselect All
 						</button>
 					{/if}
+					<button
+						onclick={() => (selectedPhoto = data.photos.map((photo) => photo.id))}
+						class="btn btn-secondary"
+					>
+						Select All
+					</button>
 					<button class="btn btn-primary" onclick={() => fileInput.click()} disabled={uploading}>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -683,8 +690,8 @@
 								>Photo Sort Order</label
 							>
 							<select id="sortOrder" name="sortOrder" class="form-select" bind:value={sortOrder}>
-								<option value="newest">Newest first</option>
 								<option value="oldest">Oldest first</option>
+								<option value="newest">Newest first</option>
 								<option value="random">Random</option>
 							</select>
 						</div>
