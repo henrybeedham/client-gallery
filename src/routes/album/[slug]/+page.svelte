@@ -452,16 +452,16 @@
 			class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50"
 		>
 			<div class="container">
-				<div class="flex items-center justify-between py-4 gap-4">
+				<div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
 					<div class="min-w-0">
 						<div class="flex items-center gap-3">
 							<h1 class="text-lg font-semibold">{data.album.title}</h1>
 							{#if data.album.album_date}
 								<span
-									class="text-sm font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20"
+									class="text-sm text-center font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20"
 									style="color: var(--gallery-primary);"
 								>
-									{new Date(data.album.album_date).toLocaleDateString('en-US', {
+									{new Date(data.album.album_date).toLocaleDateString('en-UK', {
 										year: 'numeric',
 										month: 'long',
 										day: 'numeric'
