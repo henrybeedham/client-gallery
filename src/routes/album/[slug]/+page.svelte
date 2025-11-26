@@ -544,7 +544,7 @@
 				{#if data.tags && data.tags.length > 0}
 					<div class="flex flex-wrap gap-2 mb-6">
 						<a
-							href="/album/{data.album.slug}{data.selectedSort !== 'newest' ? `?sort=${data.selectedSort}` : ''}"
+							href="/album/{data.album.slug}?sort={data.selectedSort}"
 							class="px-3 py-1.5 rounded-full text-sm transition-colors {!data.selectedTag
 								? 'bg-blue-500 text-white'
 								: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
@@ -553,7 +553,7 @@
 						</a>
 						{#each data.tags as tag}
 							<a
-								href="/album/{data.album.slug}?tag={tag.slug}{data.selectedSort !== 'newest' ? `&sort=${data.selectedSort}` : ''}"
+								href="/album/{data.album.slug}?tag={tag.slug}&sort={data.selectedSort}"
 								class="px-3 py-1.5 rounded-full text-sm transition-colors {data.selectedTag ===
 								tag.slug
 									? 'bg-blue-500 text-white'
