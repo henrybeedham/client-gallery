@@ -124,14 +124,25 @@
 		}
 	}
 
-	async function downloadWithProgress(url: string, filename: string, trackDownload = false) {
+	async function downloadWithProgress(
+		url: string,
+		filename: string,
+		trackAlbumDownload = false,
+		trackPhotoIds: number[] = []
+	) {
 		isDownloading = true;
 		downloadProgress = 0;
 		try {
 			// Track download analytics
-			if (trackDownload) {
+			if (trackAlbumDownload) {
 				fetch(`/api/download/track/${data.album.id}`, { method: 'POST' }).catch((e) =>
 					console.warn('Analytics tracking failed:', e)
+				);
+			}
+			// Track individual photo downloads
+			for (const photoId of trackPhotoIds) {
+				fetch(`/api/download/track-photo/${data.album.id}/${photoId}`, { method: 'POST' }).catch(
+					(e) => console.warn('Analytics tracking failed:', e)
 				);
 			}
 
@@ -195,11 +206,12 @@
 
 	async function downloadSelected() {
 		if (selectedPhotos.size === 0) return;
-		const ids = Array.from(selectedPhotos).join(',');
+		const ids = Array.from(selectedPhotos);
 		await downloadWithProgress(
-			`/api/download/photos/${data.album.slug}?ids=${ids}`,
+			`/api/download/photos/${data.album.slug}?ids=${ids.join(',')}`,
 			`${data.album.slug}-selected.zip`,
-			true
+			false,
+			ids
 		);
 	}
 
