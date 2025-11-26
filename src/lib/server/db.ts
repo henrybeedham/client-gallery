@@ -552,6 +552,34 @@ export function recordAnalyticsEvent(
 			photoId,
 			eventType
 		);
+		// Send data to discord webhook (env variable) - non-blocking
+		void (async () => {
+			if (eventType !== 'page_view') {
+				const webhookUrl = env.DISCORD_WEBHOOK_URL;
+				if (!webhookUrl) return;
+
+				let payload = {};
+
+				const albumName = getAlbumById(albumId)?.title || 'Unknown Album';
+				const photoName = getPhotoById(photoId || 0)?.original_filename || 'N/A';
+
+				if (eventType === 'download') {
+					payload = {
+						content: `📥 Photo Downloaded\n**Album:** ${albumName}\n**Photo:** ${photoName}`
+					};
+				} else if (eventType === 'album_download') {
+					payload = {
+						content: `📥 Album Downloaded\n**Album:** ${albumName}`
+					};
+				}
+
+				await fetch(webhookUrl, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload)
+				});
+			}
+		})();
 	} catch (e) {
 		console.warn('Failed to record analytics event:', e);
 	}
