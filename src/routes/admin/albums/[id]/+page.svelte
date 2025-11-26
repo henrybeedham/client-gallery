@@ -799,19 +799,6 @@
 										/>
 									</div>
 								</div>
-
-								<div>
-									<label class="block text-sm font-medium mb-1.5"> Background Photo </label>
-									<!-- Hidden input to preserve backgroundPhotoId when advanced settings is open -->
-									<input type="hidden" name="backgroundPhotoId" value={backgroundPhotoId || ''} />
-									{#if data.album.background_photo_id}
-										<p class="text-sm text-purple-400">Set from photo grid (purple icon)</p>
-									{:else}
-										<p class="text-sm text-gray-500">
-											Select from photo grid using the purple icon
-										</p>
-									{/if}
-								</div>
 							</div>
 						{/if}
 

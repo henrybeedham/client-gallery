@@ -419,7 +419,7 @@
 					bind:value={passwordInput}
 					required
 				/>
-				<button type="submit" class="btn btn-primary w-full"> Unlock Album </button>
+				<button type="submit" class="btn btn-primary w-full"> Unlock Gallery </button>
 			</form>
 		</div>
 	</div>
@@ -432,7 +432,7 @@
 				style="background-image: url('/api/photos/{data.album.slug}/{data.album
 					.background_filename}/medium'); background-size: cover; background-position: center;"
 			>
-				<div class="absolute inset-0 backdrop-blur-xl bg-[var(--color-bg)]/75"></div>
+				<div class="absolute inset-0 backdrop-blur-2xl bg-[var(--color-bg)]/85"></div>
 			</div>
 		{/if}
 
@@ -517,7 +517,7 @@
 		</header>
 
 		{#if isSelecting}
-			<div class="bg-blue-500 text-white py-3 relative z-10">
+			<div class="text-white py-3 relative z-10" style="background-color: var(--gallery-primary);">
 				<div class="container flex items-center justify-between">
 					<span class="text-sm">{selectedPhotos.size} selected</span>
 					<div class="flex gap-4">
@@ -546,8 +546,9 @@
 						<a
 							href="/album/{data.album.slug}?sort={data.selectedSort}"
 							class="px-3 py-1.5 rounded-full text-sm transition-colors {!data.selectedTag
-								? 'bg-blue-500 text-white'
+								? ' text-white'
 								: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
+							style={!data.selectedTag ? `background-color: var(--gallery-primary);` : ''}
 						>
 							All
 						</a>
@@ -556,8 +557,11 @@
 								href="/album/{data.album.slug}?tag={tag.slug}&sort={data.selectedSort}"
 								class="px-3 py-1.5 rounded-full text-sm transition-colors {data.selectedTag ===
 								tag.slug
-									? 'bg-blue-500 text-white'
+									? ' text-white'
 									: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
+								style={data.selectedTag === tag.slug
+									? `background-color: var(--gallery-primary);`
+									: ''}
 							>
 								{tag.name}
 							</a>
@@ -583,7 +587,7 @@
 					>
 						<option value="newest" selected={data.selectedSort === 'newest'}>Newest first</option>
 						<option value="oldest" selected={data.selectedSort === 'oldest'}>Oldest first</option>
-						<option value="random" selected={data.selectedSort === 'random'}>Random</option>
+						<option value="random" selected={data.selectedSort === 'random'}>Random Order</option>
 					</select>
 				</div>
 
