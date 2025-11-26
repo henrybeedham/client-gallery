@@ -78,56 +78,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics(created_at);
 `);
 
-// Migration change defualt sort_order from 'newest' to 'oldest'
-db.exec(`
-	PRAGMA foreign_keys=off;
-
-	BEGIN TRANSACTION;
-
-
-	CREATE TABLE albums_new (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT NOT NULL,
-		slug TEXT NOT NULL UNIQUE,
-		description TEXT,
-		cover_photo_id INTEGER,
-		background_photo_id INTEGER,
-		is_public INTEGER DEFAULT 1,
-		show_on_home INTEGER DEFAULT 1,
-		password TEXT,
-		sort_order TEXT DEFAULT 'oldest', 
-		album_date TEXT,
-		expires_at TEXT,
-		primary_color TEXT DEFAULT '#3b82f6',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-
-
-	INSERT INTO albums_new (
-		id, title, slug, description, cover_photo_id, background_photo_id, 
-		is_public, show_on_home, password, sort_order, album_date, 
-		expires_at, primary_color, created_at, updated_at
-	)
-	SELECT 
-		id, title, slug, description, cover_photo_id, background_photo_id, 
-		is_public, show_on_home, password, sort_order, album_date, 
-		expires_at, primary_color, created_at, updated_at 
-	FROM albums;
-
-
-
-	DROP TABLE albums;
-
-
-	ALTER TABLE albums_new RENAME TO albums;
-
-	COMMIT;
-
-
-	PRAGMA foreign_keys=on;
-`);
-
 export interface Album {
 	id: number;
 	title: string;

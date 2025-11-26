@@ -138,6 +138,20 @@
 		input.value = '';
 	}
 
+	async function deleteSelectedPhotos(photoIds: number[]) {
+		for (const photoId of photoIds) {
+			const formData = new FormData();
+			formData.append('photoId', photoId.toString());
+			await fetch(`/admin/albums/${data.album.id}?/deletePhoto`, {
+				method: 'POST',
+				body: formData
+			});
+		}
+
+		selectedPhoto = [];
+		await invalidateAll();
+	}
+
 	async function togglePhotoTag(photoIds: number[], tagId: number) {
 		let currentStatus: 'add' | 'remove' | 'mixed' = 'mixed';
 		for (const photoId of photoIds) {
@@ -263,7 +277,9 @@
 						hidden
 					/>
 					{#if selectedPhoto && selectedPhoto.length > 0}
-						<button class="btn btn-danger"> Delete All </button>
+						<button onclick={() => deleteSelectedPhotos(selectedPhoto)} class="btn btn-danger">
+							Delete Selected
+						</button>
 						<button onclick={() => (selectedPhoto = [])} class="btn btn-secondary">
 							Deselect All
 						</button>
