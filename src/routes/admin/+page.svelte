@@ -32,7 +32,7 @@
 		</a>
 	</div>
 
-	<div class="grid grid-cols-3 gap-4 mb-8">
+	<div class="grid grid-cols-4 gap-4 mb-8">
 		<div
 			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 text-center"
 		>
@@ -48,8 +48,14 @@
 		<div
 			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 text-center"
 		>
-			<div class="text-3xl font-bold mb-1">{data.stats.tags}</div>
-			<div class="text-sm text-gray-500">Tags</div>
+			<div class="text-3xl font-bold mb-1">{data.stats.pageViews}</div>
+			<div class="text-sm text-gray-500">Page Views</div>
+		</div>
+		<div
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 text-center"
+		>
+			<div class="text-3xl font-bold mb-1">{data.stats.downloads}</div>
+			<div class="text-sm text-gray-500">Downloads</div>
 		</div>
 	</div>
 

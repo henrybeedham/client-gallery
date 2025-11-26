@@ -499,14 +499,27 @@ export function getPhotoTagRelationsByAlbum(
 		.all(albumId) as { photo_id: number; tag_id: number }[];
 }
 
-export function getStats(): { albums: number; photos: number; tags: number } {
+export function getStats(): {
+	albums: number;
+	photos: number;
+	pageViews: number;
+	downloads: number;
+} {
 	const albums = (db.prepare('SELECT COUNT(*) as count FROM albums').get() as { count: number })
 		.count;
 	const photos = (db.prepare('SELECT COUNT(*) as count FROM photos').get() as { count: number })
 		.count;
-	const tags = (db.prepare('SELECT COUNT(*) as count FROM photo_tags').get() as { count: number })
-		.count;
-	return { albums, photos, tags };
+	const pageViews = (
+		db.prepare("SELECT COUNT(*) as count FROM analytics WHERE event_type = 'page_view'").get() as {
+			count: number;
+		}
+	).count;
+	const downloads = (
+		db.prepare("SELECT COUNT(*) as count FROM analytics WHERE event_type = 'download'").get() as {
+			count: number;
+		}
+	).count;
+	return { albums, photos, pageViews, downloads };
 }
 
 // Analytics operations
