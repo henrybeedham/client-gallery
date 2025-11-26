@@ -151,6 +151,12 @@
 												>Private</span
 											>
 										{/if}
+										{#if album.expires_at < new Date().toISOString()}
+											<span
+												class="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400"
+												>Expired</span
+											>
+										{/if}
 										{#if !album.show_on_home}
 											<span
 												class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400"
