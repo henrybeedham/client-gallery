@@ -18,7 +18,8 @@ import {
 	removeTagFromPhoto,
 	getAlbumAnalytics,
 	getPhotoDownloadCounts,
-	updatePhotoMetadata
+	updatePhotoMetadata,
+	getOrCreateTag
 } from '$lib/server/db';
 import {
 	processAndSaveImage,
@@ -435,6 +436,9 @@ export const actions: Actions = {
 		let failed = 0;
 		let firstPhotoId: number | null = null;
 
+		// Cache for tag IDs to avoid repeated lookups
+		const tagCache = new Map<string, number>();
+
 		for (const file of importFiles) {
 			try {
 				const processed = await processImageFromImportFolder(file.path, album.slug);
@@ -448,6 +452,17 @@ export const actions: Actions = {
 					processed.mimeType,
 					processed.dateTaken
 				);
+
+				// If the file was in a subfolder, create/get the tag and assign it to the photo
+				if (file.tag) {
+					let tagId = tagCache.get(file.tag);
+					if (!tagId) {
+						const tagSlug = slugify(file.tag);
+						tagId = getOrCreateTag(albumId, file.tag, tagSlug);
+						tagCache.set(file.tag, tagId);
+					}
+					addTagToPhoto(photoId, tagId);
+				}
 
 				if (!firstPhotoId) {
 					firstPhotoId = photoId;

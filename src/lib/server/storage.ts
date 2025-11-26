@@ -206,6 +206,7 @@ export interface ImportFolderFile {
 	name: string;
 	path: string;
 	size: number;
+	tag: string | null; // Subfolder name to be used as tag, null if in root
 }
 
 const VALID_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
@@ -221,6 +222,7 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 
 		for (const entry of entries) {
 			if (entry.isFile()) {
+				// Files in the root import folder (no tag)
 				const ext = path.extname(entry.name).toLowerCase();
 				if (VALID_IMAGE_EXTENSIONS.includes(ext)) {
 					const filePath = path.join(IMPORT_DIR, entry.name);
@@ -229,11 +231,40 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 						files.push({
 							name: entry.name,
 							path: filePath,
-							size: stats.size
+							size: stats.size,
+							tag: null
 						});
 					} catch {
 						// Skip files that can't be read
 					}
+				}
+			} else if (entry.isDirectory()) {
+				// Scan subfolders - subfolder name becomes the tag
+				const subfolderName = entry.name;
+				const subfolderPath = path.join(IMPORT_DIR, subfolderName);
+				try {
+					const subEntries = await fs.readdir(subfolderPath, { withFileTypes: true });
+					for (const subEntry of subEntries) {
+						if (subEntry.isFile()) {
+							const ext = path.extname(subEntry.name).toLowerCase();
+							if (VALID_IMAGE_EXTENSIONS.includes(ext)) {
+								const filePath = path.join(subfolderPath, subEntry.name);
+								try {
+									const stats = await fs.stat(filePath);
+									files.push({
+										name: subEntry.name,
+										path: filePath,
+										size: stats.size,
+										tag: subfolderName
+									});
+								} catch {
+									// Skip files that can't be read
+								}
+							}
+						}
+					}
+				} catch {
+					// Skip subfolders that can't be read
 				}
 			}
 		}

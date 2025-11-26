@@ -440,6 +440,20 @@ export function createTag(albumId: number, name: string, slug: string): number {
 	return result.lastInsertRowid as number;
 }
 
+export function getTagBySlug(albumId: number, slug: string): PhotoTag | undefined {
+	return db
+		.prepare('SELECT * FROM photo_tags WHERE album_id = ? AND slug = ?')
+		.get(albumId, slug) as PhotoTag | undefined;
+}
+
+export function getOrCreateTag(albumId: number, name: string, slug: string): number {
+	const existing = getTagBySlug(albumId, slug);
+	if (existing) {
+		return existing.id;
+	}
+	return createTag(albumId, name, slug);
+}
+
 export function deleteTag(id: number): void {
 	db.prepare('DELETE FROM photo_tags WHERE id = ?').run(id);
 }
