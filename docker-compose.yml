@@ -12,3 +12,4 @@ services:
     volumes:
       - /opt/client-gallery/data:/app/data
       - /opt/client-gallery/uploads:/app/uploads
+      - /opt/client-gallery/import:/app/import

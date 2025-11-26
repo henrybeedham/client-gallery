@@ -20,7 +20,7 @@ db.exec(`
     is_public INTEGER DEFAULT 1,
     show_on_home INTEGER DEFAULT 1,
     password TEXT,
-    sort_order TEXT DEFAULT 'newest',
+    sort_order TEXT DEFAULT 'oldest',
     album_date TEXT,
     expires_at TEXT,
     primary_color TEXT DEFAULT '#3b82f6',
@@ -76,6 +76,56 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_photo_tags_album_id ON photo_tags(album_id);
   CREATE INDEX IF NOT EXISTS idx_analytics_album_id ON analytics(album_id);
   CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics(created_at);
+`);
+
+// Migration change defualt sort_order from 'newest' to 'oldest'
+db.exec(`
+	PRAGMA foreign_keys=off;
+
+	BEGIN TRANSACTION;
+
+
+	CREATE TABLE albums_new (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		slug TEXT NOT NULL UNIQUE,
+		description TEXT,
+		cover_photo_id INTEGER,
+		background_photo_id INTEGER,
+		is_public INTEGER DEFAULT 1,
+		show_on_home INTEGER DEFAULT 1,
+		password TEXT,
+		sort_order TEXT DEFAULT 'oldest', 
+		album_date TEXT,
+		expires_at TEXT,
+		primary_color TEXT DEFAULT '#3b82f6',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+
+	INSERT INTO albums_new (
+		id, title, slug, description, cover_photo_id, background_photo_id, 
+		is_public, show_on_home, password, sort_order, album_date, 
+		expires_at, primary_color, created_at, updated_at
+	)
+	SELECT 
+		id, title, slug, description, cover_photo_id, background_photo_id, 
+		is_public, show_on_home, password, sort_order, album_date, 
+		expires_at, primary_color, created_at, updated_at 
+	FROM albums;
+
+
+
+	DROP TABLE albums;
+
+
+	ALTER TABLE albums_new RENAME TO albums;
+
+	COMMIT;
+
+
+	PRAGMA foreign_keys=on;
 `);
 
 export interface Album {
@@ -185,7 +235,7 @@ export function createAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	sortOrder: 'newest' | 'oldest' | 'random' = 'newest',
+	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
 	primaryColor: string = '#3b82f6'
@@ -217,7 +267,7 @@ export function updateAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	password: string | null,
-	sortOrder: 'newest' | 'oldest' | 'random' = 'newest',
+	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
 	primaryColor: string = '#3b82f6',
@@ -314,13 +364,13 @@ const VALID_ORDER_BY_NO_ALIAS = {
 export function getPhotosByAlbum(
 	albumId: number,
 	tagSlug?: string,
-	sortOrder: 'newest' | 'oldest' | 'random' = 'newest'
+	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest'
 ): Photo[] {
 	let photos: Photo[];
 
 	if (tagSlug) {
 		// Use allowlist to prevent SQL injection (with alias)
-		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['newest'];
+		const orderBy = VALID_ORDER_BY_WITH_ALIAS[sortOrder] || VALID_ORDER_BY_WITH_ALIAS['oldest'];
 		photos = db
 			.prepare(
 				`
@@ -334,7 +384,7 @@ export function getPhotosByAlbum(
 			.all(albumId, tagSlug) as Photo[];
 	} else {
 		// Use allowlist to prevent SQL injection (without alias)
-		const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['newest'];
+		const orderBy = VALID_ORDER_BY_NO_ALIAS[sortOrder] || VALID_ORDER_BY_NO_ALIAS['oldest'];
 		photos = db
 			.prepare(`SELECT * FROM photos WHERE album_id = ? ORDER BY ${orderBy}`)
 			.all(albumId) as Photo[];
@@ -438,6 +488,20 @@ export function createTag(albumId: number, name: string, slug: string): number {
 		.prepare('INSERT INTO photo_tags (album_id, name, slug) VALUES (?, ?, ?)')
 		.run(albumId, name, slug);
 	return result.lastInsertRowid as number;
+}
+
+export function getTagBySlug(albumId: number, slug: string): PhotoTag | undefined {
+	return db
+		.prepare('SELECT * FROM photo_tags WHERE album_id = ? AND slug = ?')
+		.get(albumId, slug) as PhotoTag | undefined;
+}
+
+export function getOrCreateTag(albumId: number, name: string, slug: string): number {
+	const existing = getTagBySlug(albumId, slug);
+	if (existing) {
+		return existing.id;
+	}
+	return createTag(albumId, name, slug);
 }
 
 export function deleteTag(id: number): void {

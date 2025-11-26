@@ -1,5 +1,10 @@
 import type { PageServerLoad, Actions } from './$types';
-import { getAlbumBySlug, getPhotosByAlbum, getTagsByAlbum, recordAnalyticsEvent } from '$lib/server/db';
+import {
+	getAlbumBySlug,
+	getPhotosByAlbum,
+	getTagsByAlbum,
+	recordAnalyticsEvent
+} from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 
@@ -31,7 +36,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			isExpired: true,
 			expiresIn: null,
 			selectedTag: undefined,
-			selectedSort: album.sort_order || 'newest',
+			selectedSort: album.sort_order || 'oldest',
 			contactEmail,
 			contactPhone,
 			allPhotoIds: [],
@@ -51,7 +56,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				requiresPassword: true,
 				isExpired: false,
 				expiresIn,
-				selectedSort: album.sort_order || 'newest',
+				selectedSort: album.sort_order || 'oldest',
 				contactEmail,
 				contactPhone,
 				allPhotoIds: [],
@@ -68,15 +73,20 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	// Allow user to override sort order via query parameter, otherwise use album default
 	const sortParam = url.searchParams.get('sort');
 	const validSorts = ['newest', 'oldest', 'random'];
-	const sortOrder = sortParam && validSorts.includes(sortParam) ? sortParam : (album.sort_order || 'newest');
-	
+	const sortOrder =
+		sortParam && validSorts.includes(sortParam) ? sortParam : album.sort_order || 'oldest';
+
 	// Get all photos to extract IDs, then slice for initial load
-	const allPhotos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'newest' | 'oldest' | 'random');
+	const allPhotos = getPhotosByAlbum(
+		album.id,
+		tagSlug,
+		sortOrder as 'newest' | 'oldest' | 'random'
+	);
 	const photos = allPhotos.slice(0, INITIAL_PHOTOS);
 	const tags = getTagsByAlbum(album.id);
-	
+
 	// Get all photo IDs for select all functionality
-	const allPhotoIds = allPhotos.map(p => p.id);
+	const allPhotoIds = allPhotos.map((p) => p.id);
 	const hasMore = allPhotos.length > INITIAL_PHOTOS;
 	const totalCount = allPhotos.length;
 

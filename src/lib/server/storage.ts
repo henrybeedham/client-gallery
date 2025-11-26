@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { env } from '$env/dynamic/private';
 
 const UPLOAD_DIR = env.UPLOAD_DIR || './uploads';
+const IMPORT_DIR = env.IMPORT_DIR || './import';
 const THUMBNAIL_SIZE = 600;
 const MEDIUM_SIZE = 1600;
 
@@ -195,4 +196,149 @@ export async function regenerateImageFromOriginal(
 		mimeType: `image/${metadata.format || 'jpeg'}`,
 		dateTaken
 	};
+}
+
+export function getImportDir(): string {
+	return IMPORT_DIR;
+}
+
+export interface ImportFolderFile {
+	name: string;
+	path: string;
+	size: number;
+	tag: string | null; // Subfolder name to be used as tag, null if in root
+}
+
+const VALID_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
+	if (!existsSync(IMPORT_DIR)) {
+		return [];
+	}
+
+	try {
+		const entries = await fs.readdir(IMPORT_DIR, { withFileTypes: true });
+		const files: ImportFolderFile[] = [];
+
+		for (const entry of entries) {
+			if (entry.isFile()) {
+				// Files in the root import folder (no tag)
+				const ext = path.extname(entry.name).toLowerCase();
+				if (VALID_IMAGE_EXTENSIONS.includes(ext)) {
+					const filePath = path.join(IMPORT_DIR, entry.name);
+					try {
+						const stats = await fs.stat(filePath);
+						files.push({
+							name: entry.name,
+							path: filePath,
+							size: stats.size,
+							tag: null
+						});
+					} catch {
+						// Skip files that can't be read
+					}
+				}
+			} else if (entry.isDirectory()) {
+				// Scan subfolders - subfolder name becomes the tag
+				const subfolderName = entry.name;
+				const subfolderPath = path.join(IMPORT_DIR, subfolderName);
+				try {
+					const subEntries = await fs.readdir(subfolderPath, { withFileTypes: true });
+					for (const subEntry of subEntries) {
+						if (subEntry.isFile()) {
+							const ext = path.extname(subEntry.name).toLowerCase();
+							if (VALID_IMAGE_EXTENSIONS.includes(ext)) {
+								const filePath = path.join(subfolderPath, subEntry.name);
+								try {
+									const stats = await fs.stat(filePath);
+									files.push({
+										name: subEntry.name,
+										path: filePath,
+										size: stats.size,
+										tag: subfolderName
+									});
+								} catch {
+									// Skip files that can't be read
+								}
+							}
+						}
+					}
+				} catch {
+					// Skip subfolders that can't be read
+				}
+			}
+		}
+
+		return files.sort((a, b) => a.name.localeCompare(b.name));
+	} catch {
+		return [];
+	}
+}
+
+export async function processImageFromImportFolder(
+	filePath: string,
+	albumSlug: string
+): Promise<ProcessedImage> {
+	// Validate that the file path is within the import directory (security check)
+	const resolvedPath = path.resolve(filePath);
+	const resolvedImportDir = path.resolve(IMPORT_DIR);
+	if (!resolvedPath.startsWith(resolvedImportDir)) {
+		throw new Error('Invalid file path: file must be within the import directory');
+	}
+
+	ensureAlbumDirs(albumSlug);
+
+	const buffer = await fs.readFile(filePath);
+	const originalFilename = path.basename(filePath);
+	const ext = path.extname(originalFilename).toLowerCase();
+	const filename = `${uuidv4()}${ext}`;
+
+	const image = sharp(buffer);
+	const metadata = await image.metadata();
+
+	// Extract EXIF date taken
+	const dateTaken = extractExifDateTaken(metadata.exif);
+
+	// Save original
+	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);
+	await fs.writeFile(originalPath, buffer);
+
+	// Generate medium size (for lightbox - preserve aspect ratio)
+	const mediumPath = path.join(UPLOAD_DIR, albumSlug, 'medium', filename);
+	await image
+		.clone()
+		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
+		.toFile(mediumPath);
+
+	// Generate thumbnail (preserve aspect ratio, don't crop)
+	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
+	await image
+		.clone()
+		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
+		.toFile(thumbnailPath);
+
+	const stats = await fs.stat(originalPath);
+
+	return {
+		filename,
+		width: metadata.width || 0,
+		height: metadata.height || 0,
+		fileSize: stats.size,
+		mimeType: `image/${metadata.format || 'jpeg'}`,
+		dateTaken
+	};
+}
+
+export async function deleteFileFromImportFolder(filePath: string): Promise<void> {
+	try {
+		// Ensure the file is within the import folder (security check)
+		const resolvedPath = path.resolve(filePath);
+		const resolvedImportDir = path.resolve(IMPORT_DIR);
+		if (!resolvedPath.startsWith(resolvedImportDir)) {
+			throw new Error('Invalid file path');
+		}
+		await fs.unlink(filePath);
+	} catch {
+		// File may not exist or can't be deleted
+	}
 }
