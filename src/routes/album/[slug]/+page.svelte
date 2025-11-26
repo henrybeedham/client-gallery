@@ -11,6 +11,7 @@
 	let isDownloading = $state(false);
 	let downloadProgress = $state(0);
 	let passwordInput = $state('');
+	let lastSelectedIndex: number | null = $state(null);
 
 	// Lazy loading state
 	let displayedPhotos = $state([...data.photos]);
@@ -43,7 +44,7 @@
 
 	async function loadMorePhotos() {
 		if (isLoadingMore || !hasMore) return;
-		
+
 		isLoadingMore = true;
 		try {
 			const url = new URL(`/api/photos/${data.album.slug}/list`, window.location.origin);
@@ -65,15 +66,25 @@
 		isLoadingMore = false;
 	}
 
-	// Handle photo click
+	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
 			openLightbox(index);
 			return;
 		}
 
-		// Toggle selection
-		toggleSelection(photoId);
+		if (event.shiftKey && lastSelectedIndex !== null) {
+			// Shift+click: select range
+			const start = Math.min(lastSelectedIndex, index);
+			const end = Math.max(lastSelectedIndex, index);
+			const rangeIds = data.photos.slice(start, end + 1).map((p) => p.id);
+			rangeIds.forEach((id) => selectedPhotos.add(id));
+			selectedPhotos = new Set(selectedPhotos);
+		} else {
+			// Normal click: toggle selection
+			toggleSelection(photoId);
+			lastSelectedIndex = index;
+		}
 	}
 
 	function toggleSelection(photoId: number) {
@@ -93,12 +104,14 @@
 	function clearSelection() {
 		selectedPhotos = new Set();
 		isSelecting = false;
+		lastSelectedIndex = null;
 	}
 
 	function toggleSelectMode() {
 		isSelecting = !isSelecting;
 		if (!isSelecting) {
 			selectedPhotos = new Set();
+			lastSelectedIndex = null;
 		}
 	}
 
@@ -164,7 +177,11 @@
 	}
 
 	async function downloadAlbum() {
-		await downloadWithProgress(`/api/download/album/${data.album.id}`, `${data.album.slug}.zip`, true);
+		await downloadWithProgress(
+			`/api/download/album/${data.album.id}`,
+			`${data.album.slug}.zip`,
+			true
+		);
 	}
 
 	async function downloadSelected() {
@@ -239,8 +256,7 @@
 	function sanitizeColor(color: string): string {
 		// Only allow valid hex colors or standard color names
 		const hexPattern = /^#[0-9A-Fa-f]{3,8}$/;
-		const colorNames =
-			/^(red|blue|green|yellow|orange|purple|pink|cyan|white|black|gray|grey)$/i;
+		const colorNames = /^(red|blue|green|yellow|orange|purple|pink|cyan|white|black|gray|grey)$/i;
 		if (hexPattern.test(color) || colorNames.test(color)) {
 			return color;
 		}
@@ -254,22 +270,37 @@
 
 <svelte:head>
 	<title>{data.album.title} - Gallery</title>
-	<meta name="description" content={data.album.description || `View ${data.album.title} photo gallery`} />
-	
+	<meta
+		name="description"
+		content={data.album.description || `View ${data.album.title} photo gallery`}
+	/>
+
 	<!-- Open Graph / Facebook -->
 	<meta property="og:type" content="website" />
 	<meta property="og:title" content={data.album.title} />
-	<meta property="og:description" content={data.album.description || `View ${data.album.title} photo gallery`} />
+	<meta
+		property="og:description"
+		content={data.album.description || `View ${data.album.title} photo gallery`}
+	/>
 	{#if data.album.cover_filename}
-		<meta property="og:image" content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium" />
+		<meta
+			property="og:image"
+			content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium"
+		/>
 	{/if}
-	
+
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={data.album.title} />
-	<meta name="twitter:description" content={data.album.description || `View ${data.album.title} photo gallery`} />
+	<meta
+		name="twitter:description"
+		content={data.album.description || `View ${data.album.title} photo gallery`}
+	/>
 	{#if data.album.cover_filename}
-		<meta name="twitter:image" content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium" />
+		<meta
+			name="twitter:image"
+			content="/api/photos/{data.album.slug}/{data.album.cover_filename}/medium"
+		/>
 	{/if}
 
 	<!-- Custom color scheme -->
@@ -299,7 +330,7 @@
 			</svg>
 			<h1 class="text-2xl font-bold mb-2">{data.album.title}</h1>
 			<p class="text-gray-400 mb-6">This gallery has expired and is no longer available.</p>
-			
+
 			{#if data.contactEmail || data.contactPhone}
 				<div class="border-t border-[var(--color-border)] pt-6">
 					<p class="text-sm text-gray-400 mb-4">If you need access, please contact:</p>
@@ -308,8 +339,20 @@
 							href="mailto:{data.contactEmail}"
 							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 mb-2"
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+								></path>
 								<polyline points="22,6 12,13 2,6"></polyline>
 							</svg>
 							{data.contactEmail}
@@ -320,8 +363,20 @@
 							href="tel:{data.contactPhone}"
 							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300"
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<path
+									d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+								></path>
 							</svg>
 							{data.contactPhone}
 						</a>
@@ -363,11 +418,12 @@
 	<div class="min-h-screen flex flex-col relative">
 		<!-- Background image if set -->
 		{#if data.album.background_filename}
-			<div 
+			<div
 				class="fixed inset-0 z-0"
-				style="background-image: url('/api/photos/{data.album.slug}/{data.album.background_filename}/medium'); background-size: cover; background-position: center;"
+				style="background-image: url('/api/photos/{data.album.slug}/{data.album
+					.background_filename}/medium'); background-size: cover; background-position: center;"
 			>
-				<div class="absolute inset-0 backdrop-blur-2xl bg-[var(--color-bg)]/85"></div>
+				<div class="absolute inset-0 backdrop-blur-xl bg-[var(--color-bg)]/75"></div>
 			</div>
 		{/if}
 
@@ -380,20 +436,35 @@
 						<div class="flex items-center gap-3">
 							<h1 class="text-lg font-semibold">{data.album.title}</h1>
 							{#if data.album.album_date}
-								<span class="text-sm font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20" style="color: var(--gallery-primary);">
-									{new Date(data.album.album_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+								<span
+									class="text-sm font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20"
+									style="color: var(--gallery-primary);"
+								>
+									{new Date(data.album.album_date).toLocaleDateString('en-US', {
+										year: 'numeric',
+										month: 'long',
+										day: 'numeric'
+									})}
 								</span>
 							{/if}
 						</div>
 						<div class="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
 							<span>{data.totalCount} photos</span>
 							{#if data.expiresIn && data.expiresIn > 0}
-								<span class="text-amber-500">• Expires in {formatTimeRemaining(data.expiresIn)}</span>
+								<span class="text-amber-500"
+									>• Expires in {formatTimeRemaining(data.expiresIn)}</span
+								>
 							{/if}
 						</div>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
-						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode} style="background-color: {isSelecting ? 'var(--gallery-primary)' : ''}; color: {isSelecting ? 'white' : ''};">
+						<button
+							class="btn btn-secondary text-sm"
+							onclick={toggleSelectMode}
+							style="background-color: {isSelecting
+								? 'var(--gallery-primary)'
+								: ''}; color: {isSelecting ? 'white' : ''};"
+						>
 							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
@@ -488,7 +559,7 @@
 				<!-- Sort dropdown -->
 				<div class="flex items-center gap-2 mb-4">
 					<label for="sortSelect" class="text-sm text-gray-400">Sort:</label>
-					<select 
+					<select
 						id="sortSelect"
 						class="form-select text-sm py-1 px-2 bg-[var(--color-bg-secondary)] border-[var(--color-border)] rounded"
 						onchange={(e) => {
@@ -528,15 +599,17 @@
 						<p>Check back soon for new photos!</p>
 					</div>
 				{:else}
-					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
 						{#each displayedPhotos as photo, index}
 							<button
-								class="group relative bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden transition-all duration-200 {selectedPhotos.has(
+								class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 									photo.id
 								)
-									? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)]'
+									? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
 									: ''}"
-								style={selectedPhotos.has(photo.id) ? `--tw-ring-color: var(--gallery-primary);` : ''}
+								style={selectedPhotos.has(photo.id)
+									? `--tw-ring-color: var(--gallery-primary);`
+									: ''}
 								onclick={(e) => handlePhotoClick(photo.id, index, e)}
 							>
 								<img
@@ -552,7 +625,9 @@
 										)
 											? 'text-white'
 											: 'bg-white/90 border-2 border-gray-300'}"
-										style={selectedPhotos.has(photo.id) ? `background-color: var(--gallery-primary);` : ''}
+										style={selectedPhotos.has(photo.id)
+											? `background-color: var(--gallery-primary);`
+											: ''}
 									>
 										{#if selectedPhotos.has(photo.id)}
 											<svg
@@ -579,9 +654,25 @@
 					<div bind:this={loadMoreTrigger} class="py-8 flex justify-center">
 						{#if isLoadingMore}
 							<div class="flex items-center gap-2 text-gray-400">
-								<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								<svg
+									class="animate-spin h-5 w-5"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
 								</svg>
 								<span>Loading more photos...</span>
 							</div>

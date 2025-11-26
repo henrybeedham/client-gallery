@@ -52,6 +52,8 @@
 
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
+		console.log('Stuff');
+
 		if (event.shiftKey && lastSelectedIndex !== null) {
 			// Shift+click: select range
 			const start = Math.min(lastSelectedIndex, index);
@@ -397,12 +399,16 @@
 									{/if}
 									<!-- Background photo button -->
 									{#if photo.id !== data.album.background_photo_id}
-										<form method="POST" action="?/setBackground" use:enhance={() => {
-											return async ({ update }) => {
-												backgroundPhotoId = photo.id;
-												await update();
-											};
-										}}>
+										<form
+											method="POST"
+											action="?/setBackground"
+											use:enhance={() => {
+												return async ({ update }) => {
+													backgroundPhotoId = photo.id;
+													await update();
+												};
+											}}
+										>
 											<input type="hidden" name="photoId" value={photo.id} />
 											<button
 												type="submit"
@@ -427,12 +433,16 @@
 											</button>
 										</form>
 									{:else}
-										<form method="POST" action="?/clearBackground" use:enhance={() => {
-											return async ({ update }) => {
-												backgroundPhotoId = null;
-												await update();
-											};
-										}}>
+										<form
+											method="POST"
+											action="?/clearBackground"
+											use:enhance={() => {
+												return async ({ update }) => {
+													backgroundPhotoId = null;
+													await update();
+												};
+											}}
+										>
 											<button
 												type="submit"
 												class="p-1.5 rounded bg-purple-500 text-white"
@@ -535,7 +545,7 @@
 												<path
 													d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
 												></path>
-										</svg>
+											</svg>
 										</button>
 									{/if}
 								</div>
@@ -547,7 +557,9 @@
 								<div class="flex items-center gap-2 text-gray-500">
 									<span>{formatFileSize(photo.file_size || 0)}</span>
 									{#if getPhotoDownloads(photo.id) > 0}
-										<span class="text-green-400" title="Downloads">↓{getPhotoDownloads(photo.id)}</span>
+										<span class="text-green-400" title="Downloads"
+											>↓{getPhotoDownloads(photo.id)}</span
+										>
 									{/if}
 								</div>
 								<div>
@@ -654,7 +666,9 @@
 						</div>
 
 						<div>
-							<label for="sortOrder" class="block text-sm font-medium mb-1.5">Photo Sort Order</label>
+							<label for="sortOrder" class="block text-sm font-medium mb-1.5"
+								>Photo Sort Order</label
+							>
 							<select id="sortOrder" name="sortOrder" class="form-select" bind:value={sortOrder}>
 								<option value="newest">Newest first</option>
 								<option value="oldest">Oldest first</option>
@@ -710,9 +724,7 @@
 						</button>
 
 						{#if showAdvancedSettings}
-							<div
-								class="space-y-4 pt-2 border-t border-[var(--color-border)] animate-fade-in"
-							>
+							<div class="space-y-4 pt-2 border-t border-[var(--color-border)] animate-fade-in">
 								<div class="space-y-3">
 									<label class="flex items-center gap-2 cursor-pointer">
 										<input
@@ -789,15 +801,11 @@
 								</div>
 
 								<div>
-									<label class="block text-sm font-medium mb-1.5">
-										Background Photo
-									</label>
+									<label class="block text-sm font-medium mb-1.5"> Background Photo </label>
 									<!-- Hidden input to preserve backgroundPhotoId when advanced settings is open -->
 									<input type="hidden" name="backgroundPhotoId" value={backgroundPhotoId || ''} />
 									{#if data.album.background_photo_id}
-										<p class="text-sm text-purple-400">
-											Set from photo grid (purple icon)
-										</p>
+										<p class="text-sm text-purple-400">Set from photo grid (purple icon)</p>
 									{:else}
 										<p class="text-sm text-gray-500">
 											Select from photo grid using the purple icon
