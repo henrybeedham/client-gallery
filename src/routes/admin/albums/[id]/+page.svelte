@@ -277,7 +277,10 @@
 						hidden
 					/>
 					{#if selectedPhoto && selectedPhoto.length > 0}
-						<button onclick={() => deleteSelectedPhotos(selectedPhoto)} class="btn btn-danger">
+						<button
+							oncontextmenu={() => deleteSelectedPhotos(selectedPhoto)}
+							class="btn btn-danger"
+						>
 							Delete Selected
 						</button>
 						<button onclick={() => (selectedPhoto = [])} class="btn btn-secondary">
