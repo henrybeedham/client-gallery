@@ -248,6 +248,13 @@ export async function processImageFromImportFolder(
 	filePath: string,
 	albumSlug: string
 ): Promise<ProcessedImage> {
+	// Validate that the file path is within the import directory (security check)
+	const resolvedPath = path.resolve(filePath);
+	const resolvedImportDir = path.resolve(IMPORT_DIR);
+	if (!resolvedPath.startsWith(resolvedImportDir)) {
+		throw new Error('Invalid file path: file must be within the import directory');
+	}
+
 	ensureAlbumDirs(albumSlug);
 
 	const buffer = await fs.readFile(filePath);

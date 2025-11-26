@@ -114,7 +114,7 @@
 				}
 
 				// Update progress based on files processed
-				uploadProgress = Math.round(((i + batch.length) / totalFiles) * 100);
+				uploadProgress = Math.round(((uploadedCount + failedCount) / totalFiles) * 100);
 				uploadStatus = `Uploading... ${uploadProgress}% (${uploadedCount}/${totalFiles})`;
 			}
 
