@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { env } from '$env/dynamic/private';
 
 const UPLOAD_DIR = env.UPLOAD_DIR || './uploads';
-const IMPORT_DIR = env.IMPORT_DIR || '/opt/client-gallery/import';
+const IMPORT_DIR = env.IMPORT_DIR || './import';
 const THUMBNAIL_SIZE = 600;
 const MEDIUM_SIZE = 1600;
 
