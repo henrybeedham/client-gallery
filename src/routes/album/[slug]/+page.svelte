@@ -29,6 +29,7 @@
 	// Calculate masonry positions when photos or container size changes
 	function calculateMasonryLayout() {
 		if (!masonryContainer || data.album.layout_style !== 'masonry') return;
+		if (columnCount <= 0) return; // Safety check to prevent division by zero
 
 		const containerWidth = masonryContainer.offsetWidth;
 		const columnWidth = (containerWidth - MASONRY_GAP * (columnCount - 1)) / columnCount;
@@ -77,6 +78,9 @@
 		}
 	}
 
+	// Track previous photo count to avoid unnecessary masonry recalculations
+	let prevPhotoCount = $state(0);
+
 	// Reset displayed photos when data changes (e.g., tag filter or sort changes)
 	$effect(() => {
 		displayedPhotos = [...data.photos];
@@ -84,15 +88,20 @@
 		selectedPhotos = new Set();
 		isSelecting = false;
 		lastSelectedIndex = null;
+		prevPhotoCount = 0; // Reset to force masonry recalculation
 	});
 
 	// Recalculate masonry when photos change
 	$effect(() => {
 		if (data.album.layout_style === 'masonry' && displayedPhotos.length > 0) {
-			// Use tick to ensure DOM is updated
-			tick().then(() => {
-				calculateMasonryLayout();
-			});
+			// Only recalculate if photo count changed
+			if (displayedPhotos.length !== prevPhotoCount) {
+				prevPhotoCount = displayedPhotos.length;
+				// Use tick to ensure DOM is updated
+				tick().then(() => {
+					calculateMasonryLayout();
+				});
+			}
 		}
 	});
 
@@ -334,8 +343,12 @@
 	function nextPhoto() {
 		if (lightboxIndex !== null && lightboxIndex < displayedPhotos.length - 1) {
 			lightboxIndex++;
-			// Trigger loading more photos when approaching the end
-			if (hasMore && lightboxIndex >= displayedPhotos.length - LIGHTBOX_PRELOAD_THRESHOLD) {
+			// Trigger loading more photos when approaching the end (check isLoadingMore to prevent race conditions)
+			if (
+				hasMore &&
+				!isLoadingMore &&
+				lightboxIndex >= displayedPhotos.length - LIGHTBOX_PRELOAD_THRESHOLD
+			) {
 				loadMorePhotos();
 			}
 		}
@@ -357,7 +370,11 @@
 
 	function handleTouchStart(e: TouchEvent) {
 		// Check if the touch started on a button element
-		const target = e.target as HTMLElement;
+		const target = e.target as HTMLElement | null;
+		if (!target) {
+			isTouchOnButton = false;
+			return;
+		}
 		isTouchOnButton = target.closest('button') !== null || target.closest('a') !== null;
 		touchStartX = e.touches[0].clientX;
 	}
