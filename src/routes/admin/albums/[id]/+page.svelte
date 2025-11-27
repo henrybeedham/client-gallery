@@ -13,6 +13,7 @@
 	let showOnHome = $state(data.album.show_on_home === 1);
 	let password = $state(data.album.password || '');
 	let sortOrder = $state(data.album.sort_order || 'oldest');
+	let layoutStyle = $state(data.album.layout_style || 'grid');
 	let albumDate = $state(data.album.album_date || '');
 	let expiresAt = $state(data.album.expires_at || '');
 	let primaryColor = $state(data.album.primary_color || '#3b82f6');
@@ -722,6 +723,24 @@
 								<option value="newest">Newest first</option>
 								<option value="random">Random</option>
 							</select>
+						</div>
+
+						<div>
+							<label for="layoutStyle" class="block text-sm font-medium mb-1.5"
+								>Gallery Layout</label
+							>
+							<select
+								id="layoutStyle"
+								name="layoutStyle"
+								class="form-select"
+								bind:value={layoutStyle}
+							>
+								<option value="grid">Grid</option>
+								<option value="masonry">Masonry</option>
+							</select>
+							<p class="text-xs text-gray-500 mt-1">
+								Grid: Uniform square thumbnails. Masonry: Variable height photos.
+							</p>
 						</div>
 
 						<div>

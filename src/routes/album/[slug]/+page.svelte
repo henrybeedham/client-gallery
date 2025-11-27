@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	let { data, form } = $props();
 
@@ -19,6 +19,68 @@
 	let hasMore = $state(data.hasMore);
 	let loadMoreTrigger: HTMLDivElement;
 
+	// Masonry layout state
+	let masonryContainer: HTMLDivElement;
+	let masonryPositions = $state<{ left: string; top: string; width: string }[]>([]);
+	let masonryHeight = $state(0);
+	let columnCount = $state(4);
+	const MASONRY_GAP = 4; // gap in pixels
+
+	// Calculate masonry positions when photos or container size changes
+	function calculateMasonryLayout() {
+		if (!masonryContainer || data.album.layout_style !== 'masonry') return;
+		if (columnCount <= 0) return; // Safety check to prevent division by zero
+
+		const containerWidth = masonryContainer.offsetWidth;
+		const columnWidth = (containerWidth - MASONRY_GAP * (columnCount - 1)) / columnCount;
+		const columnHeights = new Array(columnCount).fill(0);
+		const positions: { left: string; top: string; width: string }[] = [];
+
+		for (const photo of displayedPhotos) {
+			// Find the shortest column
+			const minHeight = Math.min(...columnHeights);
+			const columnIndex = columnHeights.indexOf(minHeight);
+
+			// Calculate position
+			const left = columnIndex * (columnWidth + MASONRY_GAP);
+			const top = columnHeights[columnIndex];
+
+			// Calculate item height based on aspect ratio
+			const aspectRatio =
+				photo.width && photo.height && photo.width > 0 && photo.height > 0
+					? photo.width / photo.height
+					: 1;
+			const itemHeight = columnWidth / aspectRatio;
+
+			positions.push({
+				left: `${left}px`,
+				top: `${top}px`,
+				width: `${columnWidth}px`
+			});
+
+			// Update column height
+			columnHeights[columnIndex] += itemHeight + MASONRY_GAP;
+		}
+
+		masonryPositions = positions;
+		masonryHeight = Math.max(...columnHeights);
+	}
+
+	// Determine column count based on screen size
+	function updateColumnCount() {
+		if (typeof window === 'undefined') return;
+		if (window.innerWidth >= 1024) {
+			columnCount = 4;
+		} else if (window.innerWidth >= 640) {
+			columnCount = 3;
+		} else {
+			columnCount = 2;
+		}
+	}
+
+	// Track previous photo count to avoid unnecessary masonry recalculations
+	let prevPhotoCount = $state(0);
+
 	// Reset displayed photos when data changes (e.g., tag filter or sort changes)
 	$effect(() => {
 		displayedPhotos = [...data.photos];
@@ -26,16 +88,68 @@
 		selectedPhotos = new Set();
 		isSelecting = false;
 		lastSelectedIndex = null;
+		prevPhotoCount = 0; // Reset to force masonry recalculation
+	});
+
+	// Recalculate masonry when photos change
+	$effect(() => {
+		if (data.album.layout_style === 'masonry' && displayedPhotos.length > 0) {
+			// Only recalculate if photo count changed
+			if (displayedPhotos.length !== prevPhotoCount) {
+				prevPhotoCount = displayedPhotos.length;
+				// Use tick to ensure DOM is updated
+				tick().then(() => {
+					calculateMasonryLayout();
+				});
+			}
+		}
 	});
 
 	// Touch swipe state for lightbox
 	let touchStartX = $state(0);
 	let touchEndX = $state(0);
+	let isTouchOnButton = $state(false);
 	const minSwipeDistance = 50;
 
-	// Set up intersection observer for infinite scroll
+	// Preload threshold for triggering more photos to load in lightbox
+	const LIGHTBOX_PRELOAD_THRESHOLD = 3;
+
+	// Helper function to validate and sanitize aspect ratio values
+	function getAspectRatioStyle(width: number | null, height: number | null): string {
+		if (
+			width === null ||
+			height === null ||
+			typeof width !== 'number' ||
+			typeof height !== 'number' ||
+			!Number.isFinite(width) ||
+			!Number.isFinite(height) ||
+			width <= 0 ||
+			height <= 0
+		) {
+			return '';
+		}
+		return `aspect-ratio: ${Math.round(width)} / ${Math.round(height)}`;
+	}
+
+	// Set up intersection observer for infinite scroll and masonry resize handler
 	onMount(() => {
-		if (!loadMoreTrigger) return;
+		// Set up resize handler for masonry
+		updateColumnCount();
+		const handleResize = () => {
+			updateColumnCount();
+			calculateMasonryLayout();
+		};
+		window.addEventListener('resize', handleResize);
+
+		// Initial masonry calculation
+		if (data.album.layout_style === 'masonry') {
+			tick().then(() => calculateMasonryLayout());
+		}
+
+		// Set up intersection observer
+		if (!loadMoreTrigger) {
+			return () => window.removeEventListener('resize', handleResize);
+		}
 
 		const observer = new IntersectionObserver(
 			(entries) => {
@@ -48,7 +162,10 @@
 
 		observer.observe(loadMoreTrigger);
 
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('resize', handleResize);
+		};
 	});
 
 	async function loadMorePhotos() {
@@ -226,6 +343,14 @@
 	function nextPhoto() {
 		if (lightboxIndex !== null && lightboxIndex < displayedPhotos.length - 1) {
 			lightboxIndex++;
+			// Trigger loading more photos when approaching the end (check isLoadingMore to prevent race conditions)
+			if (
+				hasMore &&
+				!isLoadingMore &&
+				lightboxIndex >= displayedPhotos.length - LIGHTBOX_PRELOAD_THRESHOLD
+			) {
+				loadMorePhotos();
+			}
 		}
 	}
 
@@ -244,6 +369,13 @@
 	}
 
 	function handleTouchStart(e: TouchEvent) {
+		// Check if the touch started on a button element
+		const target = e.target as HTMLElement | null;
+		if (!target) {
+			isTouchOnButton = false;
+			return;
+		}
+		isTouchOnButton = target.closest('button') !== null || target.closest('a') !== null;
 		touchStartX = e.touches[0].clientX;
 	}
 
@@ -253,6 +385,14 @@
 
 	function handleTouchEnd() {
 		if (lightboxIndex === null) return;
+
+		// Don't process swipe if touch started on a button
+		if (isTouchOnButton) {
+			touchStartX = 0;
+			touchEndX = 0;
+			isTouchOnButton = false;
+			return;
+		}
 
 		const swipeDistance = touchStartX - touchEndX;
 		if (Math.abs(swipeDistance) >= minSwipeDistance) {
@@ -624,56 +764,118 @@
 						<p>Check back soon for new photos!</p>
 					</div>
 				{:else}
-					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
-						{#each displayedPhotos as photo, index}
-							<button
-								class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
-									photo.id
-								)
-									? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
-									: ''}"
-								style={selectedPhotos.has(photo.id)
-									? `--tw-ring-color: var(--gallery-primary);`
-									: ''}
-								onclick={(e) => handlePhotoClick(photo.id, index, e)}
-							>
-								<img
-									src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
-									alt={photo.original_filename}
-									loading="lazy"
-									class="w-full aspect-square object-cover"
-								/>
-								{#if isSelecting}
-									<div
-										class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
-											photo.id
-										)
-											? 'text-white'
-											: 'bg-white/90 border-2 border-gray-300'}"
-										style={selectedPhotos.has(photo.id)
-											? `background-color: var(--gallery-primary);`
-											: ''}
-									>
-										{#if selectedPhotos.has(photo.id)}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="14"
-												height="14"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="3"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<polyline points="20 6 9 17 4 12"></polyline>
-											</svg>
-										{/if}
-									</div>
-								{/if}
-							</button>
-						{/each}
-					</div>
+					{#if data.album.layout_style === 'masonry'}
+						<!-- Masonry Layout with absolute positioning for proper order and stable loading -->
+						<div
+							bind:this={masonryContainer}
+							class="relative w-full"
+							style="height: {masonryHeight}px;"
+						>
+							{#each displayedPhotos as photo, index}
+								<button
+									class="group absolute bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
+										photo.id
+									)
+										? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
+										: ''}"
+									style="{masonryPositions[index]
+										? `left: ${masonryPositions[index].left}; top: ${masonryPositions[index].top}; width: ${masonryPositions[index].width};`
+										: 'visibility: hidden;'}{selectedPhotos.has(photo.id)
+										? ' --tw-ring-color: var(--gallery-primary);'
+										: ''}"
+									onclick={(e) => handlePhotoClick(photo.id, index, e)}
+								>
+									<img
+										src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
+										alt={photo.original_filename}
+										loading="lazy"
+										class="w-full object-cover"
+										style={getAspectRatioStyle(photo.width, photo.height)}
+									/>
+									{#if isSelecting}
+										<div
+											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+												photo.id
+											)
+												? 'text-white'
+												: 'bg-white/90 border-2 border-gray-300'}"
+											style={selectedPhotos.has(photo.id)
+												? `background-color: var(--gallery-primary);`
+												: ''}
+										>
+											{#if selectedPhotos.has(photo.id)}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													width="14"
+													height="14"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="3"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<polyline points="20 6 9 17 4 12"></polyline>
+												</svg>
+											{/if}
+										</div>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					{:else}
+						<!-- Grid Layout (default) -->
+						<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
+							{#each displayedPhotos as photo, index}
+								<button
+									class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
+										photo.id
+									)
+										? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
+										: ''}"
+									style={selectedPhotos.has(photo.id)
+										? `--tw-ring-color: var(--gallery-primary);`
+										: ''}
+									onclick={(e) => handlePhotoClick(photo.id, index, e)}
+								>
+									<img
+										src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
+										alt={photo.original_filename}
+										loading="lazy"
+										class="w-full aspect-square object-cover"
+									/>
+									{#if isSelecting}
+										<div
+											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+												photo.id
+											)
+												? 'text-white'
+												: 'bg-white/90 border-2 border-gray-300'}"
+											style={selectedPhotos.has(photo.id)
+												? `background-color: var(--gallery-primary);`
+												: ''}
+										>
+											{#if selectedPhotos.has(photo.id)}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													width="14"
+													height="14"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="3"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<polyline points="20 6 9 17 4 12"></polyline>
+												</svg>
+											{/if}
+										</div>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					{/if}
 
 					<!-- Load more trigger and loading indicator -->
 					<div bind:this={loadMoreTrigger} class="py-8 flex justify-center">
