@@ -24,7 +24,7 @@
 	let masonryPositions = $state<{ left: string; top: string; width: string }[]>([]);
 	let masonryHeight = $state(0);
 	let columnCount = $state(4);
-	const MASONRY_GAP = 4; // gap in pixels
+	const MASONRY_GAP = 6; // gap in pixels
 
 	// Calculate masonry positions when photos or container size changes
 	function calculateMasonryLayout() {
@@ -619,13 +619,7 @@
 						</div>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
-						<button
-							class="btn btn-secondary text-sm"
-							onclick={toggleSelectMode}
-							style="background-color: {isSelecting
-								? 'var(--gallery-primary)'
-								: ''}; color: {isSelecting ? 'white' : ''};"
-						>
+						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode}>
 							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
@@ -776,7 +770,7 @@
 									class="group absolute bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 										photo.id
 									)
-										? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
+										? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[97.65%]'
 										: ''}"
 									style="{masonryPositions[index]
 										? `left: ${masonryPositions[index].left}; top: ${masonryPositions[index].top}; width: ${masonryPositions[index].width};`
