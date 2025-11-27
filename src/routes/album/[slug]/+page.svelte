@@ -31,6 +31,7 @@
 	// Touch swipe state for lightbox
 	let touchStartX = $state(0);
 	let touchEndX = $state(0);
+	let isTouchOnButton = $state(false);
 	const minSwipeDistance = 50;
 
 	// Set up intersection observer for infinite scroll
@@ -226,6 +227,10 @@
 	function nextPhoto() {
 		if (lightboxIndex !== null && lightboxIndex < displayedPhotos.length - 1) {
 			lightboxIndex++;
+			// Trigger loading more photos when approaching the end
+			if (hasMore && lightboxIndex >= displayedPhotos.length - 3) {
+				loadMorePhotos();
+			}
 		}
 	}
 
@@ -244,6 +249,9 @@
 	}
 
 	function handleTouchStart(e: TouchEvent) {
+		// Check if the touch started on a button element
+		const target = e.target as HTMLElement;
+		isTouchOnButton = target.closest('button') !== null || target.closest('a') !== null;
 		touchStartX = e.touches[0].clientX;
 	}
 
@@ -253,6 +261,14 @@
 
 	function handleTouchEnd() {
 		if (lightboxIndex === null) return;
+
+		// Don't process swipe if touch started on a button
+		if (isTouchOnButton) {
+			touchStartX = 0;
+			touchEndX = 0;
+			isTouchOnButton = false;
+			return;
+		}
 
 		const swipeDistance = touchStartX - touchEndX;
 		if (Math.abs(swipeDistance) >= minSwipeDistance) {
@@ -624,56 +640,114 @@
 						<p>Check back soon for new photos!</p>
 					</div>
 				{:else}
-					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
-						{#each displayedPhotos as photo, index}
-							<button
-								class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
-									photo.id
-								)
-									? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
-									: ''}"
-								style={selectedPhotos.has(photo.id)
-									? `--tw-ring-color: var(--gallery-primary);`
-									: ''}
-								onclick={(e) => handlePhotoClick(photo.id, index, e)}
-							>
-								<img
-									src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
-									alt={photo.original_filename}
-									loading="lazy"
-									class="w-full aspect-square object-cover"
-								/>
-								{#if isSelecting}
-									<div
-										class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
-											photo.id
-										)
-											? 'text-white'
-											: 'bg-white/90 border-2 border-gray-300'}"
-										style={selectedPhotos.has(photo.id)
-											? `background-color: var(--gallery-primary);`
+					{#if data.album.layout_style === 'masonry'}
+						<!-- Masonry Layout -->
+						<div class="columns-2 sm:columns-3 lg:columns-4 gap-1">
+							{#each displayedPhotos as photo, index}
+								<button
+									class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 mb-1 w-full block break-inside-avoid {selectedPhotos.has(
+										photo.id
+									)
+										? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
+										: ''}"
+									style={selectedPhotos.has(photo.id)
+										? `--tw-ring-color: var(--gallery-primary);`
+										: ''}
+									onclick={(e) => handlePhotoClick(photo.id, index, e)}
+								>
+									<img
+										src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
+										alt={photo.original_filename}
+										loading="lazy"
+										class="w-full object-cover"
+										style={photo.width && photo.height
+											? `aspect-ratio: ${photo.width} / ${photo.height}`
 											: ''}
-									>
-										{#if selectedPhotos.has(photo.id)}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="14"
-												height="14"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="3"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<polyline points="20 6 9 17 4 12"></polyline>
-											</svg>
-										{/if}
-									</div>
-								{/if}
-							</button>
-						{/each}
-					</div>
+									/>
+									{#if isSelecting}
+										<div
+											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+												photo.id
+											)
+												? 'text-white'
+												: 'bg-white/90 border-2 border-gray-300'}"
+											style={selectedPhotos.has(photo.id)
+												? `background-color: var(--gallery-primary);`
+												: ''}
+										>
+											{#if selectedPhotos.has(photo.id)}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													width="14"
+													height="14"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="3"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<polyline points="20 6 9 17 4 12"></polyline>
+												</svg>
+											{/if}
+										</div>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					{:else}
+						<!-- Grid Layout (default) -->
+						<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
+							{#each displayedPhotos as photo, index}
+								<button
+									class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
+										photo.id
+									)
+										? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
+										: ''}"
+									style={selectedPhotos.has(photo.id)
+										? `--tw-ring-color: var(--gallery-primary);`
+										: ''}
+									onclick={(e) => handlePhotoClick(photo.id, index, e)}
+								>
+									<img
+										src="/api/photos/{data.album.slug}/{photo.filename}/thumbnail"
+										alt={photo.original_filename}
+										loading="lazy"
+										class="w-full aspect-square object-cover"
+									/>
+									{#if isSelecting}
+										<div
+											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+												photo.id
+											)
+												? 'text-white'
+												: 'bg-white/90 border-2 border-gray-300'}"
+											style={selectedPhotos.has(photo.id)
+												? `background-color: var(--gallery-primary);`
+												: ''}
+										>
+											{#if selectedPhotos.has(photo.id)}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													width="14"
+													height="14"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="3"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<polyline points="20 6 9 17 4 12"></polyline>
+												</svg>
+											{/if}
+										</div>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					{/if}
 
 					<!-- Load more trigger and loading indicator -->
 					<div bind:this={loadMoreTrigger} class="py-8 flex justify-center">

@@ -21,6 +21,7 @@ db.exec(`
     show_on_home INTEGER DEFAULT 1,
     password TEXT,
     sort_order TEXT DEFAULT 'oldest',
+    layout_style TEXT DEFAULT 'grid',
     album_date TEXT,
     expires_at TEXT,
     primary_color TEXT DEFAULT '#3b82f6',
@@ -78,6 +79,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics(created_at);
 `);
 
+// Migration: Add layout_style column if it doesn't exist
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN layout_style TEXT DEFAULT 'grid'`);
+} catch {
+	// Column already exists, ignore error
+}
+
 export interface Album {
 	id: number;
 	title: string;
@@ -89,6 +97,7 @@ export interface Album {
 	show_on_home: number;
 	password: string | null;
 	sort_order: 'newest' | 'oldest' | 'random';
+	layout_style: 'grid' | 'masonry';
 	album_date: string | null;
 	expires_at: string | null;
 	primary_color: string;
@@ -188,11 +197,12 @@ export function createAlbum(
 	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
-	primaryColor: string = '#3b82f6'
+	primaryColor: string = '#3b82f6',
+	layoutStyle: 'grid' | 'masonry' = 'grid'
 ): number {
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, sort_order, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, sort_order, layout_style, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
 		.run(
 			title,
@@ -202,6 +212,7 @@ export function createAlbum(
 			showOnHome ? 1 : 0,
 			password || null,
 			sortOrder,
+			layoutStyle,
 			albumDate || null,
 			expiresAt || null,
 			primaryColor
@@ -221,7 +232,8 @@ export function updateAlbum(
 	albumDate: string | null = null,
 	expiresAt: string | null = null,
 	primaryColor: string = '#3b82f6',
-	backgroundPhotoId: number | null = null
+	backgroundPhotoId: number | null = null,
+	layoutStyle: 'grid' | 'masonry' = 'grid'
 ): void {
 	db.prepare(
 		`UPDATE albums SET 
@@ -232,6 +244,7 @@ export function updateAlbum(
       show_on_home = ?,
       password = ?,
       sort_order = ?,
+      layout_style = ?,
       album_date = ?,
       expires_at = ?,
       primary_color = ?,
@@ -246,6 +259,7 @@ export function updateAlbum(
 		showOnHome ? 1 : 0,
 		password || null,
 		sortOrder,
+		layoutStyle,
 		albumDate || null,
 		expiresAt || null,
 		primaryColor,

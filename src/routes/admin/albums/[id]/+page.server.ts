@@ -85,6 +85,10 @@ export const actions: Actions = {
 			| 'newest'
 			| 'oldest'
 			| 'random';
+		const layoutStyleInput = data.get('layoutStyle')?.toString() || 'grid';
+		const layoutStyle = (layoutStyleInput === 'masonry' ? 'masonry' : 'grid') as
+			| 'grid'
+			| 'masonry';
 		const albumDate = data.get('albumDate')?.toString() || null;
 		const expiresAt = data.get('expiresAt')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
@@ -131,7 +135,8 @@ export const actions: Actions = {
 				albumDate || null,
 				expiresAt || null,
 				primaryColor,
-				backgroundPhotoId
+				backgroundPhotoId,
+				layoutStyle
 			);
 			return { success: true, message: 'Album updated' };
 		} catch {
