@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	let { data, form } = $props();
 
@@ -19,6 +19,64 @@
 	let hasMore = $state(data.hasMore);
 	let loadMoreTrigger: HTMLDivElement;
 
+	// Masonry layout state
+	let masonryContainer: HTMLDivElement;
+	let masonryPositions = $state<{ left: string; top: string; width: string }[]>([]);
+	let masonryHeight = $state(0);
+	let columnCount = $state(4);
+	const MASONRY_GAP = 4; // gap in pixels
+
+	// Calculate masonry positions when photos or container size changes
+	function calculateMasonryLayout() {
+		if (!masonryContainer || data.album.layout_style !== 'masonry') return;
+
+		const containerWidth = masonryContainer.offsetWidth;
+		const columnWidth = (containerWidth - MASONRY_GAP * (columnCount - 1)) / columnCount;
+		const columnHeights = new Array(columnCount).fill(0);
+		const positions: { left: string; top: string; width: string }[] = [];
+
+		for (const photo of displayedPhotos) {
+			// Find the shortest column
+			const minHeight = Math.min(...columnHeights);
+			const columnIndex = columnHeights.indexOf(minHeight);
+
+			// Calculate position
+			const left = columnIndex * (columnWidth + MASONRY_GAP);
+			const top = columnHeights[columnIndex];
+
+			// Calculate item height based on aspect ratio
+			const aspectRatio =
+				photo.width && photo.height && photo.width > 0 && photo.height > 0
+					? photo.width / photo.height
+					: 1;
+			const itemHeight = columnWidth / aspectRatio;
+
+			positions.push({
+				left: `${left}px`,
+				top: `${top}px`,
+				width: `${columnWidth}px`
+			});
+
+			// Update column height
+			columnHeights[columnIndex] += itemHeight + MASONRY_GAP;
+		}
+
+		masonryPositions = positions;
+		masonryHeight = Math.max(...columnHeights);
+	}
+
+	// Determine column count based on screen size
+	function updateColumnCount() {
+		if (typeof window === 'undefined') return;
+		if (window.innerWidth >= 1024) {
+			columnCount = 4;
+		} else if (window.innerWidth >= 640) {
+			columnCount = 3;
+		} else {
+			columnCount = 2;
+		}
+	}
+
 	// Reset displayed photos when data changes (e.g., tag filter or sort changes)
 	$effect(() => {
 		displayedPhotos = [...data.photos];
@@ -26,6 +84,16 @@
 		selectedPhotos = new Set();
 		isSelecting = false;
 		lastSelectedIndex = null;
+	});
+
+	// Recalculate masonry when photos change
+	$effect(() => {
+		if (data.album.layout_style === 'masonry' && displayedPhotos.length > 0) {
+			// Use tick to ensure DOM is updated
+			tick().then(() => {
+				calculateMasonryLayout();
+			});
+		}
 	});
 
 	// Touch swipe state for lightbox
@@ -54,9 +122,25 @@
 		return `aspect-ratio: ${Math.round(width)} / ${Math.round(height)}`;
 	}
 
-	// Set up intersection observer for infinite scroll
+	// Set up intersection observer for infinite scroll and masonry resize handler
 	onMount(() => {
-		if (!loadMoreTrigger) return;
+		// Set up resize handler for masonry
+		updateColumnCount();
+		const handleResize = () => {
+			updateColumnCount();
+			calculateMasonryLayout();
+		};
+		window.addEventListener('resize', handleResize);
+
+		// Initial masonry calculation
+		if (data.album.layout_style === 'masonry') {
+			tick().then(() => calculateMasonryLayout());
+		}
+
+		// Set up intersection observer
+		if (!loadMoreTrigger) {
+			return () => window.removeEventListener('resize', handleResize);
+		}
 
 		const observer = new IntersectionObserver(
 			(entries) => {
@@ -69,7 +153,10 @@
 
 		observer.observe(loadMoreTrigger);
 
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('resize', handleResize);
+		};
 	});
 
 	async function loadMorePhotos() {
@@ -661,18 +748,24 @@
 					</div>
 				{:else}
 					{#if data.album.layout_style === 'masonry'}
-						<!-- Masonry Layout -->
-						<div class="columns-2 sm:columns-3 lg:columns-4 gap-1">
+						<!-- Masonry Layout with absolute positioning for proper order and stable loading -->
+						<div
+							bind:this={masonryContainer}
+							class="relative w-full"
+							style="height: {masonryHeight}px;"
+						>
 							{#each displayedPhotos as photo, index}
 								<button
-									class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 mb-1 w-full block break-inside-avoid {selectedPhotos.has(
+									class="group absolute bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 										photo.id
 									)
 										? 'ring-4 ring-offset-2 ring-offset-[var(--color-bg)] scale-[95.5%]'
 										: ''}"
-									style={selectedPhotos.has(photo.id)
-										? `--tw-ring-color: var(--gallery-primary);`
-										: ''}
+									style="{masonryPositions[index]
+										? `left: ${masonryPositions[index].left}; top: ${masonryPositions[index].top}; width: ${masonryPositions[index].width};`
+										: 'visibility: hidden;'}{selectedPhotos.has(photo.id)
+										? ' --tw-ring-color: var(--gallery-primary);'
+										: ''}"
 									onclick={(e) => handlePhotoClick(photo.id, index, e)}
 								>
 									<img
