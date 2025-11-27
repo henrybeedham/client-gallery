@@ -34,6 +34,26 @@
 	let isTouchOnButton = $state(false);
 	const minSwipeDistance = 50;
 
+	// Preload threshold for triggering more photos to load in lightbox
+	const LIGHTBOX_PRELOAD_THRESHOLD = 3;
+
+	// Helper function to validate and sanitize aspect ratio values
+	function getAspectRatioStyle(width: number | null, height: number | null): string {
+		if (
+			width === null ||
+			height === null ||
+			typeof width !== 'number' ||
+			typeof height !== 'number' ||
+			!Number.isFinite(width) ||
+			!Number.isFinite(height) ||
+			width <= 0 ||
+			height <= 0
+		) {
+			return '';
+		}
+		return `aspect-ratio: ${Math.round(width)} / ${Math.round(height)}`;
+	}
+
 	// Set up intersection observer for infinite scroll
 	onMount(() => {
 		if (!loadMoreTrigger) return;
@@ -228,7 +248,7 @@
 		if (lightboxIndex !== null && lightboxIndex < displayedPhotos.length - 1) {
 			lightboxIndex++;
 			// Trigger loading more photos when approaching the end
-			if (hasMore && lightboxIndex >= displayedPhotos.length - 3) {
+			if (hasMore && lightboxIndex >= displayedPhotos.length - LIGHTBOX_PRELOAD_THRESHOLD) {
 				loadMorePhotos();
 			}
 		}
@@ -660,9 +680,7 @@
 										alt={photo.original_filename}
 										loading="lazy"
 										class="w-full object-cover"
-										style={photo.width && photo.height
-											? `aspect-ratio: ${photo.width} / ${photo.height}`
-											: ''}
+										style={getAspectRatioStyle(photo.width, photo.height)}
 									/>
 									{#if isSelecting}
 										<div
