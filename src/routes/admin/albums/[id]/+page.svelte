@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { slugify, formatFileSize } from '$lib/utils';
+	import { PUBLIC_BASE_URL as BASE_URL } from '$env/static/public';
 
 	let { data, form } = $props();
 
@@ -239,6 +240,14 @@
 		</a>
 		<div>
 			<h1 class="text-2xl font-bold">{data.album.title}</h1>
+			<button
+				class="text-sm text-blue-400 hover:text-blue-300 mr-4"
+				onclick={() => {
+					navigator.clipboard.writeText(`${BASE_URL}/album/${data.album.slug}`);
+				}}
+			>
+				Copy link
+			</button>
 			<a
 				href="/album/{data.album.slug}"
 				target="_blank"
