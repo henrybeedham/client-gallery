@@ -922,7 +922,7 @@
 		aria-label="Photo lightbox"
 	>
 		<div class="flex items-center justify-between p-4 text-white flex-shrink-0">
-			<span class="text-sm opacity-80">{lightboxIndex + 1} / {displayedPhotos.length}</span>
+			<span class="text-sm opacity-80">{lightboxIndex + 1} / {data.totalCount}</span>
 			<span class="text-sm font-bold opacity-80"
 				>{displayedPhotos[lightboxIndex].original_filename}</span
 			>
