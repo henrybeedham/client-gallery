@@ -288,7 +288,7 @@
 					/>
 					{#if selectedPhoto && selectedPhoto.length > 0}
 						<button
-							oncontextmenu={() => deleteSelectedPhotos(selectedPhoto)}
+							oncontextmenu={() => deleteSelectedPhotos(selectedPhoto!)}
 							class="btn btn-danger"
 						>
 							Delete Selected

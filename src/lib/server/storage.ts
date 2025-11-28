@@ -37,17 +37,40 @@ function ensureAlbumDirs(albumSlug: string): void {
 function extractExifDateTaken(exifBuffer: Buffer | undefined): string | null {
 	if (!exifBuffer) return null;
 	try {
-		// EXIF dates are typically in offset 36 (DateTimeOriginal) or offset 132 (DateTime)
-		// Sharp's metadata.exif is a Buffer - we need to look for date patterns
-		const exifString = exifBuffer.toString('binary');
-		// Look for date pattern: YYYY:MM:DD HH:MM:SS
-		const dateMatch = exifString.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-		if (dateMatch) {
-			const [, year, month, day, hour, minute, second] = dateMatch;
-			return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+		const exifString = exifBuffer.toString('latin1'); // safer than binary
+
+		// Try finding DateTimeOriginal specifically
+		const dtoIndex = exifString.indexOf('DateTimeOriginal');
+		if (dtoIndex !== -1) {
+			// Extract date after this tag
+			const slice = exifString.slice(dtoIndex, dtoIndex + 50);
+			const m = slice.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+			if (m) {
+				const [, y, mo, d, h, mi, s] = m;
+				return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
+			}
+		}
+
+		// Fallback: try DateTimeDigitized
+		const dtdIndex = exifString.indexOf('DateTimeDigitized');
+		if (dtdIndex !== -1) {
+			const slice = exifString.slice(dtdIndex, dtdIndex + 50);
+			const m = slice.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+			if (m) {
+				const [, y, mo, d, h, mi, s] = m;
+				return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
+			}
+		}
+
+		// Final fallback: DO NOT USE — usually export time
+		// but included so your function always returns something
+		const fallback = exifString.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+		if (fallback) {
+			const [, y, mo, d, h, mi, s] = fallback;
+			return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
 		}
 	} catch {
-		// Failed to parse EXIF, return null
+		return null;
 	}
 	return null;
 }
