@@ -203,7 +203,7 @@
 			// Shift+click: select range
 			const start = Math.min(lastSelectedIndex, index);
 			const end = Math.max(lastSelectedIndex, index);
-			const rangeIds = data.photos.slice(start, end + 1).map((p) => p.id);
+			const rangeIds = displayedPhotos.slice(start, end + 1).map((p) => p.id);
 			rangeIds.forEach((id) => selectedPhotos.add(id));
 			selectedPhotos = new Set(selectedPhotos);
 		} else {
