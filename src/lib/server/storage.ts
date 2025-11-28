@@ -36,41 +36,113 @@ function ensureAlbumDirs(albumSlug: string): void {
 
 function extractExifDateTaken(exifBuffer: Buffer | undefined): string | null {
 	if (!exifBuffer) return null;
+
 	try {
-		const exifString = exifBuffer.toString('latin1'); // safer than binary
+		// 1. Validate 'Exif' header (Source: JPEG APP1 structure)
+		// Sharp usually provides the buffer starting with "Exif\0\0"
+		if (exifBuffer.toString('ascii', 0, 4) !== 'Exif') {
+			return null;
+		}
 
-		// Try finding DateTimeOriginal specifically
-		const dtoIndex = exifString.indexOf('DateTimeOriginal');
-		if (dtoIndex !== -1) {
-			// Extract date after this tag
-			const slice = exifString.slice(dtoIndex, dtoIndex + 50);
-			const m = slice.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-			if (m) {
-				const [, y, mo, d, h, mi, s] = m;
-				return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
+		// TIFF data starts after "Exif\0\0" (6 bytes total)
+		// All offsets in the TIFF spec are relative to the start of the TIFF header (idx 6)
+		const tiffStart = 6;
+
+		// 2. Determine Byte Order
+		// 'II' (0x4949) = Little Endian (Intel), 'MM' (0x4D4D) = Big Endian (Motorola)
+		const isLittleEndian = exifBuffer.toString('ascii', tiffStart, tiffStart + 2) === 'II';
+
+		// Helper to read data based on endianness
+		const getUInt16 = (offset: number) =>
+			isLittleEndian ? exifBuffer.readUInt16LE(offset) : exifBuffer.readUInt16BE(offset);
+		const getUInt32 = (offset: number) =>
+			isLittleEndian ? exifBuffer.readUInt32LE(offset) : exifBuffer.readUInt32BE(offset);
+
+		// 3. Get Offset to the First IFD (Image File Directory)
+		// Bytes 2-3 are 0x002A (42), Bytes 4-7 are the offset to IFD0
+		const ifd0Offset = getUInt32(tiffStart + 4);
+
+		// We need to find the "Exif Offset" tag (0x8769) inside IFD0.
+		// This points to the Sub-IFD where DateTimeOriginal (0x9003) actually lives.
+		const exifSubIFDOffset = findTagValue(
+			exifBuffer,
+			tiffStart,
+			ifd0Offset,
+			0x8769,
+			getUInt16,
+			getUInt32
+		);
+
+		if (!exifSubIFDOffset) {
+			return null; // No Exif SubIFD found
+		}
+
+		// 4. Find DateTimeOriginal (0x9003) inside the Exif Sub-IFD
+		// The value returned here is the offset to the actual string data
+		const dateOffset = findTagValue(
+			exifBuffer,
+			tiffStart,
+			exifSubIFDOffset,
+			0x9003,
+			getUInt16,
+			getUInt32
+		);
+
+		if (dateOffset) {
+			// 5. Read the string
+			// EXIF date format is fixed length 19 chars: "YYYY:MM:DD HH:MM:SS"
+			const dateString = exifBuffer.toString(
+				'ascii',
+				tiffStart + dateOffset,
+				tiffStart + dateOffset + 19
+			);
+
+			// Parse matches: YYYY:MM:DD HH:MM:SS
+			const dateMatch = dateString.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+
+			if (dateMatch) {
+				const [, year, month, day, hour, minute, second] = dateMatch;
+				return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
 			}
 		}
-
-		// Fallback: try DateTimeDigitized
-		const dtdIndex = exifString.indexOf('DateTimeDigitized');
-		if (dtdIndex !== -1) {
-			const slice = exifString.slice(dtdIndex, dtdIndex + 50);
-			const m = slice.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-			if (m) {
-				const [, y, mo, d, h, mi, s] = m;
-				return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
-			}
-		}
-
-		// Final fallback: DO NOT USE — usually export time
-		// but included so your function always returns something
-		const fallback = exifString.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-		if (fallback) {
-			const [, y, mo, d, h, mi, s] = fallback;
-			return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
-		}
-	} catch {
+	} catch (error) {
+		console.error('Error extracting EXIF date taken:', error);
+		// Malformed EXIF or out-of-bounds read
 		return null;
+	}
+	return null;
+}
+
+// Minimal TIFF Tag Finder Helper
+function findTagValue(
+	buffer: Buffer,
+	tiffStart: number,
+	ifdOffset: number,
+	targetTagId: number,
+	getUInt16: (o: number) => number,
+	getUInt32: (o: number) => number
+): number | null {
+	const numEntries = getUInt16(tiffStart + ifdOffset);
+
+	// Iterate through directory entries (12 bytes each)
+	for (let i = 0; i < numEntries; i++) {
+		const entryOffset = tiffStart + ifdOffset + 2 + i * 12;
+
+		// Ensure we don't read past buffer
+		if (entryOffset + 12 > buffer.length) return null;
+
+		const tagId = getUInt16(entryOffset);
+
+		if (tagId === targetTagId) {
+			// Bytes 0-1: Tag ID
+			// Bytes 2-3: Type (2=ASCII, 4=Long/UInt32)
+			// Bytes 4-7: Count
+			// Bytes 8-11: Value or Offset to Value
+
+			// If the tag is the Exif Pointer (0x8769), we need the Value (which is an offset)
+			// If the tag is DateTimeOriginal (0x9003), we need the Value (which is an offset to string)
+			return getUInt32(entryOffset + 8);
+		}
 	}
 	return null;
 }
