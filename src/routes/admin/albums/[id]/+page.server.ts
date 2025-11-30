@@ -19,7 +19,8 @@ import {
 	getAlbumAnalytics,
 	getPhotoDownloadCounts,
 	updatePhotoMetadata,
-	getOrCreateTag
+	getOrCreateTag,
+	deleteAlbumAnalytics
 } from '$lib/server/db';
 import {
 	processAndSaveImage,
@@ -86,9 +87,7 @@ export const actions: Actions = {
 			| 'oldest'
 			| 'random';
 		const layoutStyleInput = data.get('layoutStyle')?.toString() || 'grid';
-		const layoutStyle = (layoutStyleInput === 'masonry' ? 'masonry' : 'grid') as
-			| 'grid'
-			| 'masonry';
+		const layoutStyle = (layoutStyleInput === 'masonry' ? 'masonry' : 'grid') as 'grid' | 'masonry';
 		const albumDate = data.get('albumDate')?.toString() || null;
 		const expiresAt = data.get('expiresAt')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
@@ -494,5 +493,19 @@ export const actions: Actions = {
 			return { success: true, message: `Imported ${imported} photo(s), ${failed} failed` };
 		}
 		return { success: true, message: `Imported ${imported} photo(s) from import folder` };
+	},
+
+	clearAnalytics: async ({ params }) => {
+		const albumId = parseInt(params.id);
+		if (isNaN(albumId)) {
+			return fail(400, { error: 'Invalid album ID' });
+		}
+
+		try {
+			deleteAlbumAnalytics(albumId);
+			return { success: true, message: 'Album analytics cleared' };
+		} catch (e) {
+			console.error(`Failed to clear analytics for album ${albumId}:`, e);
+		}
 	}
 };

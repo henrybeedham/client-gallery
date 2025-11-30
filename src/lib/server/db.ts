@@ -628,6 +628,10 @@ export function getAlbumAnalytics(albumId: number): {
 	return { page_views: pageViews, downloads, album_downloads: albumDownloads };
 }
 
+export function deleteAlbumAnalytics(albumId: number): void {
+	db.prepare('DELETE FROM analytics WHERE album_id = ?').run(albumId);
+}
+
 export function getPhotoDownloadCounts(albumId: number): Map<number, number> {
 	const results = db
 		.prepare(
