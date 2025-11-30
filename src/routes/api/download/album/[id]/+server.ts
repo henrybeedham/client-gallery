@@ -5,8 +5,8 @@ import { error } from '@sveltejs/kit';
 import archiver from 'archiver';
 import { createReadStream, statSync, existsSync } from 'fs';
 
-// Default file size estimate (1MB) when actual size is unknown
-const DEFAULT_FILE_SIZE_ESTIMATE = 1000000;
+// Default file size estimate (7MB) when actual size is unknown
+const DEFAULT_FILE_SIZE_ESTIMATE = 7000000;
 
 export const GET: RequestHandler = async ({ params }) => {
 	const albumId = parseInt(params.id);

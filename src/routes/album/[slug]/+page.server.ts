@@ -7,10 +7,12 @@ import {
 } from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { validateSession } from '$lib/server/auth';
 
 const INITIAL_PHOTOS = 24;
 
 export const load: PageServerLoad = async ({ params, cookies, url }) => {
+	const isAuthenticated = validateSession(cookies);
 	const album = getAlbumBySlug(params.slug);
 
 	if (!album || !album.is_public) {
@@ -67,7 +69,9 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	}
 
 	// Record page view
-	recordAnalyticsEvent(album.id, 'page_view');
+	if (!isAuthenticated) {
+		recordAnalyticsEvent(album.id, 'page_view');
+	}
 
 	const tagSlug = url.searchParams.get('tag') || undefined;
 	// Allow user to override sort order via query parameter, otherwise use album default
