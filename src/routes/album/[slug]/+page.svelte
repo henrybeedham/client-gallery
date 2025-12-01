@@ -1268,7 +1268,9 @@
 
 				{#if printOrderSuccess}
 					<div class="text-center py-8">
-						<div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+						<div
+							class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4"
+						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								width="32"
@@ -1505,17 +1507,15 @@
 								<div class="space-y-1 text-sm">
 									<div class="flex justify-between">
 										<span class="text-gray-400">Items:</span>
-										<span
-											>{printQuote.itemsCost.amount} {printQuote.itemsCost.currency}</span
-										>
+										<span>{printQuote.itemsCost.amount} {printQuote.itemsCost.currency}</span>
 									</div>
 									<div class="flex justify-between">
 										<span class="text-gray-400">Shipping:</span>
-										<span
-											>{printQuote.shippingCost.amount} {printQuote.shippingCost.currency}</span
-										>
+										<span>{printQuote.shippingCost.amount} {printQuote.shippingCost.currency}</span>
 									</div>
-									<div class="flex justify-between font-medium pt-2 border-t border-[var(--color-border)]">
+									<div
+										class="flex justify-between font-medium pt-2 border-t border-[var(--color-border)]"
+									>
 										<span>Total:</span>
 										<span class="text-green-400"
 											>{printQuote.totalCost.amount} {printQuote.totalCost.currency}</span

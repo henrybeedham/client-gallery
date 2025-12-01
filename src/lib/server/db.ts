@@ -87,12 +87,14 @@ try {
 }
 
 // Create print_orders table for Prodigi integration
+// Note: Using SET NULL for foreign keys because print orders are financial records
+// that should be preserved even if associated photos/albums are deleted.
 db.exec(`
   CREATE TABLE IF NOT EXISTS print_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     prodigi_order_id TEXT UNIQUE,
-    photo_id INTEGER NOT NULL,
-    album_id INTEGER NOT NULL,
+    photo_id INTEGER,
+    album_id INTEGER,
     sku TEXT NOT NULL,
     copies INTEGER DEFAULT 1,
     status TEXT DEFAULT 'pending',
@@ -169,8 +171,8 @@ export interface PhotoTag {
 export interface PrintOrder {
 	id: number;
 	prodigi_order_id: string | null;
-	photo_id: number;
-	album_id: number;
+	photo_id: number | null;
+	album_id: number | null;
 	sku: string;
 	copies: number;
 	status: string;

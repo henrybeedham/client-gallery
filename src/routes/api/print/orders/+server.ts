@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
-import { getProdigiClient } from '$lib/server/prodigi';
+import { getProdigiClient, extractOrderStatusAndCost } from '$lib/server/prodigi';
 import {
 	getAllPrintOrders,
 	getPrintOrderById,
@@ -26,9 +26,8 @@ export const GET: RequestHandler = async ({ url }) => {
 				try {
 					const prodigiOrder = await prodigi.getOrder(order.prodigi_order_id);
 
-					// Update local order with latest status
-					const status = prodigiOrder.status?.stage?.toLowerCase() || order.status;
-					const totalCost = prodigiOrder.charges?.[0]?.totalCost;
+					// Update local order with latest status using shared utility
+					const { status, totalCost } = extractOrderStatusAndCost(prodigiOrder, order.status);
 
 					if (totalCost) {
 						updatePrintOrderStatus(order.id, status, totalCost.amount, totalCost.currency);

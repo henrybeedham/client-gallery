@@ -197,9 +197,7 @@ export class ProdigiClient {
 		const data = await response.json();
 
 		if (!response.ok) {
-			throw new Error(
-				data.traceParent || data.message || `Prodigi API error: ${response.status}`
-			);
+			throw new Error(data.traceParent || data.message || `Prodigi API error: ${response.status}`);
 		}
 
 		return data;
@@ -250,7 +248,11 @@ export class ProdigiClient {
 	 * Get a quote for an order
 	 */
 	async getQuote(quoteRequest: ProdigiQuoteRequest): Promise<ProdigiQuote> {
-		const response = await this.request<{ quotes: ProdigiQuote[] }>('POST', '/Quotes', quoteRequest);
+		const response = await this.request<{ quotes: ProdigiQuote[] }>(
+			'POST',
+			'/Quotes',
+			quoteRequest
+		);
 		// Return the first quote (for the requested shipping method)
 		if (response.quotes && response.quotes.length > 0) {
 			return response.quotes[0];
@@ -313,3 +315,19 @@ export const PHOTO_PRINT_SKUS = {
 } as const;
 
 export type PhotoPrintSize = keyof typeof PHOTO_PRINT_SKUS;
+
+/**
+ * Extract order status and cost from Prodigi order response
+ * This utility function helps maintain consistency across order creation and status checking
+ */
+export function extractOrderStatusAndCost(
+	prodigiOrder: ProdigiOrder,
+	fallbackStatus = 'pending'
+): {
+	status: string;
+	totalCost: ProdigiCost | undefined;
+} {
+	const status = prodigiOrder.status?.stage?.toLowerCase() || fallbackStatus;
+	const totalCost = prodigiOrder.charges?.[0]?.totalCost;
+	return { status, totalCost };
+}

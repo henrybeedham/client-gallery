@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
-import { getProdigiClient } from '$lib/server/prodigi';
+import { getProdigiClient, extractOrderStatusAndCost } from '$lib/server/prodigi';
 import {
 	getPhotoById,
 	getAlbumById,
@@ -125,9 +125,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Update local order with Prodigi order ID and data
 		updatePrintOrderProdigiId(localOrderId, prodigiOrder.id, JSON.stringify(prodigiOrder));
 
-		// Update status based on Prodigi response
-		const status = prodigiOrder.status?.stage?.toLowerCase() || 'pending';
-		const totalCost = prodigiOrder.charges?.[0]?.totalCost;
+		// Update status based on Prodigi response using shared utility
+		const { status, totalCost } = extractOrderStatusAndCost(prodigiOrder);
 		if (totalCost) {
 			updatePrintOrderStatus(localOrderId, status, totalCost.amount, totalCost.currency);
 		} else {
