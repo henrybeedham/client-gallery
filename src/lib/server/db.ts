@@ -86,6 +86,41 @@ try {
 	// Column already exists, ignore error
 }
 
+// Create print_orders table for Prodigi integration
+db.exec(`
+  CREATE TABLE IF NOT EXISTS print_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    prodigi_order_id TEXT UNIQUE,
+    photo_id INTEGER NOT NULL,
+    album_id INTEGER NOT NULL,
+    sku TEXT NOT NULL,
+    copies INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'pending',
+    shipping_method TEXT DEFAULT 'Standard',
+    recipient_name TEXT NOT NULL,
+    recipient_email TEXT,
+    recipient_phone TEXT,
+    address_line1 TEXT NOT NULL,
+    address_line2 TEXT,
+    city TEXT NOT NULL,
+    state TEXT,
+    postal_code TEXT NOT NULL,
+    country_code TEXT NOT NULL,
+    total_cost TEXT,
+    currency TEXT DEFAULT 'USD',
+    order_data TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE SET NULL,
+    FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_print_orders_photo_id ON print_orders(photo_id);
+  CREATE INDEX IF NOT EXISTS idx_print_orders_album_id ON print_orders(album_id);
+  CREATE INDEX IF NOT EXISTS idx_print_orders_prodigi_order_id ON print_orders(prodigi_order_id);
+  CREATE INDEX IF NOT EXISTS idx_print_orders_status ON print_orders(status);
+`);
+
 export interface Album {
 	id: number;
 	title: string;
@@ -129,6 +164,31 @@ export interface PhotoTag {
 	name: string;
 	slug: string;
 	created_at: string;
+}
+
+export interface PrintOrder {
+	id: number;
+	prodigi_order_id: string | null;
+	photo_id: number;
+	album_id: number;
+	sku: string;
+	copies: number;
+	status: string;
+	shipping_method: string;
+	recipient_name: string;
+	recipient_email: string | null;
+	recipient_phone: string | null;
+	address_line1: string;
+	address_line2: string | null;
+	city: string;
+	state: string | null;
+	postal_code: string;
+	country_code: string;
+	total_cost: string | null;
+	currency: string;
+	order_data: string | null;
+	created_at: string;
+	updated_at: string;
 }
 
 // Album operations
@@ -678,6 +738,112 @@ export function getAllAnalytics(): {
 		downloads: number;
 		album_downloads: number;
 	}[];
+}
+
+// Print Order operations
+export function createPrintOrder(
+	photoId: number,
+	albumId: number,
+	sku: string,
+	copies: number,
+	shippingMethod: string,
+	recipientName: string,
+	recipientEmail: string | null,
+	recipientPhone: string | null,
+	addressLine1: string,
+	addressLine2: string | null,
+	city: string,
+	state: string | null,
+	postalCode: string,
+	countryCode: string
+): number {
+	const result = db
+		.prepare(
+			`INSERT INTO print_orders 
+      (photo_id, album_id, sku, copies, shipping_method, recipient_name, recipient_email, 
+       recipient_phone, address_line1, address_line2, city, state, postal_code, country_code) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			photoId,
+			albumId,
+			sku,
+			copies,
+			shippingMethod,
+			recipientName,
+			recipientEmail,
+			recipientPhone,
+			addressLine1,
+			addressLine2,
+			city,
+			state,
+			postalCode,
+			countryCode
+		);
+	return result.lastInsertRowid as number;
+}
+
+export function getPrintOrderById(id: number): PrintOrder | undefined {
+	return db.prepare('SELECT * FROM print_orders WHERE id = ?').get(id) as PrintOrder | undefined;
+}
+
+export function getPrintOrderByProdigiId(prodigiOrderId: string): PrintOrder | undefined {
+	return db.prepare('SELECT * FROM print_orders WHERE prodigi_order_id = ?').get(prodigiOrderId) as
+		| PrintOrder
+		| undefined;
+}
+
+export function getPrintOrdersByPhotoId(photoId: number): PrintOrder[] {
+	return db
+		.prepare('SELECT * FROM print_orders WHERE photo_id = ? ORDER BY created_at DESC')
+		.all(photoId) as PrintOrder[];
+}
+
+export function getPrintOrdersByAlbumId(albumId: number): PrintOrder[] {
+	return db
+		.prepare('SELECT * FROM print_orders WHERE album_id = ? ORDER BY created_at DESC')
+		.all(albumId) as PrintOrder[];
+}
+
+export function getAllPrintOrders(): PrintOrder[] {
+	return db.prepare('SELECT * FROM print_orders ORDER BY created_at DESC').all() as PrintOrder[];
+}
+
+export function updatePrintOrderProdigiId(
+	id: number,
+	prodigiOrderId: string,
+	orderData: string | null = null
+): void {
+	db.prepare(
+		'UPDATE print_orders SET prodigi_order_id = ?, order_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+	).run(prodigiOrderId, orderData, id);
+}
+
+export function updatePrintOrderStatus(
+	id: number,
+	status: string,
+	totalCost?: string,
+	currency?: string
+): void {
+	if (totalCost && currency) {
+		db.prepare(
+			'UPDATE print_orders SET status = ?, total_cost = ?, currency = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+		).run(status, totalCost, currency, id);
+	} else {
+		db.prepare(
+			'UPDATE print_orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+		).run(status, id);
+	}
+}
+
+export function updatePrintOrderData(id: number, orderData: string): void {
+	db.prepare(
+		'UPDATE print_orders SET order_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+	).run(orderData, id);
+}
+
+export function deletePrintOrder(id: number): void {
+	db.prepare('DELETE FROM print_orders WHERE id = ?').run(id);
 }
 
 export default db;

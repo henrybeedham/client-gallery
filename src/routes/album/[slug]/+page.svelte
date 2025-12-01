@@ -13,6 +13,36 @@
 	let passwordInput = $state('');
 	let lastSelectedIndex: number | null = $state(null);
 
+	// Print ordering state
+	let printServiceAvailable = $state(false);
+	let showPrintModal = $state(false);
+	let printProducts: { size: string; sku: string; description: string }[] = $state([]);
+	let selectedPrintSize = $state('');
+	let printCopies = $state(1);
+	let printShippingMethod = $state<'Budget' | 'Standard' | 'Express' | 'Overnight'>('Standard');
+	let printRecipient = $state({
+		name: '',
+		email: '',
+		phone: '',
+		address: {
+			line1: '',
+			line2: '',
+			city: '',
+			state: '',
+			postalCode: '',
+			countryCode: 'US'
+		}
+	});
+	let printQuote: {
+		totalCost: { amount: string; currency: string };
+		shippingCost: { amount: string; currency: string };
+		itemsCost: { amount: string; currency: string };
+	} | null = $state(null);
+	let isLoadingQuote = $state(false);
+	let isSubmittingOrder = $state(false);
+	let printOrderSuccess = $state(false);
+	let printError = $state('');
+
 	// Lazy loading state - use $derived to reset when data changes (e.g., tag filter changes)
 	let displayedPhotos = $state([...data.photos]);
 	let isLoadingMore = $state(false);
@@ -133,6 +163,26 @@
 
 	// Set up intersection observer for infinite scroll and masonry resize handler
 	onMount(() => {
+		// Check if print service is available
+		fetch('/api/print/status')
+			.then((res) => res.json())
+			.then((data) => {
+				printServiceAvailable = data.configured;
+				if (data.configured) {
+					// Load print products
+					fetch('/api/print/products')
+						.then((res) => res.json())
+						.then((productsData) => {
+							printProducts = productsData.products;
+							if (printProducts.length > 0) {
+								selectedPrintSize = printProducts[0].sku;
+							}
+						})
+						.catch(console.error);
+				}
+			})
+			.catch(console.error);
+
 		// Set up resize handler for masonry
 		updateColumnCount();
 		const handleResize = () => {
@@ -411,6 +461,124 @@
 		fetch(`/api/download/track-photo/${data.album.id}/${photoId}`, { method: 'POST' }).catch((e) =>
 			console.warn('Analytics tracking failed:', e)
 		);
+	}
+
+	// Print ordering functions
+	function openPrintModal() {
+		showPrintModal = true;
+		printQuote = null;
+		printError = '';
+		printOrderSuccess = false;
+	}
+
+	function closePrintModal() {
+		showPrintModal = false;
+		printQuote = null;
+		printError = '';
+		printOrderSuccess = false;
+		// Reset form
+		printRecipient = {
+			name: '',
+			email: '',
+			phone: '',
+			address: {
+				line1: '',
+				line2: '',
+				city: '',
+				state: '',
+				postalCode: '',
+				countryCode: 'US'
+			}
+		};
+		printCopies = 1;
+	}
+
+	async function getQuote() {
+		if (!lightboxIndex || lightboxIndex === null) return;
+
+		isLoadingQuote = true;
+		printError = '';
+
+		try {
+			const response = await fetch('/api/print/quote', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					photoId: displayedPhotos[lightboxIndex].id,
+					sku: selectedPrintSize,
+					copies: printCopies,
+					countryCode: printRecipient.address.countryCode,
+					shippingMethod: printShippingMethod
+				})
+			});
+
+			if (!response.ok) {
+				const errData = await response.json();
+				throw new Error(errData.message || 'Failed to get quote');
+			}
+
+			const data = await response.json();
+			printQuote = data.quote;
+		} catch (err) {
+			printError = err instanceof Error ? err.message : 'Failed to get quote';
+		} finally {
+			isLoadingQuote = false;
+		}
+	}
+
+	async function submitPrintOrder() {
+		if (lightboxIndex === null) return;
+
+		// Validate required fields
+		if (
+			!printRecipient.name ||
+			!printRecipient.address.line1 ||
+			!printRecipient.address.city ||
+			!printRecipient.address.postalCode
+		) {
+			printError = 'Please fill in all required fields';
+			return;
+		}
+
+		isSubmittingOrder = true;
+		printError = '';
+
+		try {
+			const response = await fetch('/api/print/order', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					photoId: displayedPhotos[lightboxIndex].id,
+					sku: selectedPrintSize,
+					copies: printCopies,
+					shippingMethod: printShippingMethod,
+					recipient: {
+						name: printRecipient.name,
+						email: printRecipient.email || undefined,
+						phone: printRecipient.phone || undefined,
+						address: {
+							line1: printRecipient.address.line1,
+							line2: printRecipient.address.line2 || undefined,
+							city: printRecipient.address.city,
+							state: printRecipient.address.state || undefined,
+							postalCode: printRecipient.address.postalCode,
+							countryCode: printRecipient.address.countryCode
+						}
+					}
+				})
+			});
+
+			if (!response.ok) {
+				const errData = await response.json();
+				throw new Error(errData.message || 'Failed to submit order');
+			}
+
+			printOrderSuccess = true;
+		} catch (err) {
+			printError = err instanceof Error ? err.message : 'Failed to submit order';
+		} finally {
+			isSubmittingOrder = false;
+		}
 	}
 
 	// Sanitize color to prevent XSS
@@ -1009,7 +1177,7 @@
 				</svg>
 			</button>
 		</div>
-		<div class="flex justify-center p-4 flex-shrink-0">
+		<div class="flex justify-center gap-3 p-4 flex-shrink-0">
 			<a
 				href="/api/photos/{data.album.slug}/{displayedPhotos[lightboxIndex].filename}/original"
 				download={displayedPhotos[lightboxIndex].original_filename}
@@ -1024,6 +1192,363 @@
 			>
 				Download Photo
 			</a>
+			{#if printServiceAvailable}
+				<button
+					class="btn bg-green-600 hover:bg-green-700 text-white"
+					onclick={(e) => {
+						e.stopPropagation();
+						openPrintModal();
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="inline-block mr-1"
+					>
+						<polyline points="6 9 6 2 18 2 18 9"></polyline>
+						<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
+						></path>
+						<rect x="6" y="14" width="12" height="8"></rect>
+					</svg>
+					Order Print
+				</button>
+			{/if}
+		</div>
+	</div>
+{/if}
+
+<!-- Print Order Modal -->
+{#if showPrintModal && lightboxIndex !== null}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_interactive_supports_focus -->
+	<div
+		class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1100] flex items-center justify-center p-4"
+		onclick={closePrintModal}
+		role="dialog"
+		aria-modal="true"
+		aria-label="Order print"
+	>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="bg-[var(--color-bg-secondary)] rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+			onclick={(e) => e.stopPropagation()}
+		>
+			<div class="p-6">
+				<div class="flex items-center justify-between mb-6">
+					<h2 class="text-xl font-bold">Order Print</h2>
+					<button
+						class="p-2 text-gray-400 hover:text-white transition-colors"
+						onclick={closePrintModal}
+						aria-label="Close"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+					</button>
+				</div>
+
+				{#if printOrderSuccess}
+					<div class="text-center py-8">
+						<div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="32"
+								height="32"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="text-green-500"
+							>
+								<polyline points="20 6 9 17 4 12"></polyline>
+							</svg>
+						</div>
+						<h3 class="text-lg font-semibold mb-2">Order Submitted!</h3>
+						<p class="text-gray-400 mb-6">
+							Your print order has been submitted successfully. You will receive a confirmation
+							email shortly.
+						</p>
+						<button class="btn btn-primary" onclick={closePrintModal}>Close</button>
+					</div>
+				{:else}
+					<!-- Photo preview -->
+					<div class="mb-6 flex items-center gap-4">
+						<img
+							src="/api/photos/{data.album.slug}/{displayedPhotos[lightboxIndex]
+								.filename}/thumbnail"
+							alt="Print preview"
+							class="w-20 h-20 object-cover rounded-lg"
+						/>
+						<div>
+							<p class="font-medium">{displayedPhotos[lightboxIndex].original_filename}</p>
+							<p class="text-sm text-gray-400">
+								{displayedPhotos[lightboxIndex].width}x{displayedPhotos[lightboxIndex].height}
+							</p>
+						</div>
+					</div>
+
+					{#if printError}
+						<div
+							class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-4"
+						>
+							{printError}
+						</div>
+					{/if}
+
+					<div class="space-y-4">
+						<!-- Print Size -->
+						<div>
+							<label for="printSize" class="block text-sm font-medium mb-1.5">Print Size</label>
+							<select
+								id="printSize"
+								class="form-select w-full"
+								bind:value={selectedPrintSize}
+								onchange={() => (printQuote = null)}
+							>
+								{#each printProducts as product}
+									<option value={product.sku}>{product.size} - {product.description}</option>
+								{/each}
+							</select>
+						</div>
+
+						<!-- Copies -->
+						<div>
+							<label for="copies" class="block text-sm font-medium mb-1.5">Copies</label>
+							<input
+								type="number"
+								id="copies"
+								class="form-input w-full"
+								min="1"
+								max="100"
+								bind:value={printCopies}
+								onchange={() => (printQuote = null)}
+							/>
+						</div>
+
+						<!-- Shipping Method -->
+						<div>
+							<label for="shippingMethod" class="block text-sm font-medium mb-1.5"
+								>Shipping Method</label
+							>
+							<select
+								id="shippingMethod"
+								class="form-select w-full"
+								bind:value={printShippingMethod}
+								onchange={() => (printQuote = null)}
+							>
+								<option value="Budget">Budget</option>
+								<option value="Standard">Standard</option>
+								<option value="Express">Express</option>
+								<option value="Overnight">Overnight</option>
+							</select>
+						</div>
+
+						<hr class="border-[var(--color-border)]" />
+
+						<!-- Recipient Details -->
+						<h3 class="font-medium">Shipping Address</h3>
+
+						<div>
+							<label for="recipientName" class="block text-sm font-medium mb-1.5"
+								>Full Name <span class="text-red-400">*</span></label
+							>
+							<input
+								type="text"
+								id="recipientName"
+								class="form-input w-full"
+								bind:value={printRecipient.name}
+								required
+							/>
+						</div>
+
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label for="recipientEmail" class="block text-sm font-medium mb-1.5">Email</label>
+								<input
+									type="email"
+									id="recipientEmail"
+									class="form-input w-full"
+									bind:value={printRecipient.email}
+								/>
+							</div>
+							<div>
+								<label for="recipientPhone" class="block text-sm font-medium mb-1.5">Phone</label>
+								<input
+									type="tel"
+									id="recipientPhone"
+									class="form-input w-full"
+									bind:value={printRecipient.phone}
+								/>
+							</div>
+						</div>
+
+						<div>
+							<label for="addressLine1" class="block text-sm font-medium mb-1.5"
+								>Address Line 1 <span class="text-red-400">*</span></label
+							>
+							<input
+								type="text"
+								id="addressLine1"
+								class="form-input w-full"
+								bind:value={printRecipient.address.line1}
+								required
+							/>
+						</div>
+
+						<div>
+							<label for="addressLine2" class="block text-sm font-medium mb-1.5"
+								>Address Line 2</label
+							>
+							<input
+								type="text"
+								id="addressLine2"
+								class="form-input w-full"
+								bind:value={printRecipient.address.line2}
+							/>
+						</div>
+
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label for="city" class="block text-sm font-medium mb-1.5"
+									>City <span class="text-red-400">*</span></label
+								>
+								<input
+									type="text"
+									id="city"
+									class="form-input w-full"
+									bind:value={printRecipient.address.city}
+									required
+								/>
+							</div>
+							<div>
+								<label for="state" class="block text-sm font-medium mb-1.5">State/Province</label>
+								<input
+									type="text"
+									id="state"
+									class="form-input w-full"
+									bind:value={printRecipient.address.state}
+								/>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label for="postalCode" class="block text-sm font-medium mb-1.5"
+									>Postal Code <span class="text-red-400">*</span></label
+								>
+								<input
+									type="text"
+									id="postalCode"
+									class="form-input w-full"
+									bind:value={printRecipient.address.postalCode}
+									required
+								/>
+							</div>
+							<div>
+								<label for="countryCode" class="block text-sm font-medium mb-1.5"
+									>Country <span class="text-red-400">*</span></label
+								>
+								<select
+									id="countryCode"
+									class="form-select w-full"
+									bind:value={printRecipient.address.countryCode}
+									onchange={() => (printQuote = null)}
+								>
+									<option value="US">United States</option>
+									<option value="GB">United Kingdom</option>
+									<option value="CA">Canada</option>
+									<option value="AU">Australia</option>
+									<option value="DE">Germany</option>
+									<option value="FR">France</option>
+									<option value="IT">Italy</option>
+									<option value="ES">Spain</option>
+									<option value="NL">Netherlands</option>
+									<option value="BE">Belgium</option>
+									<option value="AT">Austria</option>
+									<option value="CH">Switzerland</option>
+									<option value="SE">Sweden</option>
+									<option value="NO">Norway</option>
+									<option value="DK">Denmark</option>
+									<option value="FI">Finland</option>
+									<option value="IE">Ireland</option>
+									<option value="NZ">New Zealand</option>
+									<option value="JP">Japan</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- Quote Section -->
+						{#if printQuote}
+							<div class="bg-[var(--color-bg-tertiary)] rounded-lg p-4 mt-4">
+								<h4 class="font-medium mb-2">Price Quote</h4>
+								<div class="space-y-1 text-sm">
+									<div class="flex justify-between">
+										<span class="text-gray-400">Items:</span>
+										<span
+											>{printQuote.itemsCost.amount} {printQuote.itemsCost.currency}</span
+										>
+									</div>
+									<div class="flex justify-between">
+										<span class="text-gray-400">Shipping:</span>
+										<span
+											>{printQuote.shippingCost.amount} {printQuote.shippingCost.currency}</span
+										>
+									</div>
+									<div class="flex justify-between font-medium pt-2 border-t border-[var(--color-border)]">
+										<span>Total:</span>
+										<span class="text-green-400"
+											>{printQuote.totalCost.amount} {printQuote.totalCost.currency}</span
+										>
+									</div>
+								</div>
+							</div>
+						{/if}
+
+						<div class="flex gap-3 mt-6">
+							<button
+								class="btn btn-secondary flex-1"
+								onclick={getQuote}
+								disabled={isLoadingQuote || !selectedPrintSize}
+							>
+								{isLoadingQuote ? 'Loading...' : 'Get Quote'}
+							</button>
+							<button
+								class="btn btn-primary flex-1"
+								onclick={submitPrintOrder}
+								disabled={isSubmittingOrder || !printQuote}
+							>
+								{isSubmittingOrder ? 'Submitting...' : 'Place Order'}
+							</button>
+						</div>
+
+						<p class="text-xs text-gray-500 text-center mt-4">
+							Prints are fulfilled by Prodigi. By placing an order, you agree to their terms of
+							service.
+						</p>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 {/if}
