@@ -43,16 +43,15 @@ function ensureAlbumDirs(albumSlug: string): void {
  */
 async function extractExifDateTaken(buffer: Buffer): Promise<string | null> {
 	try {
-		// Parse EXIF data from buffer
+		// Parse EXIF data from buffer using array syntax for specific fields
+		// This approach is more efficient and returns the fields directly
 		// DateTimeOriginal is the original capture time (not export time from Lightroom)
-		// Also try DateTimeDigitized and DateTime as fallbacks
-		const exif = await exifr.parse(buffer, {
-			pick: ['DateTimeOriginal', 'DateTimeDigitized', 'DateTime'],
-			translateKeys: false,
-			translateValues: false
-		});
+		const exif = await exifr.parse(buffer, ['DateTimeOriginal', 'DateTimeDigitized', 'DateTime']);
 
-		if (!exif) return null;
+		// exifr.parse returns undefined when no EXIF data is found or fields don't exist
+		if (!exif) {
+			return null;
+		}
 
 		// Priority order:
 		// 1. DateTimeOriginal - when the photo was taken (camera capture time)
@@ -60,25 +59,38 @@ async function extractExifDateTaken(buffer: Buffer): Promise<string | null> {
 		// 3. DateTime - general date/time (often modified time)
 		const dateValue = exif.DateTimeOriginal || exif.DateTimeDigitized || exif.DateTime;
 
-		if (!dateValue) return null;
+		if (!dateValue) {
+			return null;
+		}
 
-		// exifr returns Date objects, so we can directly convert to ISO string
+		// exifr by default returns Date objects for datetime fields
 		if (dateValue instanceof Date) {
+			// Check if date is valid
+			if (isNaN(dateValue.getTime())) {
+				return null;
+			}
 			return dateValue.toISOString();
 		}
 
-		// If it's a string, try to parse it
+		// If it's a string (shouldn't happen with default exifr but handle it)
 		if (typeof dateValue === 'string') {
 			// EXIF format: "YYYY:MM:DD HH:MM:SS"
 			const match = dateValue.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
 			if (match) {
 				const [, year, month, day, hour, minute, second] = match;
-				return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+				// Create ISO 8601 format
+				const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+				// Validate it's a proper date
+				const testDate = new Date(isoString);
+				if (!isNaN(testDate.getTime())) {
+					return isoString;
+				}
 			}
 		}
 
 		return null;
 	} catch (error) {
+		// Silently fail - many images don't have EXIF data
 		console.error('Error extracting EXIF date taken:', error);
 		return null;
 	}
