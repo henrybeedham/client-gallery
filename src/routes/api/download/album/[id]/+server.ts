@@ -40,19 +40,43 @@ export const GET: RequestHandler = async ({ params }) => {
 	// Create a zip stream
 	const archive = archiver('zip', { zlib: { level: 5 } });
 
+	// Track if the stream has been cancelled to prevent enqueueing after close
+	let isCancelled = false;
+
 	// Create a ReadableStream that streams the archive data
 	const stream = new ReadableStream({
 		start(controller) {
 			archive.on('data', (chunk: Uint8Array) => {
-				controller.enqueue(chunk);
+				// Only enqueue if not cancelled - prevents ERR_INVALID_STATE
+				if (!isCancelled) {
+					try {
+						controller.enqueue(chunk);
+					} catch (err) {
+						// Ignore errors if controller is already closed
+						console.log('Enqueue error (stream may be cancelled):', err);
+					}
+				}
 			});
 
 			archive.on('end', () => {
-				controller.close();
+				if (!isCancelled) {
+					try {
+						controller.close();
+					} catch (err) {
+						// Ignore if already closed
+						console.log('Close error (stream may be cancelled):', err);
+					}
+				}
 			});
 
 			archive.on('error', (err) => {
-				controller.error(err);
+				if (!isCancelled) {
+					try {
+						controller.error(err);
+					} catch (e) {
+						console.log('Error reporting failed (stream may be cancelled):', e);
+					}
+				}
 			});
 
 			// Add photos to archive, skipping any files that don't exist
@@ -67,16 +91,18 @@ export const GET: RequestHandler = async ({ params }) => {
 			archive.finalize();
 		},
 		cancel() {
+			// Mark as cancelled to prevent further operations
+			isCancelled = true;
+
 			// Clean up the archive when the client cancels the download
-			// Wrap in try-catch to prevent crashes when archive is already closed
 			try {
-				if (!archive.pointer()) {
-					// Archive hasn't been finalized yet, safe to abort
-					archive.abort();
-				}
+				// Remove all event listeners to stop processing
+				archive.removeAllListeners();
+				// Destroy the archive to stop file operations
+				archive.destroy();
 			} catch (err) {
-				// Silently ignore errors - archive may already be closed
-				console.log('Archive abort error (safe to ignore):', err);
+				// Silently ignore errors during cleanup
+				console.log('Archive cleanup error (safe to ignore):', err);
 			}
 		}
 	});
