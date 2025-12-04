@@ -77,7 +77,16 @@ export const GET: RequestHandler = async ({ url, params }) => {
 		},
 		cancel() {
 			// Clean up the archive when the client cancels the download
-			archive.abort();
+			// Wrap in try-catch to prevent crashes when archive is already closed
+			try {
+				if (!archive.pointer()) {
+					// Archive hasn't been finalized yet, safe to abort
+					archive.abort();
+				}
+			} catch (err) {
+				// Silently ignore errors - archive may already be closed
+				console.log('Archive abort error (safe to ignore):', err);
+			}
 		}
 	});
 
