@@ -309,11 +309,13 @@
 
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
 		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
-			<div class="flex items-center justify-between mb-4">
-				<div class="flex items-center gap-4">
+			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+				<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
 					<h2 class="text-lg font-semibold">Photos ({data.photos.length})</h2>
 					<div class="flex items-center gap-2">
-						<label for="photoSortSelect" class="text-sm text-gray-400">Sort:</label>
+						<label for="photoSortSelect" class="text-sm text-gray-400 whitespace-nowrap"
+							>Sort:</label
+						>
 						<select
 							id="photoSortSelect"
 							class="form-select text-sm py-1 px-2 bg-[var(--color-bg-tertiary)] border-[var(--color-border)] rounded"
@@ -327,7 +329,7 @@
 						</select>
 					</div>
 				</div>
-				<div class="flex gap-2">
+				<div class="flex flex-wrap gap-2">
 					<input
 						type="file"
 						accept="image/jpeg,image/png,image/webp,image/gif"

@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import { existsSync, mkdirSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
+import exifr from 'exifr';
 import { env } from '$env/dynamic/private';
 
 const UPLOAD_DIR = env.UPLOAD_DIR || './uploads';
@@ -34,117 +35,53 @@ function ensureAlbumDirs(albumSlug: string): void {
 	}
 }
 
-function extractExifDateTaken(exifBuffer: Buffer | undefined): string | null {
-	if (!exifBuffer) return null;
-
+/**
+ * Extract the date/time when the photo was originally taken from EXIF metadata.
+ * Uses DateTimeOriginal which represents when the photo was captured, not when it was exported/modified.
+ * @param buffer - The image buffer to extract EXIF data from
+ * @returns ISO 8601 formatted date string or null if not found
+ */
+async function extractExifDateTaken(buffer: Buffer): Promise<string | null> {
 	try {
-		// 1. Validate 'Exif' header (Source: JPEG APP1 structure)
-		// Sharp usually provides the buffer starting with "Exif\0\0"
-		if (exifBuffer.toString('ascii', 0, 4) !== 'Exif') {
-			return null;
+		// Parse EXIF data from buffer
+		// DateTimeOriginal is the original capture time (not export time from Lightroom)
+		// Also try DateTimeDigitized and DateTime as fallbacks
+		const exif = await exifr.parse(buffer, {
+			pick: ['DateTimeOriginal', 'DateTimeDigitized', 'DateTime'],
+			translateKeys: false,
+			translateValues: false
+		});
+
+		if (!exif) return null;
+
+		// Priority order:
+		// 1. DateTimeOriginal - when the photo was taken (camera capture time)
+		// 2. DateTimeDigitized - when the photo was digitized
+		// 3. DateTime - general date/time (often modified time)
+		const dateValue = exif.DateTimeOriginal || exif.DateTimeDigitized || exif.DateTime;
+
+		if (!dateValue) return null;
+
+		// exifr returns Date objects, so we can directly convert to ISO string
+		if (dateValue instanceof Date) {
+			return dateValue.toISOString();
 		}
 
-		// TIFF data starts after "Exif\0\0" (6 bytes total)
-		// All offsets in the TIFF spec are relative to the start of the TIFF header (idx 6)
-		const tiffStart = 6;
-
-		// 2. Determine Byte Order
-		// 'II' (0x4949) = Little Endian (Intel), 'MM' (0x4D4D) = Big Endian (Motorola)
-		const isLittleEndian = exifBuffer.toString('ascii', tiffStart, tiffStart + 2) === 'II';
-
-		// Helper to read data based on endianness
-		const getUInt16 = (offset: number) =>
-			isLittleEndian ? exifBuffer.readUInt16LE(offset) : exifBuffer.readUInt16BE(offset);
-		const getUInt32 = (offset: number) =>
-			isLittleEndian ? exifBuffer.readUInt32LE(offset) : exifBuffer.readUInt32BE(offset);
-
-		// 3. Get Offset to the First IFD (Image File Directory)
-		// Bytes 2-3 are 0x002A (42), Bytes 4-7 are the offset to IFD0
-		const ifd0Offset = getUInt32(tiffStart + 4);
-
-		// We need to find the "Exif Offset" tag (0x8769) inside IFD0.
-		// This points to the Sub-IFD where DateTimeOriginal (0x9003) actually lives.
-		const exifSubIFDOffset = findTagValue(
-			exifBuffer,
-			tiffStart,
-			ifd0Offset,
-			0x8769,
-			getUInt16,
-			getUInt32
-		);
-
-		if (!exifSubIFDOffset) {
-			return null; // No Exif SubIFD found
-		}
-
-		// 4. Find DateTimeOriginal (0x9003) inside the Exif Sub-IFD
-		// The value returned here is the offset to the actual string data
-		const dateOffset = findTagValue(
-			exifBuffer,
-			tiffStart,
-			exifSubIFDOffset,
-			0x9003,
-			getUInt16,
-			getUInt32
-		);
-
-		if (dateOffset) {
-			// 5. Read the string
-			// EXIF date format is fixed length 19 chars: "YYYY:MM:DD HH:MM:SS"
-			const dateString = exifBuffer.toString(
-				'ascii',
-				tiffStart + dateOffset,
-				tiffStart + dateOffset + 19
-			);
-
-			// Parse matches: YYYY:MM:DD HH:MM:SS
-			const dateMatch = dateString.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-
-			if (dateMatch) {
-				const [, year, month, day, hour, minute, second] = dateMatch;
+		// If it's a string, try to parse it
+		if (typeof dateValue === 'string') {
+			// EXIF format: "YYYY:MM:DD HH:MM:SS"
+			const match = dateValue.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+			if (match) {
+				const [, year, month, day, hour, minute, second] = match;
 				return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
 			}
 		}
+
+		return null;
 	} catch (error) {
 		console.error('Error extracting EXIF date taken:', error);
-		// Malformed EXIF or out-of-bounds read
 		return null;
 	}
-	return null;
-}
-
-// Minimal TIFF Tag Finder Helper
-function findTagValue(
-	buffer: Buffer,
-	tiffStart: number,
-	ifdOffset: number,
-	targetTagId: number,
-	getUInt16: (o: number) => number,
-	getUInt32: (o: number) => number
-): number | null {
-	const numEntries = getUInt16(tiffStart + ifdOffset);
-
-	// Iterate through directory entries (12 bytes each)
-	for (let i = 0; i < numEntries; i++) {
-		const entryOffset = tiffStart + ifdOffset + 2 + i * 12;
-
-		// Ensure we don't read past buffer
-		if (entryOffset + 12 > buffer.length) return null;
-
-		const tagId = getUInt16(entryOffset);
-
-		if (tagId === targetTagId) {
-			// Bytes 0-1: Tag ID
-			// Bytes 2-3: Type (2=ASCII, 4=Long/UInt32)
-			// Bytes 4-7: Count
-			// Bytes 8-11: Value or Offset to Value
-
-			// If the tag is the Exif Pointer (0x8769), we need the Value (which is an offset)
-			// If the tag is DateTimeOriginal (0x9003), we need the Value (which is an offset to string)
-			return getUInt32(entryOffset + 8);
-		}
-	}
-	return null;
 }
 
 export async function processAndSaveImage(
@@ -160,8 +97,9 @@ export async function processAndSaveImage(
 	const image = sharp(buffer);
 	const metadata = await image.metadata();
 
-	// Extract EXIF date taken
-	const dateTaken = extractExifDateTaken(metadata.exif);
+	// Extract EXIF date taken from the original buffer
+	// This extracts DateTimeOriginal which is the actual capture time, not export time
+	const dateTaken = await extractExifDateTaken(buffer);
 
 	// Save original
 	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);
@@ -265,8 +203,9 @@ export async function regenerateImageFromOriginal(
 	const image = sharp(buffer);
 	const metadata = await image.metadata();
 
-	// Extract EXIF date taken using shared helper
-	const dateTaken = extractExifDateTaken(metadata.exif);
+	// Extract EXIF date taken from buffer
+	// This extracts DateTimeOriginal which is the actual capture time, not export time
+	const dateTaken = await extractExifDateTaken(buffer);
 
 	// Regenerate medium size (for lightbox - preserve aspect ratio)
 	const mediumPath = path.join(UPLOAD_DIR, albumSlug, 'medium', filename);
@@ -391,8 +330,9 @@ export async function processImageFromImportFolder(
 	const image = sharp(buffer);
 	const metadata = await image.metadata();
 
-	// Extract EXIF date taken
-	const dateTaken = extractExifDateTaken(metadata.exif);
+	// Extract EXIF date taken from buffer
+	// This extracts DateTimeOriginal which is the actual capture time, not export time
+	const dateTaken = await extractExifDateTaken(buffer);
 
 	// Save original
 	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);

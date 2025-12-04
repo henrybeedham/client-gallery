@@ -32,7 +32,7 @@
 		</a>
 	</div>
 
-	<div class="grid grid-cols-5 gap-4 mb-8">
+	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
 		<div
 			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 text-center"
 		>
