@@ -12,6 +12,7 @@
 	let downloadProgress = $state(0);
 	let passwordInput = $state('');
 	let lastSelectedIndex: number | null = $state(null);
+	let downloadAbortController: AbortController | null = null;
 
 	// Lazy loading state - use $derived to reset when data changes (e.g., tag filter changes)
 	let displayedPhotos = $state([...data.photos]);
@@ -148,7 +149,13 @@
 
 		// Set up intersection observer
 		if (!loadMoreTrigger) {
-			return () => window.removeEventListener('resize', handleResize);
+			return () => {
+				window.removeEventListener('resize', handleResize);
+				// Cancel any ongoing downloads when component unmounts
+				if (downloadAbortController) {
+					downloadAbortController.abort();
+				}
+			};
 		}
 
 		const observer = new IntersectionObserver(
@@ -165,6 +172,10 @@
 		return () => {
 			observer.disconnect();
 			window.removeEventListener('resize', handleResize);
+			// Cancel any ongoing downloads when component unmounts
+			if (downloadAbortController) {
+				downloadAbortController.abort();
+			}
 		};
 	});
 
@@ -247,6 +258,15 @@
 		trackAlbumDownload = false,
 		trackPhotoIds: number[] = []
 	) {
+		// Cancel any existing download
+		if (downloadAbortController) {
+			downloadAbortController.abort();
+		}
+
+		// Create new AbortController for this download
+		downloadAbortController = new AbortController();
+		const signal = downloadAbortController.signal;
+
 		isDownloading = true;
 		downloadProgress = 0;
 		try {
@@ -263,7 +283,7 @@
 				);
 			}
 
-			const response = await fetch(url);
+			const response = await fetch(url, { signal });
 			if (!response.ok) throw new Error('Download failed');
 
 			// Try Content-Length first, then fall back to X-Estimated-Size for streaming responses
@@ -306,11 +326,18 @@
 			window.URL.revokeObjectURL(blobUrl);
 			document.body.removeChild(a);
 		} catch (e) {
-			console.error('Download failed:', e);
-			alert('Download failed. Please try again.');
+			// Don't show error if the download was aborted intentionally
+			if (e instanceof Error && e.name === 'AbortError') {
+				console.log('Download cancelled');
+			} else {
+				console.error('Download failed:', e);
+				alert('Download failed. Please try again.');
+			}
+		} finally {
+			isDownloading = false;
+			downloadProgress = 0;
+			downloadAbortController = null;
 		}
-		isDownloading = false;
-		downloadProgress = 0;
 	}
 
 	async function downloadAlbum() {

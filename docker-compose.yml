@@ -4,7 +4,7 @@ services:
     container_name: client-gallery
     restart: unless-stopped
     ports:
-      - "3010:3000"
+      - '3010:3000'
     environment:
       - NODE_ENV=production
       - DATABASE_PATH=/app/data/gallery.db

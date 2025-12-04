@@ -31,11 +31,47 @@
 	let lastSelectedIndex: number | null = $state(null);
 
 	let fileInput: HTMLInputElement;
+	let photoSortOrder = $state<'downloads' | 'oldest' | 'newest' | 'random' | 'filename'>('oldest');
 
 	// Get download count for a photo
 	function getPhotoDownloads(photoId: number): number {
 		return data.photoDownloads?.[photoId] || 0;
 	}
+
+	// Sorted photos based on the selected sort order
+	let sortedPhotos = $derived.by(() => {
+		const photosCopy = [...data.photos];
+
+		switch (photoSortOrder) {
+			case 'downloads':
+				return photosCopy.sort((a, b) => {
+					const aDownloads = getPhotoDownloads(a.id);
+					const bDownloads = getPhotoDownloads(b.id);
+					return bDownloads - aDownloads; // Descending order (most downloads first)
+				});
+			case 'oldest':
+				return photosCopy.sort((a, b) => {
+					const aTime = new Date(a.created_at).getTime();
+					const bTime = new Date(b.created_at).getTime();
+					return aTime - bTime; // Ascending order (oldest first)
+				});
+			case 'newest':
+				return photosCopy.sort((a, b) => {
+					const aTime = new Date(a.created_at).getTime();
+					const bTime = new Date(b.created_at).getTime();
+					return bTime - aTime; // Descending order (newest first)
+				});
+			case 'random':
+				// Use a stable random sort for the session
+				return photosCopy.sort(() => Math.random() - 0.5);
+			case 'filename':
+				return photosCopy.sort((a, b) => {
+					return a.original_filename.localeCompare(b.original_filename);
+				});
+			default:
+				return photosCopy;
+		}
+	});
 
 	// Get tags for a specific photo
 	function getPhotoTags(photoId: number): number[] {
@@ -54,13 +90,11 @@
 
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
-		console.log('Stuff');
-
 		if (event.shiftKey && lastSelectedIndex !== null) {
 			// Shift+click: select range
 			const start = Math.min(lastSelectedIndex, index);
 			const end = Math.max(lastSelectedIndex, index);
-			const rangeIds = data.photos.slice(start, end + 1).map((p) => p.id);
+			const rangeIds = sortedPhotos.slice(start, end + 1).map((p) => p.id);
 			selectedPhoto = [...new Set([...(selectedPhoto || []), ...rangeIds])];
 		} else {
 			// Normal click: toggle selection
@@ -276,7 +310,23 @@
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
 		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
 			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-lg font-semibold">Photos ({data.photos.length})</h2>
+				<div class="flex items-center gap-4">
+					<h2 class="text-lg font-semibold">Photos ({data.photos.length})</h2>
+					<div class="flex items-center gap-2">
+						<label for="photoSortSelect" class="text-sm text-gray-400">Sort:</label>
+						<select
+							id="photoSortSelect"
+							class="form-select text-sm py-1 px-2 bg-[var(--color-bg-tertiary)] border-[var(--color-border)] rounded"
+							bind:value={photoSortOrder}
+						>
+							<option value="oldest">Oldest first</option>
+							<option value="newest">Newest first</option>
+							<option value="downloads">Most downloads</option>
+							<option value="random">Random</option>
+							<option value="filename">Filename (A-Z)</option>
+						</select>
+					</div>
+				</div>
 				<div class="flex gap-2">
 					<input
 						type="file"
@@ -298,7 +348,7 @@
 						</button>
 					{/if}
 					<button
-						onclick={() => (selectedPhoto = data.photos.map((photo) => photo.id))}
+						onclick={() => (selectedPhoto = sortedPhotos.map((photo) => photo.id))}
 						class="btn btn-secondary"
 					>
 						Select All
@@ -367,7 +417,7 @@
 					<span class="font-medium">Tip:</span> Hold Shift and click to select a range of photos
 				</p>
 				<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-					{#each data.photos as photo, index}
+					{#each sortedPhotos as photo, index}
 						<div
 							class="group relative rounded-lg overflow-hidden bg-[var(--color-bg-tertiary)] cursor-pointer transition-all {photo.id ===
 							data.album.cover_photo_id

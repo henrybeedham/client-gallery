@@ -27,16 +27,19 @@ A professional photography client gallery delivery platform built with SvelteKit
 ### Development
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Create a `.env` file (copy from `.env.example`):
+
    ```bash
    cp .env.example .env
    ```
 
 3. Start the development server:
+
    ```bash
    npm run dev
    ```
@@ -46,6 +49,7 @@ A professional photography client gallery delivery platform built with SvelteKit
 ### Production with Docker
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/yourusername/client-gallery.git
    cd client-gallery
@@ -56,6 +60,7 @@ A professional photography client gallery delivery platform built with SvelteKit
    - `ADMIN_PASSWORD`: Admin login password (change this!)
 
 3. Build and run:
+
    ```bash
    docker compose up -d
    ```
@@ -66,12 +71,12 @@ A professional photography client gallery delivery platform built with SvelteKit
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ADMIN_USERNAME` | Admin login username | `admin` |
-| `ADMIN_PASSWORD` | Admin login password | `changeme` |
-| `DATABASE_PATH` | SQLite database file path | `./data/gallery.db` |
-| `UPLOAD_DIR` | Photo storage directory | `./uploads` |
+| Variable         | Description               | Default             |
+| ---------------- | ------------------------- | ------------------- |
+| `ADMIN_USERNAME` | Admin login username      | `admin`             |
+| `ADMIN_PASSWORD` | Admin login password      | `changeme`          |
+| `DATABASE_PATH`  | SQLite database file path | `./data/gallery.db` |
+| `UPLOAD_DIR`     | Photo storage directory   | `./uploads`         |
 
 ## Usage
 
@@ -115,11 +120,13 @@ client-gallery/
 ## Photo Storage
 
 Photos are processed and stored in three sizes:
+
 - **Original**: Full resolution for downloads
 - **Medium**: 1200px max dimension for lightbox viewing
 - **Thumbnail**: 400px square crop for galleries
 
 All images are stored locally in the `uploads` directory with the following structure:
+
 ```
 uploads/
 ├── original/

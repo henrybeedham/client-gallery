@@ -21,9 +21,7 @@ export const actions: Actions = {
 			| 'oldest'
 			| 'random';
 		const layoutStyleInput = data.get('layoutStyle')?.toString() || 'grid';
-		const layoutStyle = (layoutStyleInput === 'masonry' ? 'masonry' : 'grid') as
-			| 'grid'
-			| 'masonry';
+		const layoutStyle = (layoutStyleInput === 'masonry' ? 'masonry' : 'grid') as 'grid' | 'masonry';
 		const albumDate = data.get('albumDate')?.toString() || null;
 		const expiresAt = data.get('expiresAt')?.toString() || null;
 		const primaryColor = data.get('primaryColor')?.toString() || '#3b82f6';
