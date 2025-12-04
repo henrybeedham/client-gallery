@@ -69,7 +69,10 @@ async function extractExifDateTaken(buffer: Buffer): Promise<string | null> {
 			if (isNaN(dateValue.getTime())) {
 				return null;
 			}
-			return dateValue.toISOString();
+			// Convert to ISO format without milliseconds and timezone for consistency
+			// Format: YYYY-MM-DDTHH:MM:SS (matches SQLite DATETIME format)
+			const isoString = dateValue.toISOString();
+			return isoString.substring(0, 19); // Remove .xxxZ suffix
 		}
 
 		// If it's a string (shouldn't happen with default exifr but handle it)
@@ -78,7 +81,7 @@ async function extractExifDateTaken(buffer: Buffer): Promise<string | null> {
 			const match = dateValue.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
 			if (match) {
 				const [, year, month, day, hour, minute, second] = match;
-				// Create ISO 8601 format
+				// Create ISO 8601 format without timezone (matches SQLite DATETIME format)
 				const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
 				// Validate it's a proper date
 				const testDate = new Date(isoString);
