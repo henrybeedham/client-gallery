@@ -718,6 +718,7 @@
 					<div class="flex flex-wrap gap-2 mb-6">
 						<a
 							href="/album/{data.album.slug}?sort={data.selectedSort}"
+							data-sveltekit-noscroll
 							class="px-3 py-1.5 rounded-full text-sm transition-colors {!data.selectedTag
 								? ' text-white'
 								: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
@@ -728,6 +729,7 @@
 						{#each data.tags as tag}
 							<a
 								href="/album/{data.album.slug}?tag={tag.slug}&sort={data.selectedSort}"
+								data-sveltekit-noscroll
 								class="px-3 py-1.5 rounded-full text-sm transition-colors {data.selectedTag ===
 								tag.slug
 									? ' text-white'
