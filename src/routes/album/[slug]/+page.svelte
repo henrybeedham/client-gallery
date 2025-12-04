@@ -152,8 +152,12 @@
 			return () => {
 				window.removeEventListener('resize', handleResize);
 				// Cancel any ongoing downloads when component unmounts
-				if (downloadAbortController) {
-					downloadAbortController.abort();
+				if (downloadAbortController && !downloadAbortController.signal.aborted) {
+					try {
+						downloadAbortController.abort();
+					} catch (e) {
+						console.log('Error aborting download on unmount:', e);
+					}
 				}
 			};
 		}
@@ -173,8 +177,12 @@
 			observer.disconnect();
 			window.removeEventListener('resize', handleResize);
 			// Cancel any ongoing downloads when component unmounts
-			if (downloadAbortController) {
-				downloadAbortController.abort();
+			if (downloadAbortController && !downloadAbortController.signal.aborted) {
+				try {
+					downloadAbortController.abort();
+				} catch (e) {
+					console.log('Error aborting download on unmount:', e);
+				}
 			}
 		};
 	});
@@ -258,9 +266,13 @@
 		trackAlbumDownload = false,
 		trackPhotoIds: number[] = []
 	) {
-		// Cancel any existing download
-		if (downloadAbortController) {
-			downloadAbortController.abort();
+		// Cancel any existing download - only abort if not already aborted
+		if (downloadAbortController && !downloadAbortController.signal.aborted) {
+			try {
+				downloadAbortController.abort();
+			} catch (e) {
+				console.log('Error aborting previous download:', e);
+			}
 		}
 
 		// Create new AbortController for this download
