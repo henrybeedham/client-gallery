@@ -319,7 +319,7 @@ DATABASE_PATH=/var/lib/client-gallery/data/gallery.db
 UPLOAD_DIR=/var/lib/client-gallery/uploads
 GALLERY_CONTACT_EMAIL=support@myphotography.com
 GALLERY_CONTACT_PHONE=+1-555-123-4567
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/123456789/abcdefghijklmnop
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/REPLACE_WITH_YOUR_WEBHOOK_ID/REPLACE_WITH_YOUR_WEBHOOK_TOKEN
 PUBLIC_BASE_URL=https://gallery.myphotography.com
 ```
 
