@@ -319,7 +319,7 @@ DATABASE_PATH=/var/lib/client-gallery/data/gallery.db
 UPLOAD_DIR=/var/lib/client-gallery/uploads
 GALLERY_CONTACT_EMAIL=support@myphotography.com
 GALLERY_CONTACT_PHONE=+1-555-123-4567
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/REPLACE_WITH_YOUR_WEBHOOK_ID/REPLACE_WITH_YOUR_WEBHOOK_TOKEN
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/{YOUR_WEBHOOK_ID}/{YOUR_WEBHOOK_TOKEN}
 PUBLIC_BASE_URL=https://gallery.myphotography.com
 ```
 
@@ -433,6 +433,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ by photographers, for photographers**
 
-[⬆ Back to Top](#-client-gallery)
+[⬆ Back to Top](#--client-gallery)
 
 </div>
