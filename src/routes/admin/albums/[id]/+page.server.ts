@@ -186,7 +186,14 @@ export const actions: Actions = {
 					processed.height,
 					processed.fileSize,
 					processed.mimeType,
-					processed.dateTaken
+					processed.dateTaken,
+					processed.cameraMake,
+					processed.cameraModel,
+					processed.lensModel,
+					processed.focalLength,
+					processed.aperture,
+					processed.shutterSpeed,
+					processed.iso
 				);
 
 				if (!firstPhotoId) {
@@ -405,7 +412,14 @@ export const actions: Actions = {
 					result.height,
 					result.fileSize,
 					result.mimeType,
-					result.dateTaken
+					result.dateTaken,
+					result.cameraMake,
+					result.cameraModel,
+					result.lensModel,
+					result.focalLength,
+					result.aperture,
+					result.shutterSpeed,
+					result.iso
 				);
 				regenerated++;
 			} catch (e) {
@@ -454,7 +468,14 @@ export const actions: Actions = {
 					processed.height,
 					processed.fileSize,
 					processed.mimeType,
-					processed.dateTaken
+					processed.dateTaken,
+					processed.cameraMake,
+					processed.cameraModel,
+					processed.lensModel,
+					processed.focalLength,
+					processed.aperture,
+					processed.shutterSpeed,
+					processed.iso
 				);
 
 				// If the file was in a subfolder, create/get the tag and assign it to the photo

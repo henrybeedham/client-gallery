@@ -39,6 +39,13 @@ db.exec(`
     file_size INTEGER,
     mime_type TEXT,
     date_taken DATETIME,
+    camera_make TEXT,
+    camera_model TEXT,
+    lens_model TEXT,
+    focal_length REAL,
+    aperture REAL,
+    shutter_speed TEXT,
+    iso INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     sort_order INTEGER DEFAULT 0,
     FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE
@@ -86,6 +93,43 @@ try {
 	// Column already exists, ignore error
 }
 
+// Migration: Add EXIF metadata columns to photos table
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN camera_make TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN camera_model TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN lens_model TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN focal_length REAL`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN aperture REAL`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN shutter_speed TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN iso INTEGER`);
+} catch {
+	// Column already exists, ignore error
+}
+
 export interface Album {
 	id: number;
 	title: string;
@@ -118,6 +162,13 @@ export interface Photo {
 	file_size: number | null;
 	mime_type: string | null;
 	date_taken: string | null;
+	camera_make: string | null;
+	camera_model: string | null;
+	lens_model: string | null;
+	focal_length: number | null;
+	aperture: number | null;
+	shutter_speed: string | null;
+	iso: number | null;
 	created_at: string;
 	sort_order: number;
 	tags?: PhotoTag[];
@@ -380,7 +431,14 @@ export function createPhoto(
 	height: number | null,
 	fileSize: number | null,
 	mimeType: string | null,
-	dateTaken: string | null = null
+	dateTaken: string | null = null,
+	cameraMake: string | null = null,
+	cameraModel: string | null = null,
+	lensModel: string | null = null,
+	focalLength: number | null = null,
+	aperture: number | null = null,
+	shutterSpeed: string | null = null,
+	iso: number | null = null
 ): number {
 	const maxOrder = db
 		.prepare('SELECT MAX(sort_order) as max_order FROM photos WHERE album_id = ?')
@@ -390,8 +448,8 @@ export function createPhoto(
 	const result = db
 		.prepare(
 			`INSERT INTO photos 
-      (album_id, filename, original_filename, width, height, file_size, mime_type, date_taken, sort_order) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (album_id, filename, original_filename, width, height, file_size, mime_type, date_taken, camera_make, camera_model, lens_model, focal_length, aperture, shutter_speed, iso, sort_order) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			albumId,
@@ -402,6 +460,13 @@ export function createPhoto(
 			fileSize,
 			mimeType,
 			dateTaken,
+			cameraMake,
+			cameraModel,
+			lensModel,
+			focalLength,
+			aperture,
+			shutterSpeed,
+			iso,
 			sortOrder
 		);
 	return result.lastInsertRowid as number;
@@ -427,7 +492,14 @@ export function updatePhotoMetadata(
 	height: number | null,
 	fileSize: number | null,
 	mimeType: string | null,
-	dateTaken: string | null
+	dateTaken: string | null,
+	cameraMake: string | null = null,
+	cameraModel: string | null = null,
+	lensModel: string | null = null,
+	focalLength: number | null = null,
+	aperture: number | null = null,
+	shutterSpeed: string | null = null,
+	iso: number | null = null
 ): void {
 	db.prepare(
 		`UPDATE photos SET 
@@ -435,9 +507,16 @@ export function updatePhotoMetadata(
 			height = ?, 
 			file_size = ?, 
 			mime_type = ?, 
-			date_taken = ? 
+			date_taken = ?,
+			camera_make = ?,
+			camera_model = ?,
+			lens_model = ?,
+			focal_length = ?,
+			aperture = ?,
+			shutter_speed = ?,
+			iso = ?
 		WHERE id = ?`
-	).run(width, height, fileSize, mimeType, dateTaken, id);
+	).run(width, height, fileSize, mimeType, dateTaken, cameraMake, cameraModel, lensModel, focalLength, aperture, shutterSpeed, iso, id);
 }
 
 // Photo Tag operations
