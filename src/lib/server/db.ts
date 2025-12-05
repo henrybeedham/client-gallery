@@ -79,6 +79,12 @@ db.exec(`
     FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_photos_album_id ON photos(album_id);
   CREATE INDEX IF NOT EXISTS idx_albums_slug ON albums(slug);
   CREATE INDEX IF NOT EXISTS idx_photo_tags_album_id ON photo_tags(album_id);
@@ -757,6 +763,93 @@ export function getAllAnalytics(): {
 		downloads: number;
 		album_downloads: number;
 	}[];
+}
+
+// Settings operations
+export interface Settings {
+	defaultDescription: string;
+	defaultColor: string;
+	defaultLayoutStyle: 'grid' | 'masonry';
+	defaultSortOrder: 'newest' | 'oldest' | 'random';
+	defaultIsPublic: boolean;
+	defaultShowOnHome: boolean;
+}
+
+export function getSettings(): Settings {
+	const defaultSettings: Settings = {
+		defaultDescription: '',
+		defaultColor: '#3b82f6',
+		defaultLayoutStyle: 'grid',
+		defaultSortOrder: 'oldest',
+		defaultIsPublic: true,
+		defaultShowOnHome: true
+	};
+
+	try {
+		const rows = db.prepare('SELECT key, value FROM settings').all() as {
+			key: string;
+			value: string;
+		}[];
+		const settings = { ...defaultSettings };
+
+		for (const row of rows) {
+			switch (row.key) {
+				case 'defaultDescription':
+					settings.defaultDescription = row.value;
+					break;
+				case 'defaultColor':
+					settings.defaultColor = row.value;
+					break;
+				case 'defaultLayoutStyle':
+					settings.defaultLayoutStyle = (row.value === 'masonry' ? 'masonry' : 'grid') as
+						| 'grid'
+						| 'masonry';
+					break;
+				case 'defaultSortOrder':
+					settings.defaultSortOrder = (row.value === 'newest' || row.value === 'random'
+						? row.value
+						: 'oldest') as 'newest' | 'oldest' | 'random';
+					break;
+				case 'defaultIsPublic':
+					settings.defaultIsPublic = row.value === 'true';
+					break;
+				case 'defaultShowOnHome':
+					settings.defaultShowOnHome = row.value === 'true';
+					break;
+			}
+		}
+
+		return settings;
+	} catch {
+		return defaultSettings;
+	}
+}
+
+export function updateSettings(settings: Partial<Settings>): void {
+	const stmt = db.prepare(
+		'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)'
+	);
+	const transaction = db.transaction(() => {
+		if (settings.defaultDescription !== undefined) {
+			stmt.run('defaultDescription', settings.defaultDescription);
+		}
+		if (settings.defaultColor !== undefined) {
+			stmt.run('defaultColor', settings.defaultColor);
+		}
+		if (settings.defaultLayoutStyle !== undefined) {
+			stmt.run('defaultLayoutStyle', settings.defaultLayoutStyle);
+		}
+		if (settings.defaultSortOrder !== undefined) {
+			stmt.run('defaultSortOrder', settings.defaultSortOrder);
+		}
+		if (settings.defaultIsPublic !== undefined) {
+			stmt.run('defaultIsPublic', settings.defaultIsPublic.toString());
+		}
+		if (settings.defaultShowOnHome !== undefined) {
+			stmt.run('defaultShowOnHome', settings.defaultShowOnHome.toString());
+		}
+	});
+	transaction();
 }
 
 export default db;

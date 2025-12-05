@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { slugify } from '$lib/utils';
 
-	let { form } = $props();
+	let { data, form } = $props();
 	let title = $state(form?.title || '');
 	let customSlug = $state(form?.slug || '');
 	let loading = $state(false);
@@ -101,13 +101,18 @@
 						class="form-textarea"
 						rows="4"
 						placeholder="Enter album description... You can use **bold**, *italic*, and other markdown formatting."
-						>{form?.description || ''}</textarea
+						>{form?.description || data.settings.defaultDescription}</textarea
 					>
 				</div>
 
 				<div class="flex flex-col gap-3">
 					<label class="flex items-center gap-2 cursor-pointer">
-						<input type="checkbox" name="isPublic" checked class="w-4 h-4 accent-blue-500" />
+						<input
+							type="checkbox"
+							name="isPublic"
+							checked={data.settings.defaultIsPublic}
+							class="w-4 h-4 accent-blue-500"
+						/>
 						<span class="text-sm">Public album</span>
 					</label>
 					<p class="text-xs text-gray-500 ml-6">Private albums are only visible to admins</p>
@@ -115,7 +120,12 @@
 
 				<div class="flex flex-col gap-3">
 					<label class="flex items-center gap-2 cursor-pointer">
-						<input type="checkbox" name="showOnHome" checked class="w-4 h-4 accent-blue-500" />
+						<input
+							type="checkbox"
+							name="showOnHome"
+							checked={data.settings.defaultShowOnHome}
+							class="w-4 h-4 accent-blue-500"
+						/>
 						<span class="text-sm">Show on homepage</span>
 					</label>
 					<p class="text-xs text-gray-500 ml-6">

@@ -214,7 +214,8 @@
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
-			openLightbox(index);
+			// Navigate to photo detail page instead of lightbox
+			window.location.href = `/album/${data.album.slug}/photo/${photoId}`;
 			return;
 		}
 

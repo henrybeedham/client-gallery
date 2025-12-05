@@ -118,6 +118,29 @@
 					</svg>
 					New Album
 				</a>
+				<a
+					href="/admin/settings"
+					class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+					onclick={closeMobileMenu}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="12" cy="12" r="3"></circle>
+						<path
+							d="M12 1v6m0 6v6m5.196-14.196l-4.243 4.243m0 5.657l-4.242 4.242M23 12h-6m-6 0H1m14.196 5.196l-4.243-4.242m0-5.657L6.804 2.804"
+						></path>
+					</svg>
+					Settings
+				</a>
 			</nav>
 			<div class="p-4 border-t border-[var(--color-border)]">
 				<form action="/admin/logout" method="POST">
