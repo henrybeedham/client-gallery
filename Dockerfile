@@ -1,49 +1,48 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine AS builder
 
-# 1. Base stage with shared settings
 WORKDIR /app
-# We need these tools for Sharp/SQLite in all build stages
-# Added libc6-compat which is often needed for prebuilt binaries on Alpine
-RUN apk add --no-cache python3 make g++ vips-dev libc6-compat
 
-FROM base AS builder
+# Install dependencies needed for native modules (better-sqlite3) during build
+# Sometimes the build step itself needs these if it executes the code
+RUN apk add --no-cache python3 make g++ vips-dev
 
 COPY package*.json ./
-
-# 2. Install ALL dependencies
-# CHANGED: 'npm ci' replaced with 'npm install'
-# 'npm ci' strictly follows package-lock.json. If that lockfile was made on Mac/Windows,
-# it might miss the Linux binaries for Sharp. 'npm install' will check the current OS 
-# and download the correct binaries, preventing the "build from source" error.
-RUN npm install
+RUN npm ci
 
 COPY . .
 
-# 3. Build the SvelteKit/Node app
-RUN npm run build
+# FIX: Create the directory expected by the database.
+# Even though we don't need the actual DB for the build, the folder must exist
+# so better-sqlite3 doesn't crash when the code is imported.
+RUN mkdir -p /app/data
 
-# 4. Remove devDependencies to prepare for production
-RUN npm prune --production
+# Set the ENV so the build process knows where to look, just in case
+ENV DATABASE_PATH=/app/data/gallery.db
+
+RUN npm run build
 
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# 5. Production image only needs runtime libraries
-RUN apk add --no-cache vips libc6-compat
+# Install dependencies for native modules
+RUN apk add --no-cache python3 make g++ vips-dev
 
-# Copy the built app and the production-ready node_modules from the builder
+COPY package*.json ./
+RUN npm ci --omit=dev
+
 COPY --from=builder /app/build ./build
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
 
-# Setup directories
+# Create directories for data and uploads
 RUN mkdir -p /app/data /app/uploads
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATABASE_PATH=/app/data/gallery.db
 ENV UPLOAD_DIR=/app/uploads
+# FIX: Increase body size limit for file uploads. 
+# '0' disables the limit, allowing large file uploads. 
+# Alternatively set to bytes, e.g., 536870912 for 512MB.
 ENV BODY_SIZE_LIMIT=Infinity
 
 EXPOSE 3000
