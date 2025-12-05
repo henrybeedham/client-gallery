@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 
 	let { data, form } = $props();
+	let colorValue = $state(data.settings.defaultColor);
 </script>
 
 <svelte:head>
@@ -64,18 +65,13 @@
 						id="defaultColor"
 						name="defaultColor"
 						class="h-10 w-20 rounded border border-[var(--color-border)]"
-						value={data.settings.defaultColor}
+						bind:value={colorValue}
 					/>
 					<input
 						type="text"
 						class="form-input flex-1"
 						placeholder="#3b82f6"
-						value={data.settings.defaultColor}
-						oninput={(e) => {
-							const target = e.target as HTMLInputElement;
-							const colorPicker = document.getElementById('defaultColor') as HTMLInputElement;
-							if (colorPicker) colorPicker.value = target.value;
-						}}
+						bind:value={colorValue}
 					/>
 				</div>
 				<p class="text-xs text-gray-500 mt-1">Used for buttons and accents</p>

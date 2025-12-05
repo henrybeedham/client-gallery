@@ -42,6 +42,21 @@ function ensureAlbumDirs(albumSlug: string): void {
 	}
 }
 
+/**
+ * Generate thumbnail with cover fit for consistent grid layout
+ */
+async function generateThumbnail(
+	image: sharp.Sharp,
+	albumSlug: string,
+	filename: string
+): Promise<void> {
+	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
+	await image
+		.clone()
+		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'cover', withoutEnlargement: true })
+		.toFile(thumbnailPath);
+}
+
 export interface ExifMetadata {
 	dateTaken: string | null;
 	cameraMake: string | null;
@@ -193,12 +208,8 @@ export async function processAndSaveImage(
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(mediumPath);
 
-	// Generate thumbnail (crop to cover the space for consistent grid layout)
-	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
-	await image
-		.clone()
-		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'cover', withoutEnlargement: true })
-		.toFile(thumbnailPath);
+	// Generate thumbnail using shared helper function
+	await generateThumbnail(image, albumSlug, filename);
 
 	const stats = await fs.stat(originalPath);
 
@@ -301,12 +312,8 @@ export async function regenerateImageFromOriginal(
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(mediumPath);
 
-	// Regenerate thumbnail (crop to cover the space for consistent grid layout)
-	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
-	await image
-		.clone()
-		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'cover', withoutEnlargement: true })
-		.toFile(thumbnailPath);
+	// Regenerate thumbnail using shared helper function
+	await generateThumbnail(image, albumSlug, filename);
 
 	const stats = await fs.stat(originalPath);
 
@@ -431,12 +438,8 @@ export async function processImageFromImportFolder(
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(mediumPath);
 
-	// Generate thumbnail (crop to cover the space for consistent grid layout)
-	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
-	await image
-		.clone()
-		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'cover', withoutEnlargement: true })
-		.toFile(thumbnailPath);
+	// Generate thumbnail using shared helper function
+	await generateThumbnail(image, albumSlug, filename);
 
 	const stats = await fs.stat(originalPath);
 

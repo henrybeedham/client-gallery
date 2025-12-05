@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 
@@ -214,8 +215,8 @@
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
-			// Navigate to photo detail page instead of lightbox
-			window.location.href = `/album/${data.album.slug}/photo/${photoId}`;
+			// Navigate to photo detail page with smooth client-side navigation
+			goto(`/album/${data.album.slug}/photo/${photoId}`);
 			return;
 		}
 
