@@ -308,7 +308,7 @@
 	{/if}
 
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
+		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 order-2 lg:order-1">
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
 				<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
 					<h2 class="text-lg font-semibold">Photos ({data.photos.length})</h2>
@@ -684,7 +684,7 @@
 			{/if}
 		</div>
 
-		<div class="space-y-6">
+		<div class="space-y-6 order-1 lg:order-2">
 			<!-- Analytics display -->
 			<div
 				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"

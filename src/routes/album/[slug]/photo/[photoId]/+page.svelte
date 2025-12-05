@@ -8,11 +8,8 @@
 		ChevronLeft, 
 		ChevronRight, 
 		Download, 
-		Share2, 
 		Camera, 
-		Aperture, 
-		Timer, 
-		Sun
+		Aperture
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -69,8 +66,23 @@
 			year: 'numeric',
 			month: 'long',
 			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
+			hour: 'numeric',
+			minute: '2-digit',
+			hour12: true
+		});
+	}
+
+	// Format short date for Open Graph
+	function formatShortDateTime(dateTime: string | null): string {
+		if (!dateTime) return '';
+		const date = new Date(dateTime);
+		return date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit',
+			hour12: true
 		});
 	}
 
@@ -80,30 +92,18 @@
 			(e) => console.warn('Analytics tracking failed:', e)
 		);
 	}
-
-	// Share URL
-	function copyShareLink() {
-		const url = window.location.href;
-		navigator.clipboard.writeText(url).then(
-			() => {
-				alert('Link copied to clipboard!');
-			},
-			() => {
-				alert('Failed to copy link');
-			}
-		);
-	}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
-<title>{data.photo.original_filename} - {data.album.title}</title>
-<meta name="description" content="Photo from {data.album.title}" />
+<title>{data.album.title} - {data.photo.date_taken ? formatShortDateTime(data.photo.date_taken) : 'Photo'}</title>
+<meta name="description" content="Photo from {data.album.title}{data.photo.date_taken ? ' taken on ' + formatShortDateTime(data.photo.date_taken) : ''}" />
 
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
-<meta property="og:title" content="{data.photo.original_filename} - {data.album.title}" />
+<meta property="og:title" content="{data.album.title}{data.photo.date_taken ? ' - ' + formatShortDateTime(data.photo.date_taken) : ''}" />
+<meta property="og:description" content="Photo from {data.album.title}{data.photo.date_taken ? ' taken on ' + formatShortDateTime(data.photo.date_taken) : ''}" />
 <meta
 property="og:image"
 content="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
@@ -111,7 +111,8 @@ content="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="{data.photo.original_filename} - {data.album.title}" />
+<meta name="twitter:title" content="{data.album.title}{data.photo.date_taken ? ' - ' + formatShortDateTime(data.photo.date_taken) : ''}" />
+<meta name="twitter:description" content="Photo from {data.album.title}{data.photo.date_taken ? ' taken on ' + formatShortDateTime(data.photo.date_taken) : ''}" />
 <meta
 name="twitter:image"
 content="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
@@ -121,7 +122,7 @@ content="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 {@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
 </svelte:head>
 
-<div class="min-h-screen flex flex-col bg-[var(--color-bg)] relative overflow-hidden">
+<div class="min-h-screen flex flex-col bg-[var(--color-bg)] relative">
 <!-- Blurred background image -->
 <div 
 class="fixed inset-0 z-0"
@@ -151,10 +152,10 @@ class="sticky top-0 bg-black/40 backdrop-blur-xl border-b border-white/10 z-50"
 </header>
 
 <!-- Main content -->
-<main class="flex-1 flex flex-col lg:flex-row relative z-10 max-h-[calc(100vh-73px)] overflow-hidden">
+<main class="flex-1 flex flex-col lg:flex-row relative z-10">
 <!-- Image section -->
-<div class="flex-1 flex items-center justify-center p-4 lg:p-8 overflow-hidden">
-<div class="relative w-full h-full flex items-center justify-center" in:fade={{ duration: 300, easing: cubicOut }}>
+<div class="flex-1 flex items-center justify-center p-4 lg:p-8 lg:overflow-hidden min-h-[50vh] lg:min-h-0">
+<div class="relative w-full lg:h-full flex items-center justify-center" in:fade={{ duration: 300, easing: cubicOut }}>
 <!-- Navigation buttons -->
 {#if data.prevPhoto}
 <button
@@ -169,7 +170,7 @@ aria-label="Previous photo"
 <img
 src="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 alt={data.photo.original_filename}
-class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+class="w-full lg:max-w-full lg:max-h-full object-contain rounded-lg shadow-2xl"
 in:fly={{ y: 20, duration: 400, easing: cubicOut }}
 />
 
@@ -187,7 +188,7 @@ aria-label="Next photo"
 
 <!-- Info sidebar -->
 <aside
-class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-black/40 backdrop-blur-xl overflow-y-auto max-h-[calc(100vh-73px)]"
+class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-black/40 backdrop-blur-xl lg:overflow-y-auto lg:max-h-[calc(100vh-73px)]"
 in:fly={{ x: 50, duration: 400, easing: cubicOut }}
 >
 <div class="p-6 space-y-6">
@@ -211,10 +212,6 @@ onclick={trackPhotoDownload}
 <Download size={18} />
 Download
 </a>
-<button onclick={copyShareLink} class="btn btn-secondary w-full">
-<Share2 size={18} />
-Share Link
-</button>
 </div>
 
 <!-- EXIF metadata -->
@@ -239,26 +236,22 @@ Camera & Settings
 </div>
 {/if}
 {#if data.photo.focal_length}
-<div class="flex items-center gap-3">
-<span class="text-xs text-gray-400">f</span>
+<div>
 <dd class="text-sm font-medium text-white">{formatFocalLength(data.photo.focal_length)}</dd>
 </div>
 {/if}
 {#if data.photo.aperture}
-<div class="flex items-center gap-3">
-<Aperture size={16} class="text-gray-400 flex-shrink-0" />
+<div>
 <dd class="text-sm font-medium text-white">{formatAperture(data.photo.aperture)}</dd>
 </div>
 {/if}
 {#if data.photo.shutter_speed}
-<div class="flex items-center gap-3">
-<Timer size={16} class="text-gray-400 flex-shrink-0" />
+<div>
 <dd class="text-sm font-medium text-white">{data.photo.shutter_speed}</dd>
 </div>
 {/if}
 {#if data.photo.iso}
-<div class="flex items-center gap-3">
-<Sun size={16} class="text-gray-400 flex-shrink-0" />
+<div>
 <dd class="text-sm font-medium text-white">ISO {data.photo.iso}</dd>
 </div>
 {/if}
