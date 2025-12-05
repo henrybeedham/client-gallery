@@ -998,50 +998,92 @@
 					</p>
 				{/if}
 			</div>
-			<!-- Regenerate Images section -->
+			<!-- Maintenance section -->
 			<div
 				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
 			>
 				<h2 class="text-lg font-semibold mb-4">Maintenance</h2>
-				<p class="text-sm text-gray-400 mb-4">
-					Regenerate thumbnails and medium-sized images from originals, and re-extract photo
-					metadata (dimensions, file size, EXIF date).
-				</p>
-				<form
-					method="POST"
-					action="?/regenerateImages"
-					use:enhance={() => {
-						loading = true;
-						return async ({ result, update }) => {
-							loading = false;
-							await update({ reset: false });
-						};
-					}}
-				>
-					<button
-						type="submit"
-						class="btn btn-secondary w-full"
-						disabled={loading || data.photos.length === 0}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="18"
-							height="18"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="inline-block mr-2"
+				<div class="space-y-4">
+					<div>
+						<p class="text-sm text-gray-400 mb-3">
+							Regenerate thumbnails and medium-sized images from originals.
+						</p>
+						<form
+							method="POST"
+							action="?/regenerateImages"
+							use:enhance={() => {
+								loading = true;
+								return async ({ result, update }) => {
+									loading = false;
+									await update({ reset: false });
+								};
+							}}
 						>
-							<path
-								d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-							></path>
-						</svg>
-						{loading ? 'Regenerating...' : 'Regenerate Images & Data'}
-					</button>
-				</form>
+							<button
+								type="submit"
+								class="btn btn-secondary w-full"
+								disabled={loading || data.photos.length === 0}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									class="inline-block mr-2"
+								>
+									<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+									<circle cx="8.5" cy="8.5" r="1.5"></circle>
+									<polyline points="21 15 16 10 5 21"></polyline>
+								</svg>
+								{loading ? 'Regenerating...' : 'Regenerate Images'}
+							</button>
+						</form>
+					</div>
+
+					<div class="border-t border-[var(--color-border)] pt-4">
+						<p class="text-sm text-gray-400 mb-3">
+							Re-extract photo metadata including dimensions, file size, and EXIF data (camera, lens, settings).
+						</p>
+						<form
+							method="POST"
+							action="?/regenerateData"
+							use:enhance={() => {
+								loading = true;
+								return async ({ result, update }) => {
+									loading = false;
+									await update({ reset: false });
+								};
+							}}
+						>
+							<button
+								type="submit"
+								class="btn btn-secondary w-full"
+								disabled={loading || data.photos.length === 0}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									class="inline-block mr-2"
+								>
+									<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+								</svg>
+								{loading ? 'Regenerating...' : 'Regenerate Data'}
+							</button>
+						</form>
+					</div>
+				</div>
 			</div>
 			<!-- Import from Folder section -->
 			<div

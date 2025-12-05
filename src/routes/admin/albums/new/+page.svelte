@@ -149,6 +149,65 @@
 						Visitors will need to enter this password to view the album
 					</p>
 				</div>
+
+				<!-- Primary Color -->
+				<div>
+					<label for="primaryColor" class="block text-sm font-medium mb-1.5">
+						Primary Color
+					</label>
+					<div class="flex gap-2">
+						<input
+							type="color"
+							id="primaryColor"
+							name="primaryColor"
+							class="h-10 w-20 rounded border border-[var(--color-border)]"
+							value={data.settings.defaultColor}
+						/>
+						<input
+							type="text"
+							class="form-input flex-1"
+							placeholder="#3b82f6"
+							value={data.settings.defaultColor}
+							readonly
+						/>
+					</div>
+					<p class="text-xs text-gray-500 mt-1">Used for buttons and accents</p>
+				</div>
+
+				<!-- Sort Order -->
+				<div>
+					<label for="sortOrder" class="block text-sm font-medium mb-1.5">
+						Sort Order
+					</label>
+					<select id="sortOrder" name="sortOrder" class="form-select">
+						<option value="oldest" selected={data.settings.defaultSortOrder === 'oldest'}>
+							Oldest first
+						</option>
+						<option value="newest" selected={data.settings.defaultSortOrder === 'newest'}>
+							Newest first
+						</option>
+						<option value="random" selected={data.settings.defaultSortOrder === 'random'}>
+							Random order
+						</option>
+					</select>
+					<p class="text-xs text-gray-500 mt-1">Order photos are displayed in the album</p>
+				</div>
+
+				<!-- Layout Style -->
+				<div>
+					<label for="layoutStyle" class="block text-sm font-medium mb-1.5">
+						Layout Style
+					</label>
+					<select id="layoutStyle" name="layoutStyle" class="form-select">
+						<option value="grid" selected={data.settings.defaultLayoutStyle === 'grid'}>
+							Grid (Equal squares)
+						</option>
+						<option value="masonry" selected={data.settings.defaultLayoutStyle === 'masonry'}>
+							Masonry (Pinterest-style)
+						</option>
+					</select>
+					<p class="text-xs text-gray-500 mt-1">How photos are arranged in the gallery</p>
+				</div>
 			</div>
 
 			<div class="flex gap-3 justify-end mt-8 pt-6 border-t border-[var(--color-border)]">

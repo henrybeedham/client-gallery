@@ -3,6 +3,17 @@
 	import { page } from '$app/stores';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { 
+		ArrowLeft, 
+		ChevronLeft, 
+		ChevronRight, 
+		Download, 
+		Share2, 
+		Camera, 
+		Aperture, 
+		Timer, 
+		Sun
+	} from 'lucide-svelte';
 
 	let { data } = $props();
 
@@ -110,31 +121,29 @@ content="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 {@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
 </svelte:head>
 
-<div class="min-h-screen flex flex-col bg-[var(--color-bg)]">
+<div class="min-h-screen flex flex-col bg-[var(--color-bg)] relative overflow-hidden">
+<!-- Blurred background image -->
+<div 
+class="fixed inset-0 z-0"
+style="background-image: url('/api/photos/{data.album.slug}/{data.photo.filename}/medium'); 
+background-size: cover; 
+background-position: center;
+filter: blur(40px);
+transform: scale(1.1);"
+></div>
+<div class="fixed inset-0 z-0 bg-black/60"></div>
+
 <!-- Header -->
 <header
-class="sticky top-0 bg-[var(--color-bg)]/95 backdrop-blur-xl border-b border-[var(--color-border)] z-50"
+class="sticky top-0 bg-black/40 backdrop-blur-xl border-b border-white/10 z-50"
 >
 <div class="container">
 <div class="flex items-center justify-between py-4">
-<button onclick={backToAlbum} class="flex items-center gap-2 text-sm hover:opacity-70 transition-opacity">
-<svg
-xmlns="http://www.w3.org/2000/svg"
-width="20"
-height="20"
-viewBox="0 0 24 24"
-fill="none"
-stroke="currentColor"
-stroke-width="2"
-stroke-linecap="round"
-stroke-linejoin="round"
->
-<line x1="19" y1="12" x2="5" y2="12"></line>
-<polyline points="12 19 5 12 12 5"></polyline>
-</svg>
+<button onclick={backToAlbum} class="flex items-center gap-2 text-sm hover:opacity-70 transition-opacity text-white">
+<ArrowLeft size={20} />
 <span>Back to {data.album.title}</span>
 </button>
-<div class="text-sm text-gray-500">
+<div class="text-sm text-gray-300">
 {data.currentIndex + 1} / {data.totalPhotos}
 </div>
 </div>
@@ -142,59 +151,35 @@ stroke-linejoin="round"
 </header>
 
 <!-- Main content -->
-<main class="flex-1 flex flex-col lg:flex-row">
+<main class="flex-1 flex flex-col lg:flex-row relative z-10 max-h-[calc(100vh-73px)] overflow-hidden">
 <!-- Image section -->
-<div class="flex-1 flex items-center justify-center p-4 lg:p-8 bg-[var(--color-bg-secondary)]">
-<div class="relative w-full max-w-6xl" in:fade={{ duration: 300, easing: cubicOut }}>
+<div class="flex-1 flex items-center justify-center p-4 lg:p-8 overflow-hidden">
+<div class="relative w-full h-full flex items-center justify-center" in:fade={{ duration: 300, easing: cubicOut }}>
 <!-- Navigation buttons -->
 {#if data.prevPhoto}
 <button
 onclick={navigatePrev}
-class="absolute left-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10"
+class="absolute left-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
 aria-label="Previous photo"
 >
-<svg
-xmlns="http://www.w3.org/2000/svg"
-width="24"
-height="24"
-viewBox="0 0 24 24"
-fill="none"
-stroke="currentColor"
-stroke-width="2"
-stroke-linecap="round"
-stroke-linejoin="round"
->
-<polyline points="15 18 9 12 15 6"></polyline>
-</svg>
+<ChevronLeft size={24} />
 </button>
 {/if}
 
 <img
 src="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 alt={data.photo.original_filename}
-class="w-full h-auto rounded-lg shadow-2xl"
+class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
 in:fly={{ y: 20, duration: 400, easing: cubicOut }}
 />
 
 {#if data.nextPhoto}
 <button
 onclick={navigateNext}
-class="absolute right-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10"
+class="absolute right-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
 aria-label="Next photo"
 >
-<svg
-xmlns="http://www.w3.org/2000/svg"
-width="24"
-height="24"
-viewBox="0 0 24 24"
-fill="none"
-stroke="currentColor"
-stroke-width="2"
-stroke-linecap="round"
-stroke-linejoin="round"
->
-<polyline points="9 18 15 12 9 6"></polyline>
-</svg>
+<ChevronRight size={24} />
 </button>
 {/if}
 </div>
@@ -202,15 +187,15 @@ stroke-linejoin="round"
 
 <!-- Info sidebar -->
 <aside
-class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-[var(--color-border)] bg-[var(--color-bg)] overflow-y-auto"
+class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-black/40 backdrop-blur-xl overflow-y-auto max-h-[calc(100vh-73px)]"
 in:fly={{ x: 50, duration: 400, easing: cubicOut }}
 >
 <div class="p-6 space-y-6">
 <!-- Title -->
 <div>
-<h1 class="text-xl font-semibold mb-2">{data.photo.original_filename}</h1>
+<h1 class="text-xl font-semibold mb-2 text-white">{data.photo.original_filename}</h1>
 {#if data.photo.date_taken}
-<p class="text-sm text-gray-500">{formatDateTime(data.photo.date_taken)}</p>
+<p class="text-sm text-gray-300">{formatDateTime(data.photo.date_taken)}</p>
 {/if}
 </div>
 
@@ -223,88 +208,58 @@ class="btn w-full"
 style="background-color: var(--gallery-primary); color: white;"
 onclick={trackPhotoDownload}
 >
-<svg
-xmlns="http://www.w3.org/2000/svg"
-width="18"
-height="18"
-viewBox="0 0 24 24"
-fill="none"
-stroke="currentColor"
-stroke-width="2"
-stroke-linecap="round"
-stroke-linejoin="round"
->
-<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-<polyline points="7 10 12 15 17 10"></polyline>
-<line x1="12" y1="15" x2="12" y2="3"></line>
-</svg>
+<Download size={18} />
 Download
 </a>
 <button onclick={copyShareLink} class="btn btn-secondary w-full">
-<svg
-xmlns="http://www.w3.org/2000/svg"
-width="18"
-height="18"
-viewBox="0 0 24 24"
-fill="none"
-stroke="currentColor"
-stroke-width="2"
-stroke-linecap="round"
-stroke-linejoin="round"
->
-<circle cx="18" cy="5" r="3"></circle>
-<circle cx="6" cy="12" r="3"></circle>
-<circle cx="18" cy="19" r="3"></circle>
-<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-<line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-</svg>
+<Share2 size={18} />
 Share Link
 </button>
 </div>
 
 <!-- EXIF metadata -->
 {#if data.photo.camera_make || data.photo.camera_model || data.photo.lens_model || data.photo.focal_length || data.photo.aperture || data.photo.shutter_speed || data.photo.iso}
-<div class="border-t border-[var(--color-border)] pt-6">
-<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">
+<div class="border-t border-white/10 pt-6">
+<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-4">
 Camera & Settings
 </h2>
 <dl class="space-y-3">
 {#if data.photo.camera_make || data.photo.camera_model}
-<div>
-<dt class="text-xs text-gray-500 mb-1">Camera</dt>
-<dd class="text-sm font-medium">
+<div class="flex items-start gap-3">
+<Camera size={16} class="text-gray-400 mt-0.5 flex-shrink-0" />
+<dd class="text-sm font-medium text-white">
 {[data.photo.camera_make, data.photo.camera_model].filter(Boolean).join(' ')}
 </dd>
 </div>
 {/if}
 {#if data.photo.lens_model}
-<div>
-<dt class="text-xs text-gray-500 mb-1">Lens</dt>
-<dd class="text-sm font-medium">{data.photo.lens_model}</dd>
+<div class="flex items-start gap-3">
+<Aperture size={16} class="text-gray-400 mt-0.5 flex-shrink-0" />
+<dd class="text-sm font-medium text-white">{data.photo.lens_model}</dd>
 </div>
 {/if}
 {#if data.photo.focal_length}
-<div>
-<dt class="text-xs text-gray-500 mb-1">Focal Length</dt>
-<dd class="text-sm font-medium">{formatFocalLength(data.photo.focal_length)}</dd>
+<div class="flex items-center gap-3">
+<span class="text-xs text-gray-400">f</span>
+<dd class="text-sm font-medium text-white">{formatFocalLength(data.photo.focal_length)}</dd>
 </div>
 {/if}
 {#if data.photo.aperture}
-<div>
-<dt class="text-xs text-gray-500 mb-1">Aperture</dt>
-<dd class="text-sm font-medium">{formatAperture(data.photo.aperture)}</dd>
+<div class="flex items-center gap-3">
+<Aperture size={16} class="text-gray-400 flex-shrink-0" />
+<dd class="text-sm font-medium text-white">{formatAperture(data.photo.aperture)}</dd>
 </div>
 {/if}
 {#if data.photo.shutter_speed}
-<div>
-<dt class="text-xs text-gray-500 mb-1">Shutter Speed</dt>
-<dd class="text-sm font-medium">{data.photo.shutter_speed}</dd>
+<div class="flex items-center gap-3">
+<Timer size={16} class="text-gray-400 flex-shrink-0" />
+<dd class="text-sm font-medium text-white">{data.photo.shutter_speed}</dd>
 </div>
 {/if}
 {#if data.photo.iso}
-<div>
-<dt class="text-xs text-gray-500 mb-1">ISO</dt>
-<dd class="text-sm font-medium">{data.photo.iso}</dd>
+<div class="flex items-center gap-3">
+<Sun size={16} class="text-gray-400 flex-shrink-0" />
+<dd class="text-sm font-medium text-white">ISO {data.photo.iso}</dd>
 </div>
 {/if}
 </dl>
@@ -312,21 +267,21 @@ Camera & Settings
 {/if}
 
 <!-- File info -->
-<div class="border-t border-[var(--color-border)] pt-6">
-<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">
+<div class="border-t border-white/10 pt-6">
+<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-4">
 File Information
 </h2>
 <dl class="space-y-3">
 <div>
-<dt class="text-xs text-gray-500 mb-1">Dimensions</dt>
-<dd class="text-sm font-medium">
+<dt class="text-xs text-gray-400 mb-1">Dimensions</dt>
+<dd class="text-sm font-medium text-white">
 {data.photo.width} × {data.photo.height}
 </dd>
 </div>
 {#if data.photo.file_size}
 <div>
-<dt class="text-xs text-gray-500 mb-1">File Size</dt>
-<dd class="text-sm font-medium">
+<dt class="text-xs text-gray-400 mb-1">File Size</dt>
+<dd class="text-sm font-medium text-white">
 {(data.photo.file_size / 1024 / 1024).toFixed(2)} MB
 </dd>
 </div>
