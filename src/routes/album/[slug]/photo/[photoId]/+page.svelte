@@ -152,10 +152,10 @@ class="sticky top-0 bg-black/40 backdrop-blur-xl border-b border-white/10 z-50"
 </header>
 
 <!-- Main content -->
-<main class="flex-1 flex flex-col lg:flex-row relative z-10">
+<main class="flex-1 flex flex-col lg:flex-row relative z-10 lg:h-[calc(100vh-73px)]">
 <!-- Image section -->
-<div class="flex-1 flex items-center justify-center p-4 lg:p-8 lg:overflow-hidden min-h-[50vh] lg:min-h-0">
-<div class="relative w-full lg:h-full flex items-center justify-center" in:fade={{ duration: 300, easing: cubicOut }}>
+<div class="flex-1 flex items-center justify-center p-4 lg:p-8 overflow-hidden">
+<div class="relative w-full h-full flex items-center justify-center max-h-[70vh] lg:max-h-full" in:fade={{ duration: 300, easing: cubicOut }}>
 <!-- Navigation buttons -->
 {#if data.prevPhoto}
 <button
@@ -170,7 +170,7 @@ aria-label="Previous photo"
 <img
 src="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 alt={data.photo.original_filename}
-class="w-full lg:max-w-full lg:max-h-full object-contain rounded-lg shadow-2xl"
+class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
 in:fly={{ y: 20, duration: 400, easing: cubicOut }}
 />
 
@@ -188,7 +188,7 @@ aria-label="Next photo"
 
 <!-- Info sidebar -->
 <aside
-class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-black/40 backdrop-blur-xl lg:overflow-y-auto lg:max-h-[calc(100vh-73px)]"
+class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-black/40 backdrop-blur-xl overflow-y-auto lg:h-full"
 in:fly={{ x: 50, duration: 400, easing: cubicOut }}
 >
 <div class="p-6 space-y-6">
