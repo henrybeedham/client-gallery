@@ -1,48 +1,47 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
 
+# 1. Base stage with shared settings
 WORKDIR /app
-
-# Install dependencies needed for native modules (better-sqlite3) during build
-# Sometimes the build step itself needs these if it executes the code
+# We need these tools for Sharp/SQLite in all build stages
 RUN apk add --no-cache python3 make g++ vips-dev
 
+FROM base AS builder
+
 COPY package*.json ./
+
+# 2. Install ALL dependencies (including devDependencies)
+# This ensures 'node-addon-api' is present so Sharp can build from source if needed
 RUN npm ci
 
 COPY . .
 
-# FIX: Create the directory expected by the database.
-# Even though we don't need the actual DB for the build, the folder must exist
-# so better-sqlite3 doesn't crash when the code is imported.
-RUN mkdir -p /app/data
-
-# Set the ENV so the build process knows where to look, just in case
-ENV DATABASE_PATH=/app/data/gallery.db
-
+# 3. Build the SvelteKit/Node app
 RUN npm run build
+
+# 4. Remove devDependencies to prepare for production
+# This leaves us with a clean node_modules folder containing compiled binaries
+RUN npm prune --production
 
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++ vips-dev
+# 5. Production image only needs runtime libraries (vips), not build tools (python/make/g++)
+# This makes the final image much smaller and safer
+RUN apk add --no-cache vips
 
-COPY package*.json ./
-RUN npm ci --omit=dev
-
+# Copy the built app and the production-ready node_modules from the builder
 COPY --from=builder /app/build ./build
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
-# Create directories for data and uploads
+# Setup directories
 RUN mkdir -p /app/data /app/uploads
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATABASE_PATH=/app/data/gallery.db
 ENV UPLOAD_DIR=/app/uploads
-# FIX: Increase body size limit for file uploads. 
-# '0' disables the limit, allowing large file uploads. 
-# Alternatively set to bytes, e.g., 536870912 for 512MB.
 ENV BODY_SIZE_LIMIT=Infinity
 
 EXPOSE 3000
