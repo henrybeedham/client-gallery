@@ -7,7 +7,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ vips-dev
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 COPY . .
 
