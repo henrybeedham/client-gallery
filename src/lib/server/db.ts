@@ -522,7 +522,21 @@ export function updatePhotoMetadata(
 			shutter_speed = ?,
 			iso = ?
 		WHERE id = ?`
-	).run(width, height, fileSize, mimeType, dateTaken, cameraMake, cameraModel, lensModel, focalLength, aperture, shutterSpeed, iso, id);
+	).run(
+		width,
+		height,
+		fileSize,
+		mimeType,
+		dateTaken,
+		cameraMake,
+		cameraModel,
+		lensModel,
+		focalLength,
+		aperture,
+		shutterSpeed,
+		iso,
+		id
+	);
 }
 
 // Photo Tag operations
@@ -655,6 +669,7 @@ export function recordAnalyticsEvent(
 		void (async () => {
 			if (eventType !== 'page_view') {
 				const webhookUrl = env.DISCORD_WEBHOOK_URL;
+
 				if (!webhookUrl) return;
 
 				let payload = {};
@@ -672,11 +687,15 @@ export function recordAnalyticsEvent(
 					};
 				}
 
-				await fetch(webhookUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(payload)
-				});
+				try {
+					await fetch(webhookUrl, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+				} catch (error) {
+					console.error('Failed to send Discord webhook:', error);
+				}
 			}
 		})();
 	} catch (e) {
@@ -806,9 +825,9 @@ export function getSettings(): Settings {
 						| 'masonry';
 					break;
 				case 'defaultSortOrder':
-					settings.defaultSortOrder = (row.value === 'newest' || row.value === 'random'
-						? row.value
-						: 'oldest') as 'newest' | 'oldest' | 'random';
+					settings.defaultSortOrder = (
+						row.value === 'newest' || row.value === 'random' ? row.value : 'oldest'
+					) as 'newest' | 'oldest' | 'random';
 					break;
 				case 'defaultIsPublic':
 					settings.defaultIsPublic = row.value === 'true';
