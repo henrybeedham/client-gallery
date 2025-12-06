@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatDate } from '$lib/utils';
+	import { Plus, Image, Edit, ExternalLink, Check, X, Trash2 } from 'lucide-svelte';
 
 	let { data } = $props();
 	let deleteConfirm: number | null = $state(null);
@@ -14,20 +15,7 @@
 	<div class="flex items-center justify-between mb-8">
 		<h1 class="text-2xl font-bold">Dashboard</h1>
 		<a href="/admin/albums/new" class="btn btn-primary">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="18"
-				height="18"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<line x1="12" y1="5" x2="12" y2="19"></line>
-				<line x1="5" y1="12" x2="19" y2="12"></line>
-			</svg>
+			<Plus size={18} />
 			New Album
 		</a>
 	</div>
@@ -72,21 +60,7 @@
 			<div
 				class="empty-state bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="48"
-					height="48"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-					<circle cx="8.5" cy="8.5" r="1.5"></circle>
-					<polyline points="21 15 16 10 5 21"></polyline>
-				</svg>
+				<Image size={48} strokeWidth={1.5} />
 				<h3>No albums yet</h3>
 				<p>Create your first album to get started</p>
 				<a href="/admin/albums/new" class="btn btn-primary mt-4">Create Album</a>
@@ -125,19 +99,7 @@
 												/>
 											{:else}
 												<div class="w-full h-full flex items-center justify-center text-gray-600">
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														width="20"
-														height="20"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="1.5"
-													>
-														<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-														<circle cx="8.5" cy="8.5" r="1.5"></circle>
-														<polyline points="21 15 16 10 5 21"></polyline>
-													</svg>
+													<Image size={20} strokeWidth={1.5} />
 												</div>
 											{/if}
 										</div>
@@ -192,18 +154,7 @@
 											class="p-2 rounded-lg hover:bg-[var(--color-border)] transition-colors"
 											title="Edit"
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="16"
-												height="16"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-											>
-												<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-												<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-											</svg>
+											<Edit size={16} />
 										</a>
 										<a
 											href="/album/{album.slug}"
@@ -211,19 +162,7 @@
 											class="p-2 rounded-lg hover:bg-[var(--color-border)] transition-colors"
 											title="View"
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="16"
-												height="16"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-											>
-												<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-												<polyline points="15 3 21 3 21 9"></polyline>
-												<line x1="10" y1="14" x2="21" y2="3"></line>
-											</svg>
+											<ExternalLink size={16} />
 										</a>
 										{#if deleteConfirm === album.id}
 											<form
@@ -242,17 +181,7 @@
 													class="p-2 rounded-lg bg-red-500 text-white"
 													title="Confirm"
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														width="16"
-														height="16"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-													>
-														<polyline points="20 6 9 17 4 12"></polyline>
-													</svg>
+													<Check size={16} />
 												</button>
 											</form>
 											<button
@@ -260,18 +189,7 @@
 												onclick={() => (deleteConfirm = null)}
 												title="Cancel"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="16"
-													height="16"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-												>
-													<line x1="18" y1="6" x2="6" y2="18"></line>
-													<line x1="6" y1="6" x2="18" y2="18"></line>
-												</svg>
+												<X size={16} />
 											</button>
 										{:else}
 											<button
@@ -279,20 +197,7 @@
 												onclick={() => (deleteConfirm = album.id)}
 												title="Delete"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="16"
-													height="16"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-												>
-													<polyline points="3 6 5 6 21 6"></polyline>
-													<path
-														d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-													></path>
-												</svg>
+												<Trash2 size={16} />
 											</button>
 										{/if}
 									</div>

@@ -186,7 +186,14 @@ export const actions: Actions = {
 					processed.height,
 					processed.fileSize,
 					processed.mimeType,
-					processed.dateTaken
+					processed.dateTaken,
+					processed.cameraMake,
+					processed.cameraModel,
+					processed.lensModel,
+					processed.focalLength,
+					processed.aperture,
+					processed.shutterSpeed,
+					processed.iso
 				);
 
 				if (!firstPhotoId) {
@@ -398,15 +405,8 @@ export const actions: Actions = {
 
 		for (const photo of photos) {
 			try {
-				const result = await regenerateImageFromOriginal(photo.filename, album.slug);
-				updatePhotoMetadata(
-					photo.id,
-					result.width,
-					result.height,
-					result.fileSize,
-					result.mimeType,
-					result.dateTaken
-				);
+				// Regenerate image files only (thumbnails and medium sizes)
+				await regenerateImageFromOriginal(photo.filename, album.slug);
 				regenerated++;
 			} catch (e) {
 				console.error(`Failed to regenerate image ${photo.filename}:`, e);
@@ -415,9 +415,62 @@ export const actions: Actions = {
 		}
 
 		if (failed > 0) {
-			return { success: true, message: `Regenerated ${regenerated} image(s), ${failed} failed` };
+			return {
+				success: true,
+				message: `Regenerated ${regenerated} thumbnail(s) and medium image(s), ${failed} failed`
+			};
 		}
-		return { success: true, message: `Regenerated ${regenerated} image(s)` };
+		return { success: true, message: `Regenerated ${regenerated} thumbnail(s) and medium image(s)` };
+	},
+
+	regenerateData: async ({ params }) => {
+		const albumId = parseInt(params.id);
+		if (isNaN(albumId)) {
+			return fail(400, { error: 'Invalid album ID' });
+		}
+
+		const album = getAlbumById(albumId);
+		if (!album) {
+			return fail(404, { error: 'Album not found' });
+		}
+
+		const photos = getPhotosByAlbum(albumId);
+		let regenerated = 0;
+		let failed = 0;
+
+		for (const photo of photos) {
+			try {
+				// Re-extract metadata from original
+				const result = await regenerateImageFromOriginal(photo.filename, album.slug);
+				updatePhotoMetadata(
+					photo.id,
+					result.width,
+					result.height,
+					result.fileSize,
+					result.mimeType,
+					result.dateTaken,
+					result.cameraMake,
+					result.cameraModel,
+					result.lensModel,
+					result.focalLength,
+					result.aperture,
+					result.shutterSpeed,
+					result.iso
+				);
+				regenerated++;
+			} catch (e) {
+				console.error(`Failed to regenerate metadata for ${photo.filename}:`, e);
+				failed++;
+			}
+		}
+
+		if (failed > 0) {
+			return {
+				success: true,
+				message: `Regenerated metadata for ${regenerated} photo(s), ${failed} failed`
+			};
+		}
+		return { success: true, message: `Regenerated metadata for ${regenerated} photo(s)` };
 	},
 
 	importFromFolder: async ({ params }) => {
@@ -454,7 +507,14 @@ export const actions: Actions = {
 					processed.height,
 					processed.fileSize,
 					processed.mimeType,
-					processed.dateTaken
+					processed.dateTaken,
+					processed.cameraMake,
+					processed.cameraModel,
+					processed.lensModel,
+					processed.focalLength,
+					processed.aperture,
+					processed.shutterSpeed,
+					processed.iso
 				);
 
 				// If the file was in a subfolder, create/get the tag and assign it to the photo

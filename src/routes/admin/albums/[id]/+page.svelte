@@ -3,6 +3,21 @@
 	import { invalidateAll } from '$app/navigation';
 	import { slugify, formatFileSize } from '$lib/utils';
 	import { PUBLIC_BASE_URL as BASE_URL } from '$env/static/public';
+	import { 
+		ChevronLeft, 
+		ChevronRight,
+		Upload, 
+		Image, 
+		Check, 
+		X, 
+		Star, 
+		Trash2, 
+		Download, 
+		Eye, 
+		RefreshCw,
+		DollarSign,
+		FolderOpen
+	} from 'lucide-svelte';
 
 	let { data, form } = $props();
 
@@ -259,19 +274,7 @@
 			class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors mt-1"
 			aria-label="Back to dashboard"
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<polyline points="15 18 9 12 15 6"></polyline>
-			</svg>
+			<ChevronLeft size={20} />
 		</a>
 		<div>
 			<h1 class="text-2xl font-bold">{data.album.title}</h1>
@@ -308,7 +311,7 @@
 	{/if}
 
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
+		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 order-2 lg:order-1">
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
 				<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
 					<h2 class="text-lg font-semibold">Photos ({data.photos.length})</h2>
@@ -356,21 +359,7 @@
 						Select All
 					</button>
 					<button class="btn btn-primary" onclick={() => fileInput.click()} disabled={uploading}>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="18"
-							height="18"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						>
-							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-							<polyline points="17 8 12 3 7 8"></polyline>
-							<line x1="12" y1="3" x2="12" y2="15"></line>
-						</svg>
+						<Upload size={18} />
 						{uploading ? 'Uploading...' : 'Upload Photos'}
 					</button>
 				</div>
@@ -395,22 +384,7 @@
 
 			{#if data.photos.length === 0}
 				<div class="text-center py-12 text-gray-500">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="48"
-						height="48"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						class="mx-auto mb-4 opacity-50"
-					>
-						<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-						<circle cx="8.5" cy="8.5" r="1.5"></circle>
-						<polyline points="21 15 16 10 5 21"></polyline>
-					</svg>
+					<Image size={48} strokeWidth={1.5} class="mx-auto mb-4 opacity-50" />
 					<p class="mb-4">No photos yet</p>
 					<button class="btn btn-primary" onclick={() => fileInput.click()}> Upload Photos </button>
 				</div>
@@ -462,40 +436,12 @@
 												class="p-1.5 rounded bg-black/50 text-white hover:bg-yellow-500"
 												title="Set as cover"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="14"
-													height="14"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<polygon
-														points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-													></polygon>
-												</svg>
+												<Star size={14} />
 											</button>
 										</form>
 									{:else}
 										<span class="p-1.5 rounded bg-yellow-500 text-white" title="Cover photo">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="14"
-												height="14"
-												viewBox="0 0 24 24"
-												fill="currentColor"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<polygon
-													points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-												></polygon>
-											</svg>
+											<Star size={14} fill="currentColor" />
 										</span>
 									{/if}
 									<!-- Background photo button -->
@@ -516,21 +462,7 @@
 												class="p-1.5 rounded bg-black/50 text-white hover:bg-purple-500"
 												title="Set as background"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="14"
-													height="14"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-													<circle cx="8.5" cy="8.5" r="1.5"></circle>
-													<polyline points="21 15 16 10 5 21"></polyline>
-												</svg>
+												<Image size={14} />
 											</button>
 										</form>
 									{:else}
@@ -549,21 +481,7 @@
 												class="p-1.5 rounded bg-purple-500 text-white"
 												title="Background photo (click to clear)"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="14"
-													height="14"
-													viewBox="0 0 24 24"
-													fill="currentColor"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-													<circle cx="8.5" cy="8.5" r="1.5"></circle>
-													<polyline points="21 15 16 10 5 21"></polyline>
-												</svg>
+												<Image size={14} />
 											</button>
 										</form>
 									{/if}
@@ -584,19 +502,7 @@
 												class="p-1.5 rounded bg-red-500 text-white"
 												title="Confirm delete"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="14"
-													height="14"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<polyline points="20 6 9 17 4 12"></polyline>
-												</svg>
+												<Check size={14} />
 											</button>
 										</form>
 										<button
@@ -607,20 +513,7 @@
 											}}
 											title="Cancel"
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="14"
-												height="14"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<line x1="18" y1="6" x2="6" y2="18"></line>
-												<line x1="6" y1="6" x2="18" y2="18"></line>
-											</svg>
+											<X size={14} />
 										</button>
 									{:else}
 										<button
@@ -631,22 +524,7 @@
 											}}
 											title="Delete"
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="14"
-												height="14"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<polyline points="3 6 5 6 21 6"></polyline>
-												<path
-													d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-												></path>
-											</svg>
+											<Trash2 size={14} />
 										</button>
 									{/if}
 								</div>
@@ -684,7 +562,7 @@
 			{/if}
 		</div>
 
-		<div class="space-y-6">
+		<div class="space-y-6 order-1 lg:order-2">
 			<!-- Analytics display -->
 			<div
 				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
@@ -825,20 +703,7 @@
 							class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
 							onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								class="transition-transform {showAdvancedSettings ? 'rotate-90' : ''}"
-							>
-								<polyline points="9 18 15 12 9 6"></polyline>
-							</svg>
+							<ChevronRight size={16} class="transition-transform {showAdvancedSettings ? 'rotate-90' : ''}" />
 							Advanced Settings
 						</button>
 
@@ -947,21 +812,7 @@
 									class="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-bg-tertiary)] rounded-full text-sm hover:bg-red-500/20 group transition-colors"
 								>
 									{tag.name}
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="12"
-										height="12"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										class="opacity-50 group-hover:opacity-100"
-									>
-										<line x1="18" y1="6" x2="6" y2="18"></line>
-										<line x1="6" y1="6" x2="18" y2="18"></line>
-									</svg>
+									<X size={14} />
 								</button>
 							</form>
 						{/each}
@@ -998,50 +849,64 @@
 					</p>
 				{/if}
 			</div>
-			<!-- Regenerate Images section -->
+			<!-- Maintenance section -->
 			<div
 				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
 			>
 				<h2 class="text-lg font-semibold mb-4">Maintenance</h2>
-				<p class="text-sm text-gray-400 mb-4">
-					Regenerate thumbnails and medium-sized images from originals, and re-extract photo
-					metadata (dimensions, file size, EXIF date).
-				</p>
-				<form
-					method="POST"
-					action="?/regenerateImages"
-					use:enhance={() => {
-						loading = true;
-						return async ({ result, update }) => {
-							loading = false;
-							await update({ reset: false });
-						};
-					}}
-				>
-					<button
-						type="submit"
-						class="btn btn-secondary w-full"
-						disabled={loading || data.photos.length === 0}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="18"
-							height="18"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="inline-block mr-2"
+				<div class="space-y-4">
+					<div>
+						<p class="text-sm text-gray-400 mb-3">
+							Regenerate thumbnails and medium-sized images from originals.
+						</p>
+						<form
+							method="POST"
+							action="?/regenerateImages"
+							use:enhance={() => {
+								loading = true;
+								return async ({ result, update }) => {
+									loading = false;
+									await update({ reset: false });
+								};
+							}}
 						>
-							<path
-								d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-							></path>
-						</svg>
-						{loading ? 'Regenerating...' : 'Regenerate Images & Data'}
-					</button>
-				</form>
+							<button
+								type="submit"
+								class="btn btn-secondary w-full"
+								disabled={loading || data.photos.length === 0}
+							>
+								<Image size={14} />
+								{loading ? 'Regenerating...' : 'Regenerate Images'}
+							</button>
+						</form>
+					</div>
+
+					<div class="border-t border-[var(--color-border)] pt-4">
+						<p class="text-sm text-gray-400 mb-3">
+							Re-extract photo metadata including dimensions, file size, and EXIF data (camera, lens, settings).
+						</p>
+						<form
+							method="POST"
+							action="?/regenerateData"
+							use:enhance={() => {
+								loading = true;
+								return async ({ result, update }) => {
+									loading = false;
+									await update({ reset: false });
+								};
+							}}
+						>
+							<button
+								type="submit"
+								class="btn btn-secondary w-full"
+								disabled={loading || data.photos.length === 0}
+							>
+								<DollarSign size={18} />
+								{loading ? 'Regenerating...' : 'Regenerate Data'}
+							</button>
+						</form>
+					</div>
+				</div>
 			</div>
 			<!-- Import from Folder section -->
 			<div
@@ -1075,23 +940,7 @@
 						class="btn btn-secondary w-full"
 						disabled={loading || !data.importFiles || data.importFiles.length === 0}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="18"
-							height="18"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="inline-block mr-2"
-						>
-							<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
-							></path>
-							<line x1="12" y1="11" x2="12" y2="17"></line>
-							<polyline points="9 14 12 11 15 14"></polyline>
-						</svg>
+						<FolderOpen size={18} class="inline-block mr-2" />
 						{loading ? 'Importing...' : 'Import from Import Folder'}
 					</button>
 				</form>
@@ -1114,22 +963,7 @@
 					}}
 				>
 					<button type="submit" class="btn btn-secondary w-full" disabled={loading}>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="18"
-							height="18"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="inline-block mr-2"
-						>
-							<path
-								d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-							></path>
-						</svg>
+						<RefreshCw size={18} />
 						{loading ? 'Clearing...' : 'Clear Analytics'}
 					</button>
 				</form>

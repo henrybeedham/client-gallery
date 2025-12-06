@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { slugify } from '$lib/utils';
+	import { ChevronLeft } from 'lucide-svelte';
 
-	let { form } = $props();
+	let { data, form } = $props();
 	let title = $state(form?.title || '');
 	let customSlug = $state(form?.slug || '');
 	let loading = $state(false);
@@ -22,19 +23,7 @@
 			class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
 			aria-label="Back to dashboard"
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<polyline points="15 18 9 12 15 6"></polyline>
-			</svg>
+			<ChevronLeft size={20} />
 		</a>
 		<h1 class="text-2xl font-bold">New Album</h1>
 	</div>
@@ -101,13 +90,18 @@
 						class="form-textarea"
 						rows="4"
 						placeholder="Enter album description... You can use **bold**, *italic*, and other markdown formatting."
-						>{form?.description || ''}</textarea
+						>{form?.description || data.settings.defaultDescription}</textarea
 					>
 				</div>
 
 				<div class="flex flex-col gap-3">
 					<label class="flex items-center gap-2 cursor-pointer">
-						<input type="checkbox" name="isPublic" checked class="w-4 h-4 accent-blue-500" />
+						<input
+							type="checkbox"
+							name="isPublic"
+							checked={data.settings.defaultIsPublic}
+							class="w-4 h-4 accent-blue-500"
+						/>
 						<span class="text-sm">Public album</span>
 					</label>
 					<p class="text-xs text-gray-500 ml-6">Private albums are only visible to admins</p>
@@ -115,7 +109,12 @@
 
 				<div class="flex flex-col gap-3">
 					<label class="flex items-center gap-2 cursor-pointer">
-						<input type="checkbox" name="showOnHome" checked class="w-4 h-4 accent-blue-500" />
+						<input
+							type="checkbox"
+							name="showOnHome"
+							checked={data.settings.defaultShowOnHome}
+							class="w-4 h-4 accent-blue-500"
+						/>
 						<span class="text-sm">Show on homepage</span>
 					</label>
 					<p class="text-xs text-gray-500 ml-6">
@@ -138,6 +137,65 @@
 					<p class="text-xs text-gray-500 mt-1">
 						Visitors will need to enter this password to view the album
 					</p>
+				</div>
+
+				<!-- Primary Color -->
+				<div>
+					<label for="primaryColor" class="block text-sm font-medium mb-1.5">
+						Primary Color
+					</label>
+					<div class="flex gap-2">
+						<input
+							type="color"
+							id="primaryColor"
+							name="primaryColor"
+							class="h-10 w-20 rounded border border-[var(--color-border)]"
+							value={data.settings.defaultColor}
+						/>
+						<input
+							type="text"
+							class="form-input flex-1"
+							placeholder="#3b82f6"
+							value={data.settings.defaultColor}
+							readonly
+						/>
+					</div>
+					<p class="text-xs text-gray-500 mt-1">Used for buttons and accents</p>
+				</div>
+
+				<!-- Sort Order -->
+				<div>
+					<label for="sortOrder" class="block text-sm font-medium mb-1.5">
+						Sort Order
+					</label>
+					<select id="sortOrder" name="sortOrder" class="form-select">
+						<option value="oldest" selected={data.settings.defaultSortOrder === 'oldest'}>
+							Oldest first
+						</option>
+						<option value="newest" selected={data.settings.defaultSortOrder === 'newest'}>
+							Newest first
+						</option>
+						<option value="random" selected={data.settings.defaultSortOrder === 'random'}>
+							Random order
+						</option>
+					</select>
+					<p class="text-xs text-gray-500 mt-1">Order photos are displayed in the album</p>
+				</div>
+
+				<!-- Layout Style -->
+				<div>
+					<label for="layoutStyle" class="block text-sm font-medium mb-1.5">
+						Layout Style
+					</label>
+					<select id="layoutStyle" name="layoutStyle" class="form-select">
+						<option value="grid" selected={data.settings.defaultLayoutStyle === 'grid'}>
+							Grid (Equal squares)
+						</option>
+						<option value="masonry" selected={data.settings.defaultLayoutStyle === 'masonry'}>
+							Masonry (Pinterest-style)
+						</option>
+					</select>
+					<p class="text-xs text-gray-500 mt-1">How photos are arranged in the gallery</p>
 				</div>
 			</div>
 

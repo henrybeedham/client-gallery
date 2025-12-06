@@ -23,6 +23,13 @@ export interface ProcessedImage {
 	fileSize: number;
 	mimeType: string;
 	dateTaken: string | null;
+	cameraMake: string | null;
+	cameraModel: string | null;
+	lensModel: string | null;
+	focalLength: number | null;
+	aperture: number | null;
+	shutterSpeed: string | null;
+	iso: number | null;
 }
 
 function ensureAlbumDirs(albumSlug: string): void {
@@ -36,66 +43,141 @@ function ensureAlbumDirs(albumSlug: string): void {
 }
 
 /**
- * Extract the date/time when the photo was originally taken from EXIF metadata.
- * Uses DateTimeOriginal which represents when the photo was captured, not when it was exported/modified.
- * @param buffer - The image buffer to extract EXIF data from
- * @returns ISO 8601 formatted date string or null if not found
+ * Generate thumbnail with cover fit for consistent grid layout
  */
-async function extractExifDateTaken(buffer: Buffer): Promise<string | null> {
+async function generateThumbnail(
+	image: sharp.Sharp,
+	albumSlug: string,
+	filename: string
+): Promise<void> {
+	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
+	await image
+		.clone()
+		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'cover', withoutEnlargement: true })
+		.toFile(thumbnailPath);
+}
+
+export interface ExifMetadata {
+	dateTaken: string | null;
+	cameraMake: string | null;
+	cameraModel: string | null;
+	lensModel: string | null;
+	focalLength: number | null;
+	aperture: number | null;
+	shutterSpeed: string | null;
+	iso: number | null;
+}
+
+/**
+ * Extract comprehensive EXIF metadata from an image buffer.
+ * @param buffer - The image buffer to extract EXIF data from
+ * @returns ExifMetadata object with all available EXIF data
+ */
+async function extractExifMetadata(buffer: Buffer): Promise<ExifMetadata> {
 	try {
-		// Parse EXIF data from buffer using array syntax for specific fields
-		// This approach is more efficient and returns the fields directly
-		// DateTimeOriginal is the original capture time (not export time from Lightroom)
-		const exif = await exifr.parse(buffer, ['DateTimeOriginal', 'DateTimeDigitized', 'DateTime']);
+		// Parse comprehensive EXIF data from buffer
+		const exif = await exifr.parse(buffer, {
+			pick: [
+				'DateTimeOriginal',
+				'DateTimeDigitized',
+				'DateTime',
+				'Make',
+				'Model',
+				'LensModel',
+				'FocalLength',
+				'FNumber',
+				'ExposureTime',
+				'ISO'
+			]
+		});
 
-		// exifr.parse returns undefined when no EXIF data is found or fields don't exist
 		if (!exif) {
-			return null;
+			return {
+				dateTaken: null,
+				cameraMake: null,
+				cameraModel: null,
+				lensModel: null,
+				focalLength: null,
+				aperture: null,
+				shutterSpeed: null,
+				iso: null
+			};
 		}
 
-		// Priority order:
-		// 1. DateTimeOriginal - when the photo was taken (camera capture time)
-		// 2. DateTimeDigitized - when the photo was digitized
-		// 3. DateTime - general date/time (often modified time)
+		// Extract date taken
+		let dateTaken: string | null = null;
 		const dateValue = exif.DateTimeOriginal || exif.DateTimeDigitized || exif.DateTime;
-
-		if (!dateValue) {
-			return null;
-		}
-
-		// exifr by default returns Date objects for datetime fields
-		if (dateValue instanceof Date) {
-			// Check if date is valid
-			if (isNaN(dateValue.getTime())) {
-				return null;
-			}
-			// Convert to ISO format without milliseconds and timezone for consistency
-			// Format: YYYY-MM-DDTHH:MM:SS (matches SQLite DATETIME format)
-			const isoString = dateValue.toISOString();
-			return isoString.substring(0, 19); // Remove .xxxZ suffix
-		}
-
-		// If it's a string (shouldn't happen with default exifr but handle it)
-		if (typeof dateValue === 'string') {
-			// EXIF format: "YYYY:MM:DD HH:MM:SS"
-			const match = dateValue.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-			if (match) {
-				const [, year, month, day, hour, minute, second] = match;
-				// Create ISO 8601 format without timezone (matches SQLite DATETIME format)
-				const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-				// Validate it's a proper date
-				const testDate = new Date(isoString);
-				if (!isNaN(testDate.getTime())) {
-					return isoString;
+		if (dateValue) {
+			if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+				const isoString = dateValue.toISOString();
+				dateTaken = isoString.substring(0, 19); // Remove .xxxZ suffix
+			} else if (typeof dateValue === 'string') {
+				// EXIF format: "YYYY:MM:DD HH:MM:SS"
+				const match = dateValue.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+				if (match) {
+					const [, year, month, day, hour, minute, second] = match;
+					const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+					const testDate = new Date(isoString);
+					if (!isNaN(testDate.getTime())) {
+						dateTaken = isoString;
+					}
 				}
 			}
 		}
 
-		return null;
+		// Extract camera make/model
+		const cameraMake = exif.Make ? String(exif.Make).trim() : null;
+		const cameraModel = exif.Model ? String(exif.Model).trim() : null;
+
+		// Extract lens model
+		const lensModel = exif.LensModel ? String(exif.LensModel).trim() : null;
+
+		// Extract focal length (convert to number)
+		const focalLength =
+			exif.FocalLength && !isNaN(Number(exif.FocalLength)) ? Number(exif.FocalLength) : null;
+
+		// Extract aperture (FNumber, e.g., f/2.8 = 2.8)
+		const aperture = exif.FNumber && !isNaN(Number(exif.FNumber)) ? Number(exif.FNumber) : null;
+
+		// Extract shutter speed (ExposureTime, e.g., 1/125)
+		let shutterSpeed: string | null = null;
+		if (exif.ExposureTime) {
+			const exposureTime = Number(exif.ExposureTime);
+			if (!isNaN(exposureTime)) {
+				if (exposureTime >= 1) {
+					shutterSpeed = `${exposureTime}s`;
+				} else if (exposureTime > 0) {
+					const denominator = Math.round(1 / exposureTime);
+					shutterSpeed = `1/${denominator}`;
+				}
+			}
+		}
+
+		// Extract ISO
+		const iso = exif.ISO && !isNaN(Number(exif.ISO)) ? Number(exif.ISO) : null;
+
+		return {
+			dateTaken,
+			cameraMake,
+			cameraModel,
+			lensModel,
+			focalLength,
+			aperture,
+			shutterSpeed,
+			iso
+		};
 	} catch (error) {
-		// Silently fail - many images don't have EXIF data
-		console.error('Error extracting EXIF date taken:', error);
-		return null;
+		console.error('Error extracting EXIF metadata:', error);
+		return {
+			dateTaken: null,
+			cameraMake: null,
+			cameraModel: null,
+			lensModel: null,
+			focalLength: null,
+			aperture: null,
+			shutterSpeed: null,
+			iso: null
+		};
 	}
 }
 
@@ -112,9 +194,8 @@ export async function processAndSaveImage(
 	const image = sharp(buffer);
 	const metadata = await image.metadata();
 
-	// Extract EXIF date taken from the original buffer
-	// This extracts DateTimeOriginal which is the actual capture time, not export time
-	const dateTaken = await extractExifDateTaken(buffer);
+	// Extract comprehensive EXIF metadata from the original buffer
+	const exifMetadata = await extractExifMetadata(buffer);
 
 	// Save original
 	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);
@@ -127,12 +208,8 @@ export async function processAndSaveImage(
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(mediumPath);
 
-	// Generate thumbnail (preserve aspect ratio, don't crop)
-	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
-	await image
-		.clone()
-		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
-		.toFile(thumbnailPath);
+	// Generate thumbnail using shared helper function
+	await generateThumbnail(image, albumSlug, filename);
 
 	const stats = await fs.stat(originalPath);
 
@@ -142,7 +219,7 @@ export async function processAndSaveImage(
 		height: metadata.height || 0,
 		fileSize: stats.size,
 		mimeType: `image/${metadata.format || 'jpeg'}`,
-		dateTaken
+		...exifMetadata
 	};
 }
 
@@ -204,6 +281,13 @@ export interface RegeneratedImageData {
 	fileSize: number;
 	mimeType: string;
 	dateTaken: string | null;
+	cameraMake: string | null;
+	cameraModel: string | null;
+	lensModel: string | null;
+	focalLength: number | null;
+	aperture: number | null;
+	shutterSpeed: string | null;
+	iso: number | null;
 }
 
 export async function regenerateImageFromOriginal(
@@ -218,9 +302,8 @@ export async function regenerateImageFromOriginal(
 	const image = sharp(buffer);
 	const metadata = await image.metadata();
 
-	// Extract EXIF date taken from buffer
-	// This extracts DateTimeOriginal which is the actual capture time, not export time
-	const dateTaken = await extractExifDateTaken(buffer);
+	// Extract comprehensive EXIF metadata from buffer
+	const exifMetadata = await extractExifMetadata(buffer);
 
 	// Regenerate medium size (for lightbox - preserve aspect ratio)
 	const mediumPath = path.join(UPLOAD_DIR, albumSlug, 'medium', filename);
@@ -229,12 +312,8 @@ export async function regenerateImageFromOriginal(
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(mediumPath);
 
-	// Regenerate thumbnail (preserve aspect ratio, don't crop)
-	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
-	await image
-		.clone()
-		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
-		.toFile(thumbnailPath);
+	// Regenerate thumbnail using shared helper function
+	await generateThumbnail(image, albumSlug, filename);
 
 	const stats = await fs.stat(originalPath);
 
@@ -243,7 +322,7 @@ export async function regenerateImageFromOriginal(
 		height: metadata.height || 0,
 		fileSize: stats.size,
 		mimeType: `image/${metadata.format || 'jpeg'}`,
-		dateTaken
+		...exifMetadata
 	};
 }
 
@@ -345,9 +424,8 @@ export async function processImageFromImportFolder(
 	const image = sharp(buffer);
 	const metadata = await image.metadata();
 
-	// Extract EXIF date taken from buffer
-	// This extracts DateTimeOriginal which is the actual capture time, not export time
-	const dateTaken = await extractExifDateTaken(buffer);
+	// Extract comprehensive EXIF metadata from buffer
+	const exifMetadata = await extractExifMetadata(buffer);
 
 	// Save original
 	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);
@@ -360,12 +438,8 @@ export async function processImageFromImportFolder(
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(mediumPath);
 
-	// Generate thumbnail (preserve aspect ratio, don't crop)
-	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
-	await image
-		.clone()
-		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
-		.toFile(thumbnailPath);
+	// Generate thumbnail using shared helper function
+	await generateThumbnail(image, albumSlug, filename);
 
 	const stats = await fs.stat(originalPath);
 
@@ -375,7 +449,7 @@ export async function processImageFromImportFolder(
 		height: metadata.height || 0,
 		fileSize: stats.size,
 		mimeType: `image/${metadata.format || 'jpeg'}`,
-		dateTaken
+		...exifMetadata
 	};
 }
 

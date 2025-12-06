@@ -39,6 +39,13 @@ db.exec(`
     file_size INTEGER,
     mime_type TEXT,
     date_taken DATETIME,
+    camera_make TEXT,
+    camera_model TEXT,
+    lens_model TEXT,
+    focal_length REAL,
+    aperture REAL,
+    shutter_speed TEXT,
+    iso INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     sort_order INTEGER DEFAULT 0,
     FOREIGN KEY (album_id) REFERENCES albums(id) ON DELETE CASCADE
@@ -72,6 +79,12 @@ db.exec(`
     FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_photos_album_id ON photos(album_id);
   CREATE INDEX IF NOT EXISTS idx_albums_slug ON albums(slug);
   CREATE INDEX IF NOT EXISTS idx_photo_tags_album_id ON photo_tags(album_id);
@@ -82,6 +95,43 @@ db.exec(`
 // Migration: Add layout_style column if it doesn't exist
 try {
 	db.exec(`ALTER TABLE albums ADD COLUMN layout_style TEXT DEFAULT 'grid'`);
+} catch {
+	// Column already exists, ignore error
+}
+
+// Migration: Add EXIF metadata columns to photos table
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN camera_make TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN camera_model TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN lens_model TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN focal_length REAL`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN aperture REAL`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN shutter_speed TEXT`);
+} catch {
+	// Column already exists, ignore error
+}
+try {
+	db.exec(`ALTER TABLE photos ADD COLUMN iso INTEGER`);
 } catch {
 	// Column already exists, ignore error
 }
@@ -118,6 +168,13 @@ export interface Photo {
 	file_size: number | null;
 	mime_type: string | null;
 	date_taken: string | null;
+	camera_make: string | null;
+	camera_model: string | null;
+	lens_model: string | null;
+	focal_length: number | null;
+	aperture: number | null;
+	shutter_speed: string | null;
+	iso: number | null;
 	created_at: string;
 	sort_order: number;
 	tags?: PhotoTag[];
@@ -380,7 +437,14 @@ export function createPhoto(
 	height: number | null,
 	fileSize: number | null,
 	mimeType: string | null,
-	dateTaken: string | null = null
+	dateTaken: string | null = null,
+	cameraMake: string | null = null,
+	cameraModel: string | null = null,
+	lensModel: string | null = null,
+	focalLength: number | null = null,
+	aperture: number | null = null,
+	shutterSpeed: string | null = null,
+	iso: number | null = null
 ): number {
 	const maxOrder = db
 		.prepare('SELECT MAX(sort_order) as max_order FROM photos WHERE album_id = ?')
@@ -390,8 +454,8 @@ export function createPhoto(
 	const result = db
 		.prepare(
 			`INSERT INTO photos 
-      (album_id, filename, original_filename, width, height, file_size, mime_type, date_taken, sort_order) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (album_id, filename, original_filename, width, height, file_size, mime_type, date_taken, camera_make, camera_model, lens_model, focal_length, aperture, shutter_speed, iso, sort_order) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			albumId,
@@ -402,6 +466,13 @@ export function createPhoto(
 			fileSize,
 			mimeType,
 			dateTaken,
+			cameraMake,
+			cameraModel,
+			lensModel,
+			focalLength,
+			aperture,
+			shutterSpeed,
+			iso,
 			sortOrder
 		);
 	return result.lastInsertRowid as number;
@@ -427,7 +498,14 @@ export function updatePhotoMetadata(
 	height: number | null,
 	fileSize: number | null,
 	mimeType: string | null,
-	dateTaken: string | null
+	dateTaken: string | null,
+	cameraMake: string | null = null,
+	cameraModel: string | null = null,
+	lensModel: string | null = null,
+	focalLength: number | null = null,
+	aperture: number | null = null,
+	shutterSpeed: string | null = null,
+	iso: number | null = null
 ): void {
 	db.prepare(
 		`UPDATE photos SET 
@@ -435,9 +513,30 @@ export function updatePhotoMetadata(
 			height = ?, 
 			file_size = ?, 
 			mime_type = ?, 
-			date_taken = ? 
+			date_taken = ?,
+			camera_make = ?,
+			camera_model = ?,
+			lens_model = ?,
+			focal_length = ?,
+			aperture = ?,
+			shutter_speed = ?,
+			iso = ?
 		WHERE id = ?`
-	).run(width, height, fileSize, mimeType, dateTaken, id);
+	).run(
+		width,
+		height,
+		fileSize,
+		mimeType,
+		dateTaken,
+		cameraMake,
+		cameraModel,
+		lensModel,
+		focalLength,
+		aperture,
+		shutterSpeed,
+		iso,
+		id
+	);
 }
 
 // Photo Tag operations
@@ -570,6 +669,7 @@ export function recordAnalyticsEvent(
 		void (async () => {
 			if (eventType !== 'page_view') {
 				const webhookUrl = env.DISCORD_WEBHOOK_URL;
+
 				if (!webhookUrl) return;
 
 				let payload = {};
@@ -587,11 +687,15 @@ export function recordAnalyticsEvent(
 					};
 				}
 
-				await fetch(webhookUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(payload)
-				});
+				try {
+					await fetch(webhookUrl, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+				} catch (error) {
+					console.error('Failed to send Discord webhook:', error);
+				}
 			}
 		})();
 	} catch (e) {
@@ -678,6 +782,93 @@ export function getAllAnalytics(): {
 		downloads: number;
 		album_downloads: number;
 	}[];
+}
+
+// Settings operations
+export interface Settings {
+	defaultDescription: string;
+	defaultColor: string;
+	defaultLayoutStyle: 'grid' | 'masonry';
+	defaultSortOrder: 'newest' | 'oldest' | 'random';
+	defaultIsPublic: boolean;
+	defaultShowOnHome: boolean;
+}
+
+export function getSettings(): Settings {
+	const defaultSettings: Settings = {
+		defaultDescription: '',
+		defaultColor: '#3b82f6',
+		defaultLayoutStyle: 'grid',
+		defaultSortOrder: 'oldest',
+		defaultIsPublic: true,
+		defaultShowOnHome: true
+	};
+
+	try {
+		const rows = db.prepare('SELECT key, value FROM settings').all() as {
+			key: string;
+			value: string;
+		}[];
+		const settings = { ...defaultSettings };
+
+		for (const row of rows) {
+			switch (row.key) {
+				case 'defaultDescription':
+					settings.defaultDescription = row.value;
+					break;
+				case 'defaultColor':
+					settings.defaultColor = row.value;
+					break;
+				case 'defaultLayoutStyle':
+					settings.defaultLayoutStyle = (row.value === 'masonry' ? 'masonry' : 'grid') as
+						| 'grid'
+						| 'masonry';
+					break;
+				case 'defaultSortOrder':
+					settings.defaultSortOrder = (
+						row.value === 'newest' || row.value === 'random' ? row.value : 'oldest'
+					) as 'newest' | 'oldest' | 'random';
+					break;
+				case 'defaultIsPublic':
+					settings.defaultIsPublic = row.value === 'true';
+					break;
+				case 'defaultShowOnHome':
+					settings.defaultShowOnHome = row.value === 'true';
+					break;
+			}
+		}
+
+		return settings;
+	} catch {
+		return defaultSettings;
+	}
+}
+
+export function updateSettings(settings: Partial<Settings>): void {
+	const stmt = db.prepare(
+		'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)'
+	);
+	const transaction = db.transaction(() => {
+		if (settings.defaultDescription !== undefined) {
+			stmt.run('defaultDescription', settings.defaultDescription);
+		}
+		if (settings.defaultColor !== undefined) {
+			stmt.run('defaultColor', settings.defaultColor);
+		}
+		if (settings.defaultLayoutStyle !== undefined) {
+			stmt.run('defaultLayoutStyle', settings.defaultLayoutStyle);
+		}
+		if (settings.defaultSortOrder !== undefined) {
+			stmt.run('defaultSortOrder', settings.defaultSortOrder);
+		}
+		if (settings.defaultIsPublic !== undefined) {
+			stmt.run('defaultIsPublic', settings.defaultIsPublic.toString());
+		}
+		if (settings.defaultShowOnHome !== undefined) {
+			stmt.run('defaultShowOnHome', settings.defaultShowOnHome.toString());
+		}
+	});
+	transaction();
 }
 
 export default db;
