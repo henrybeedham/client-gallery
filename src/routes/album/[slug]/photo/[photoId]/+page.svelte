@@ -19,6 +19,10 @@
 
 	let safeColor = $derived(sanitizeColor(data.album.primary_color || '#3b82f6'));
 
+	let touchStartX = 0;
+	let touchStartY = 0;
+	const SWIPE_THRESHOLD = 50; // minimum distance to trigger swipe
+
 	function navigatePrev() {
 		if (data.prevPhoto) {
 			goto(`/album/${data.album.slug}/photo/${data.prevPhoto.id}`);
@@ -39,6 +43,28 @@
 		if (e.key === 'Escape') backToAlbum();
 		if (e.key === 'ArrowRight' && data.nextPhoto) navigateNext();
 		if (e.key === 'ArrowLeft' && data.prevPhoto) navigatePrev();
+	}
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.touches[0].clientX;
+		touchStartY = e.touches[0].clientY;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		const touchEndX = e.changedTouches[0].clientX;
+		const touchEndY = e.changedTouches[0].clientY;
+
+		const deltaX = touchStartX - touchEndX;
+		const deltaY = touchStartY - touchEndY;
+
+		// Only consider horizontal swipes (ignore vertical swipes)
+		if (Math.abs(deltaX) > Math.abs(deltaY)) {
+			if (deltaX > SWIPE_THRESHOLD && data.nextPhoto) {
+				navigateNext();
+			} else if (deltaX < -SWIPE_THRESHOLD && data.prevPhoto) {
+				navigatePrev();
+			}
+		}
 	}
 
 	// Format EXIF values for display
@@ -138,7 +164,11 @@
 	{@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
 </svelte:head>
 
-<div class="min-h-screen flex flex-col bg-[var(--color-bg)] relative">
+<div
+	class="min-h-screen flex flex-col bg-[var(--color-bg)] relative"
+	ontouchstart={handleTouchStart}
+	ontouchend={handleTouchEnd}
+>
 	<!-- Blurred background image -->
 	<div
 		class="fixed inset-0 z-0"
