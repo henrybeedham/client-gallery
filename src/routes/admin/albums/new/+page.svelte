@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { slugify } from '$lib/utils';
+	import { ChevronLeft } from 'lucide-svelte';
 
 	let { data, form } = $props();
 	let title = $state(form?.title || '');
@@ -22,19 +23,7 @@
 			class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
 			aria-label="Back to dashboard"
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<polyline points="15 18 9 12 15 6"></polyline>
-			</svg>
+			<ChevronLeft size={20} />
 		</a>
 		<h1 class="text-2xl font-bold">New Album</h1>
 	</div>

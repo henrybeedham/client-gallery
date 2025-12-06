@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Image, Lock } from 'lucide-svelte';
+	
 	let { data } = $props();
 </script>
 
@@ -27,21 +29,7 @@
 
 			{#if data.albums.length === 0}
 				<div class="empty-state">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="48"
-						height="48"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-						<circle cx="8.5" cy="8.5" r="1.5"></circle>
-						<polyline points="21 15 16 10 5 21"></polyline>
-					</svg>
+					<Image size={48} strokeWidth={1.5} />
 					<h3>No albums yet</h3>
 					<p>Check back soon for new photos!</p>
 				</div>
@@ -62,21 +50,7 @@
 									/>
 								{:else}
 									<div class="w-full h-full flex items-center justify-center text-gray-600">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="48"
-											height="48"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1.5"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										>
-											<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-											<circle cx="8.5" cy="8.5" r="1.5"></circle>
-											<polyline points="21 15 16 10 5 21"></polyline>
-										</svg>
+										<Image size={48} strokeWidth={1.5} />
 									</div>
 								{/if}
 								<div
@@ -87,21 +61,7 @@
 								</div>
 								{#if album.password}
 									<div class="absolute top-3 right-3">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="16"
-											height="16"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											class="text-white drop-shadow-lg"
-										>
-											<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-											<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-										</svg>
+										<Lock size={16} class="text-white drop-shadow-lg" />
 									</div>
 								{/if}
 							</div>
