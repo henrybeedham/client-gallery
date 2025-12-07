@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { ArrowLeft, ChevronLeft, ChevronRight, Download, Camera, Aperture } from 'lucide-svelte';

@@ -8,7 +8,7 @@ import { env } from '$env/dynamic/private';
 
 const UPLOAD_DIR = env.UPLOAD_DIR || './uploads';
 const IMPORT_DIR = env.IMPORT_DIR || './import';
-const THUMBNAIL_SIZE = 600;
+const THUMBNAIL_SIZE = 800;
 const MEDIUM_SIZE = 1600;
 
 // Ensure base upload directory exists
@@ -53,7 +53,7 @@ async function generateThumbnail(
 	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
 	await image
 		.clone()
-		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'cover', withoutEnlargement: true })
+		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
 		.toFile(thumbnailPath);
 }
 

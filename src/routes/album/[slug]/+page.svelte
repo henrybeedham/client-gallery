@@ -3,7 +3,17 @@
 	import { goto } from '$app/navigation';
 	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
-	import { Clock, Mail, Phone, Download, X, ChevronLeft, ChevronRight, Check, Image, Loader2 } from 'lucide-svelte';
+	import {
+		Clock,
+		Mail,
+		Phone,
+		X,
+		ChevronLeft,
+		ChevronRight,
+		Check,
+		Image,
+		Loader2
+	} from 'lucide-svelte';
 
 	let { data, form } = $props();
 
