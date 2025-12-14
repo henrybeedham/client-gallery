@@ -272,11 +272,11 @@ transform: scale(1.1);"
 							Camera & Settings
 						</h2>
 						<dl class="space-y-3">
-							{#if data.photo.camera_make || data.photo.camera_model}
+							{#if data.photo.camera_model}
 								<div class="flex items-start gap-3">
 									<Camera size={16} class="text-gray-400 mt-0.5 flex-shrink-0" />
 									<dd class="text-sm font-medium text-white">
-										{[data.photo.camera_make, data.photo.camera_model].filter(Boolean).join(' ')}
+										{data.photo.camera_model}
 									</dd>
 								</div>
 							{/if}
