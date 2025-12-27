@@ -226,8 +226,19 @@
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
+			// Build URL with query parameters to preserve filter state
+			const url = new URL(
+				`/album/${data.album.slug}/photo/${photoId}`,
+				window.location.origin
+			);
+			if (data.selectedTag) {
+				url.searchParams.set('tag', data.selectedTag);
+			}
+			if (data.selectedSort) {
+				url.searchParams.set('sort', data.selectedSort);
+			}
 			// Navigate to photo detail page with smooth client-side navigation
-			goto(`/album/${data.album.slug}/photo/${photoId}`);
+			goto(url.pathname + url.search);
 			return;
 		}
 
