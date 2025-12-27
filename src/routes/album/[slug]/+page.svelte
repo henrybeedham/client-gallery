@@ -234,7 +234,9 @@
 			if (data.selectedTag) {
 				url.searchParams.set('tag', data.selectedTag);
 			}
-			url.searchParams.set('sort', data.selectedSort);
+			if (data.selectedSort) {
+				url.searchParams.set('sort', data.selectedSort);
+			}
 			// Navigate to photo detail page with smooth client-side navigation
 			goto(url.pathname + url.search);
 			return;
