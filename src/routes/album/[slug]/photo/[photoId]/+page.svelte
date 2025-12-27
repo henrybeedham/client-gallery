@@ -22,20 +22,43 @@
 	let touchStartY = 0;
 	const SWIPE_THRESHOLD = 50; // minimum distance to trigger swipe
 
+	// Build URL with query parameters
+	function buildPhotoUrl(photoId: number): string {
+		const url = new URL(`/album/${data.album.slug}/photo/${photoId}`, window.location.origin);
+		if (data.selectedTag) {
+			url.searchParams.set('tag', data.selectedTag);
+		}
+		if (data.selectedSort) {
+			url.searchParams.set('sort', data.selectedSort);
+		}
+		return url.pathname + url.search;
+	}
+
+	function buildAlbumUrl(): string {
+		const url = new URL(`/album/${data.album.slug}`, window.location.origin);
+		if (data.selectedTag) {
+			url.searchParams.set('tag', data.selectedTag);
+		}
+		if (data.selectedSort) {
+			url.searchParams.set('sort', data.selectedSort);
+		}
+		return url.pathname + url.search;
+	}
+
 	function navigatePrev() {
 		if (data.prevPhoto) {
-			goto(`/album/${data.album.slug}/photo/${data.prevPhoto.id}`);
+			goto(buildPhotoUrl(data.prevPhoto.id));
 		}
 	}
 
 	function navigateNext() {
 		if (data.nextPhoto) {
-			goto(`/album/${data.album.slug}/photo/${data.nextPhoto.id}`);
+			goto(buildPhotoUrl(data.nextPhoto.id));
 		}
 	}
 
 	function backToAlbum() {
-		goto(`/album/${data.album.slug}`);
+		goto(buildAlbumUrl());
 	}
 
 	function handleKeydown(e: KeyboardEvent) {

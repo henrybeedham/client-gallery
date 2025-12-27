@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getAlbumBySlug, getPhotoById, getPhotosByAlbum } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ params, cookies }) => {
+export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const album = getAlbumBySlug(params.slug);
 	if (!album) {
 		throw error(404, 'Album not found');
@@ -30,8 +30,15 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		throw error(404, 'Photo not found');
 	}
 
-	// Get all photos in album for navigation
-	const photos = getPhotosByAlbum(album.id, undefined, album.sort_order);
+	// Get tag filter and sort order from URL parameters
+	const tagSlug = url.searchParams.get('tag') || undefined;
+	const sortParam = url.searchParams.get('sort');
+	const validSorts = ['newest', 'oldest', 'random'];
+	const sortOrder =
+		sortParam && validSorts.includes(sortParam) ? sortParam : album.sort_order || 'oldest';
+
+	// Get all photos in album for navigation (with tag filter if provided)
+	const photos = getPhotosByAlbum(album.id, tagSlug, sortOrder as 'newest' | 'oldest' | 'random');
 	const currentIndex = photos.findIndex((p) => p.id === photoId);
 	const prevPhoto = currentIndex > 0 ? photos[currentIndex - 1] : null;
 	const nextPhoto = currentIndex < photos.length - 1 ? photos[currentIndex + 1] : null;
@@ -42,6 +49,8 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		currentIndex,
 		totalPhotos: photos.length,
 		prevPhoto,
-		nextPhoto
+		nextPhoto,
+		selectedTag: tagSlug,
+		selectedSort: sortOrder
 	};
 };
