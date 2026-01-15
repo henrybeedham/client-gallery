@@ -58,7 +58,7 @@
 	}
 
 	function backToAlbum() {
-		goto(buildAlbumUrl());
+		goto(buildAlbumUrl(), { noScroll: true });
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
