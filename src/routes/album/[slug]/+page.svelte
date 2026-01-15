@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 	import {
@@ -126,6 +127,10 @@
 
 	// Preload threshold for triggering more photos to load in lightbox
 	const LIGHTBOX_PRELOAD_THRESHOLD = 3;
+	
+	// Scroll-to-photo constants
+	const SCROLL_RETRY_MAX = 20; // Max retries for scroll positioning
+	const LOAD_MORE_MAX_ATTEMPTS = 100; // Max attempts to load more photos when searching for target
 
 	// Helper function to validate and sanitize aspect ratio values
 	function getAspectRatioStyle(width: number | null, height: number | null): string {
@@ -157,6 +162,58 @@
 		// Initial masonry calculation
 		if (data.album.layout_style === 'masonry') {
 			tick().then(() => calculateMasonryLayout());
+		}
+
+		// Handle scroll to photo if coming from photo detail page
+		const scrollToPhotoId = $page.url.searchParams.get('scrollToPhoto');
+		if (scrollToPhotoId) {
+			const photoId = parseInt(scrollToPhotoId);
+			// Validate that the photo ID exists in the album's photo collection
+			if (!isNaN(photoId) && data.allPhotoIds.includes(photoId)) {
+				// Function to perform the actual scroll
+				const performScroll = () => {
+					const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
+					if (photoButton) {
+						// Check if element is positioned (for masonry layout)
+						const rect = photoButton.getBoundingClientRect();
+						if (rect.width > 0 && rect.height > 0) {
+							photoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+							return true;
+						}
+					}
+					return false;
+				};
+
+				// Function to load photos until target is displayed
+				const loadUntilPhotoVisible = async (attempts = 0) => {
+					// Check if photo is already in displayedPhotos
+					if (displayedPhotos.some((p) => p.id === photoId)) {
+						// Wait for rendering and layout
+						await tick();
+						// Try scrolling with retry for layout completion
+						let retries = 0;
+						const tryScroll = () => {
+							if (performScroll() || retries++ >= SCROLL_RETRY_MAX) {
+								return;
+							}
+							requestAnimationFrame(tryScroll);
+						};
+						requestAnimationFrame(tryScroll);
+					} else if (hasMore && attempts < LOAD_MORE_MAX_ATTEMPTS) {
+						// Photo not loaded yet, load more photos
+						await loadMorePhotos();
+						// Recursively try again after loading with incremented attempt counter
+						await loadUntilPhotoVisible(attempts + 1);
+					} else if (attempts >= LOAD_MORE_MAX_ATTEMPTS) {
+						console.warn(
+							`Failed to load photo ${photoId} after ${LOAD_MORE_MAX_ATTEMPTS} attempts`
+						);
+					}
+				};
+
+				// Start the process
+				loadUntilPhotoVisible();
+			}
 		}
 
 		// Set up intersection observer
@@ -772,6 +829,7 @@
 						>
 							{#each displayedPhotos as photo, index}
 								<button
+									data-photo-id={photo.id}
 									class="group absolute bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 										photo.id
 									)
@@ -815,6 +873,7 @@
 						<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
 							{#each displayedPhotos as photo, index}
 								<button
+									data-photo-id={photo.id}
 									class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 										photo.id
 									)
