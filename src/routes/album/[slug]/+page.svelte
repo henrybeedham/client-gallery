@@ -164,23 +164,48 @@
 		const scrollToPhotoId = $page.url.searchParams.get('scrollToPhoto');
 		if (scrollToPhotoId) {
 			const photoId = parseInt(scrollToPhotoId);
-			// Validate that the photo ID exists in the current photo collection
-			if (!isNaN(photoId) && displayedPhotos.some((p) => p.id === photoId)) {
-				// Wait for photos to be rendered and layout to be calculated
-				const scrollToPhoto = () => {
+			// Validate that the photo ID exists in the album's photo collection
+			if (!isNaN(photoId) && data.allPhotoIds.includes(photoId)) {
+				// Function to perform the actual scroll
+				const performScroll = () => {
 					const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
 					if (photoButton) {
 						// Check if element is positioned (for masonry layout)
 						const rect = photoButton.getBoundingClientRect();
 						if (rect.width > 0 && rect.height > 0) {
 							photoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
-						} else {
-							// Retry if element not yet positioned
-							requestAnimationFrame(scrollToPhoto);
+							return true;
 						}
 					}
+					return false;
 				};
-				tick().then(() => requestAnimationFrame(scrollToPhoto));
+
+				// Function to load photos until target is displayed
+				const loadUntilPhotoVisible = async () => {
+					// Check if photo is already in displayedPhotos
+					if (displayedPhotos.some((p) => p.id === photoId)) {
+						// Wait for rendering and layout
+						await tick();
+						// Try scrolling with retry for layout completion
+						let retries = 0;
+						const maxRetries = 20;
+						const tryScroll = () => {
+							if (performScroll() || retries++ >= maxRetries) {
+								return;
+							}
+							requestAnimationFrame(tryScroll);
+						};
+						requestAnimationFrame(tryScroll);
+					} else if (hasMore) {
+						// Photo not loaded yet, load more photos
+						await loadMorePhotos();
+						// Recursively try again after loading
+						await loadUntilPhotoVisible();
+					}
+				};
+
+				// Start the process
+				loadUntilPhotoVisible();
 			}
 		}
 
