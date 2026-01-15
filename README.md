@@ -27,6 +27,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 ## ✨ Features
 
 ### 🎨 **Beautiful Client Experience**
+
 - **Modern Dark Interface** - Optimized for photo viewing with a sleek dark theme
 - **Grid & Masonry Layouts** - Choose between structured grid or dynamic masonry layouts
 - **Responsive Lightbox** - Full-screen photo viewer with touch gestures and keyboard navigation
@@ -34,6 +35,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 - **Custom Branding** - Set custom primary colors per album for personalized galleries
 
 ### 📁 **Powerful Album Management**
+
 - **Unlimited Albums** - Create as many albums as you need
 - **Photo Tagging** - Organize photos with tags and allow clients to filter by tag
 - **Password Protection** - Secure galleries with password protection
@@ -43,6 +45,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 - **Show/Hide Controls** - Choose which albums appear on the homepage
 
 ### 💾 **Smart Photo Management**
+
 - **Automatic Image Processing** - Generate optimized thumbnails and medium-sized previews
 - **EXIF Data Extraction** - Automatically extract photo metadata including date taken
 - **Bulk Upload** - Upload multiple photos at once
@@ -51,6 +54,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 - **Background Images** - Set custom background images for album pages
 
 ### ⬇️ **Download Features**
+
 - **Individual Downloads** - Download single photos in full resolution
 - **Bulk Selection** - Select multiple photos to download as a ZIP file
 - **Download All** - One-click download entire albums as ZIP
@@ -58,6 +62,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 - **Progress Indicators** - Real-time download progress with percentage
 
 ### 📊 **Analytics & Insights**
+
 - **Page View Tracking** - See how many times albums are viewed
 - **Download Analytics** - Track photo and album downloads
 - **Per-Album Stats** - View detailed statistics for each album
@@ -65,6 +70,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 - **Discord Notifications** - Optional webhook notifications for downloads (configurable)
 
 ### 🔐 **Simple Admin Interface**
+
 - **Single Admin User** - No complex user management, just simple environment-based auth
 - **Clean Dashboard** - Intuitive admin interface for managing everything
 - **Quick Actions** - Fast access to create, edit, and delete albums
@@ -72,6 +78,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 - **Live Preview** - View albums as clients see them
 
 ### 🚀 **Self-Hosted & Private**
+
 - **Local Storage** - All photos stored on your server, complete ownership
 - **SQLite Database** - Lightweight, file-based database (no complex setup)
 - **No Cloud Dependencies** - Works completely offline after deployment
@@ -81,16 +88,19 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 ## 📸 Screenshots
 
 ### Client Gallery View
+
 ![Homepage](https://github.com/user-attachments/assets/1351696d-4159-49a4-9564-db09686884db)
-*Clean, modern album gallery homepage*
+_Clean, modern album gallery homepage_
 
 ### Admin Dashboard
+
 ![Admin Dashboard](https://github.com/user-attachments/assets/76c04cae-f5fc-40b5-825c-c3166857900d)
-*Comprehensive admin dashboard with statistics and quick access*
+_Comprehensive admin dashboard with statistics and quick access_
 
 ### Admin Login
+
 ![Admin Login](https://github.com/user-attachments/assets/4cc04bd4-7ce2-4cda-ac9c-ec41bd492f10)
-*Simple, secure admin authentication*
+_Simple, secure admin authentication_
 
 ## 🛠 Tech Stack
 
@@ -106,12 +116,14 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 ### Development Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/henrybeedham/client-gallery.git
    cd client-gallery
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
@@ -120,20 +132,20 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
    ```bash
    cp .env.example .env
    ```
-   
 4. **Edit `.env` and set your credentials** (see [Environment Variables](#-environment-variables))
 
 5. **Start the development server**
+
    ```bash
    npm run dev
    ```
 
 6. **Open your browser**
-   
+
    Navigate to `http://localhost:5173`
 
 7. **Access the admin panel**
-   
+
    Go to `http://localhost:5173/admin` and log in with your credentials
 
 ## 🐳 Deployment
@@ -143,15 +155,16 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 **Client Gallery** is not currently available on Docker Hub, so you'll need to build from source.
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/henrybeedham/client-gallery.git
    cd client-gallery
    ```
 
 2. **Configure environment variables**
-   
+
    Edit `docker-compose.yml` to set your environment variables, or create a `.env` file:
-   
+
    ```yaml
    services:
      gallery:
@@ -174,12 +187,13 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
    ```
 
 3. **Build and start the container**
+
    ```bash
    docker compose up -d
    ```
 
 4. **Access your gallery**
-   
+
    Navigate to `http://localhost:3000` (or your configured domain)
 
 ### Deploying with Coolify 🆒
@@ -187,6 +201,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 [Coolify](https://coolify.io/) is an open-source, self-hostable Heroku/Netlify/Vercel alternative. It makes deploying **Client Gallery** incredibly easy!
 
 #### Prerequisites
+
 - A Coolify instance set up and running
 - A server with Docker installed
 
@@ -203,17 +218,17 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
    - **Build Pack**: Docker (will auto-detect the Dockerfile)
 
 3. **Set environment variables**
-   
+
    In Coolify, add these environment variables:
    - `ADMIN_USERNAME` - Your admin username
-   - `ADMIN_PASSWORD` - Your secure admin password  
+   - `ADMIN_PASSWORD` - Your secure admin password
    - `GALLERY_CONTACT_EMAIL` - Email shown on expired galleries
    - `GALLERY_CONTACT_PHONE` - Phone shown on expired galleries
    - `PUBLIC_BASE_URL` - Your full domain URL (e.g., `https://gallery.yourdomain.com`)
    - `DISCORD_WEBHOOK_URL` - (Optional) Discord webhook for download notifications
 
 4. **Configure persistent storage**
-   
+
    Add these volume mappings in Coolify:
    - `/app/data` → Persistent volume for database
    - `/app/uploads` → Persistent volume for photos
@@ -231,6 +246,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
    - Go to `/admin` to log in and start creating albums!
 
 #### Coolify Benefits
+
 - ✅ **Automatic SSL/TLS** - Free SSL certificates from Let's Encrypt
 - ✅ **Easy Updates** - One-click deployments when you push updates
 - ✅ **Automatic Backups** - Configure automatic backups for your data
@@ -240,12 +256,14 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 ### Manual Deployment (VPS/Bare Metal)
 
 1. **Install Node.js 20+**
+
    ```bash
    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
    sudo apt-get install -y nodejs
    ```
 
 2. **Clone and build**
+
    ```bash
    git clone https://github.com/henrybeedham/client-gallery.git
    cd client-gallery
@@ -254,17 +272,20 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
    ```
 
 3. **Set environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 4. **Start the application**
+
    ```bash
    node build
    ```
 
 5. **Set up a process manager (recommended)**
+
    ```bash
    # Using PM2
    npm install -g pm2
@@ -278,7 +299,7 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
    server {
        listen 80;
        server_name gallery.yourdomain.com;
-       
+
        location / {
            proxy_pass http://localhost:3000;
            proxy_set_header Host $host;
@@ -294,16 +315,16 @@ Perfect for wedding photographers, portrait photographers, event photographers, 
 
 Create a `.env` file in the root directory with these variables:
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| **`ADMIN_USERNAME`** | ✅ | `admin` | 👤 Admin login username - Change this to secure your admin panel |
-| **`ADMIN_PASSWORD`** | ✅ | `changeme` | 🔒 Admin login password - **IMPORTANT: Change this immediately!** Use a strong, unique password |
-| **`DATABASE_PATH`** | ❌ | `./data/gallery.db` | 💾 Path to SQLite database file - Can be relative or absolute path |
-| **`UPLOAD_DIR`** | ❌ | `./uploads` | 📁 Directory for storing uploaded photos - Ensure sufficient disk space |
-| **`GALLERY_CONTACT_EMAIL`** | ❌ | - | 📧 Contact email displayed on expired gallery pages for client support |
-| **`GALLERY_CONTACT_PHONE`** | ❌ | - | 📞 Contact phone number displayed on expired gallery pages |
-| **`DISCORD_WEBHOOK_URL`** | ❌ | - | 🔔 Discord webhook URL for download notifications - Get from Discord server settings |
-| **`PUBLIC_BASE_URL`** | ❌ | `http://localhost:5173` | 🌐 Full base URL of your gallery (without trailing slash) - Used for copy link functionality. Example: `https://gallery.yourdomain.com` |
+| Variable                    | Required | Default                 | Description                                                                                                                             |
+| --------------------------- | -------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **`ADMIN_USERNAME`**        | ✅       | `admin`                 | 👤 Admin login username - Change this to secure your admin panel                                                                        |
+| **`ADMIN_PASSWORD`**        | ✅       | `changeme`              | 🔒 Admin login password - **IMPORTANT: Change this immediately!** Use a strong, unique password                                         |
+| **`DATABASE_PATH`**         | ❌       | `./data/gallery.db`     | 💾 Path to SQLite database file - Can be relative or absolute path                                                                      |
+| **`UPLOAD_DIR`**            | ❌       | `./uploads`             | 📁 Directory for storing uploaded photos - Ensure sufficient disk space                                                                 |
+| **`GALLERY_CONTACT_EMAIL`** | ❌       | -                       | 📧 Contact email displayed on expired gallery pages for client support                                                                  |
+| **`GALLERY_CONTACT_PHONE`** | ❌       | -                       | 📞 Contact phone number displayed on expired gallery pages                                                                              |
+| **`DISCORD_WEBHOOK_URL`**   | ❌       | -                       | 🔔 Discord webhook URL for download notifications - Get from Discord server settings                                                    |
+| **`PUBLIC_BASE_URL`**       | ❌       | `http://localhost:5173` | 🌐 Full base URL of your gallery (without trailing slash) - Used for copy link functionality. Example: `https://gallery.yourdomain.com` |
 
 ### Environment Variable Examples
 
@@ -376,11 +397,11 @@ When you upload photos to **Client Gallery**, they are automatically processed i
 
 ### Image Sizes
 
-| Size | Dimensions | Purpose | Storage |
-|------|------------|---------|---------|
-| **Original** | No resize | Full resolution for client downloads | `uploads/original/` |
-| **Medium** | 1200px max | Lightbox viewing and preview | `uploads/medium/` |
-| **Thumbnail** | 400×400px | Gallery grid/masonry thumbnails | `uploads/thumbnail/` |
+| Size          | Dimensions | Purpose                              | Storage              |
+| ------------- | ---------- | ------------------------------------ | -------------------- |
+| **Original**  | No resize  | Full resolution for client downloads | `uploads/original/`  |
+| **Medium**    | 1200px max | Lightbox viewing and preview         | `uploads/medium/`    |
+| **Thumbnail** | 400×400px  | Gallery grid/masonry thumbnails      | `uploads/thumbnail/` |
 
 ### Image Processing Features
 

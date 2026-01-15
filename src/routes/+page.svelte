@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Image, Lock } from 'lucide-svelte';
-	
+
 	let { data } = $props();
 </script>
 

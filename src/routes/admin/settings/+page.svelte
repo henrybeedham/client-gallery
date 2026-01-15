@@ -13,8 +13,8 @@
 	<div class="mb-8">
 		<h1 class="text-2xl font-bold mb-2">Default Album Settings</h1>
 		<p class="text-sm text-gray-500">
-			Set default values for new albums. These can be overridden when creating or editing
-			individual albums.
+			Set default values for new albums. These can be overridden when creating or editing individual
+			albums.
 		</p>
 	</div>
 
@@ -27,9 +27,7 @@
 	{/if}
 
 	{#if form?.error}
-		<div
-			class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-6"
-		>
+		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
 			{form.error}
 		</div>
 	{/if}

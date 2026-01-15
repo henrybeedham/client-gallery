@@ -17,7 +17,9 @@ export const actions: Actions = {
 		const title = data.get('title')?.toString() || '';
 		const slugInput = data.get('slug')?.toString() || '';
 		const description = data.get('description')?.toString() || settings.defaultDescription;
-		const isPublic = data.has('isPublic') ? data.get('isPublic') === 'on' : settings.defaultIsPublic;
+		const isPublic = data.has('isPublic')
+			? data.get('isPublic') === 'on'
+			: settings.defaultIsPublic;
 		const showOnHome = data.has('showOnHome')
 			? data.get('showOnHome') === 'on'
 			: settings.defaultShowOnHome;
