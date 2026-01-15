@@ -164,16 +164,23 @@
 		const scrollToPhotoId = $page.url.searchParams.get('scrollToPhoto');
 		if (scrollToPhotoId) {
 			const photoId = parseInt(scrollToPhotoId);
-			if (!isNaN(photoId)) {
-				// Wait for photos to be rendered, then scroll to the photo
-				tick().then(() => {
-					setTimeout(() => {
-						const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
-						if (photoButton) {
+			// Validate that the photo ID exists in the current photo collection
+			if (!isNaN(photoId) && displayedPhotos.some((p) => p.id === photoId)) {
+				// Wait for photos to be rendered and layout to be calculated
+				const scrollToPhoto = () => {
+					const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
+					if (photoButton) {
+						// Check if element is positioned (for masonry layout)
+						const rect = photoButton.getBoundingClientRect();
+						if (rect.width > 0 && rect.height > 0) {
 							photoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						} else {
+							// Retry if element not yet positioned
+							requestAnimationFrame(scrollToPhoto);
 						}
-					}, 100); // Small delay to ensure masonry layout is complete
-				});
+					}
+				};
+				tick().then(() => requestAnimationFrame(scrollToPhoto));
 			}
 		}
 
