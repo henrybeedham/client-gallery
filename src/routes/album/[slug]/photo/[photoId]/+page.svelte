@@ -47,13 +47,13 @@
 
 	function navigatePrev() {
 		if (data.prevPhoto) {
-			goto(buildPhotoUrl(data.prevPhoto.id));
+			goto(buildPhotoUrl(data.prevPhoto.id), { noScroll: true });
 		}
 	}
 
 	function navigateNext() {
 		if (data.nextPhoto) {
-			goto(buildPhotoUrl(data.nextPhoto.id));
+			goto(buildPhotoUrl(data.nextPhoto.id), { noScroll: true });
 		}
 	}
 
