@@ -47,24 +47,19 @@
 
 	function navigatePrev() {
 		if (data.prevPhoto) {
-			goto(buildPhotoUrl(data.prevPhoto.id), { noScroll: true });
+			goto(buildPhotoUrl(data.prevPhoto.id), { replaceState: true, noScroll: true });
 		}
 	}
 
 	function navigateNext() {
 		if (data.nextPhoto) {
-			goto(buildPhotoUrl(data.nextPhoto.id), { noScroll: true });
+			goto(buildPhotoUrl(data.nextPhoto.id), { replaceState: true, noScroll: true });
 		}
 	}
 
 	function backToAlbum() {
-		// Use browser's native back navigation to preserve scroll position
-		if (typeof window !== 'undefined' && window.history.length > 1) {
-			window.history.back();
-		} else {
-			// Fallback if no history (e.g., direct link to photo)
-			goto(buildAlbumUrl());
-		}
+		// Navigate directly to album URL to preserve scroll position
+		goto(buildAlbumUrl());
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
