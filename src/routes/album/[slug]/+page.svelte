@@ -127,6 +127,10 @@
 
 	// Preload threshold for triggering more photos to load in lightbox
 	const LIGHTBOX_PRELOAD_THRESHOLD = 3;
+	
+	// Scroll-to-photo constants
+	const SCROLL_RETRY_MAX = 20; // Max retries for scroll positioning
+	const LOAD_MORE_MAX_ATTEMPTS = 10; // Max attempts to load more photos when searching for target
 
 	// Helper function to validate and sanitize aspect ratio values
 	function getAspectRatioStyle(width: number | null, height: number | null): string {
@@ -181,26 +185,29 @@
 				};
 
 				// Function to load photos until target is displayed
-				const loadUntilPhotoVisible = async () => {
+				const loadUntilPhotoVisible = async (attempts = 0) => {
 					// Check if photo is already in displayedPhotos
 					if (displayedPhotos.some((p) => p.id === photoId)) {
 						// Wait for rendering and layout
 						await tick();
 						// Try scrolling with retry for layout completion
 						let retries = 0;
-						const maxRetries = 20;
 						const tryScroll = () => {
-							if (performScroll() || retries++ >= maxRetries) {
+							if (performScroll() || retries++ >= SCROLL_RETRY_MAX) {
 								return;
 							}
 							requestAnimationFrame(tryScroll);
 						};
 						requestAnimationFrame(tryScroll);
-					} else if (hasMore) {
+					} else if (hasMore && attempts < LOAD_MORE_MAX_ATTEMPTS) {
 						// Photo not loaded yet, load more photos
 						await loadMorePhotos();
-						// Recursively try again after loading
-						await loadUntilPhotoVisible();
+						// Recursively try again after loading with incremented attempt counter
+						await loadUntilPhotoVisible(attempts + 1);
+					} else if (attempts >= LOAD_MORE_MAX_ATTEMPTS) {
+						console.warn(
+							`Failed to load photo ${photoId} after ${LOAD_MORE_MAX_ATTEMPTS} attempts`
+						);
 					}
 				};
 
