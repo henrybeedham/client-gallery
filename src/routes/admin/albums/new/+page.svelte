@@ -141,9 +141,7 @@
 
 				<!-- Primary Color -->
 				<div>
-					<label for="primaryColor" class="block text-sm font-medium mb-1.5">
-						Primary Color
-					</label>
+					<label for="primaryColor" class="block text-sm font-medium mb-1.5"> Primary Color </label>
 					<div class="flex gap-2">
 						<input
 							type="color"
@@ -165,9 +163,7 @@
 
 				<!-- Sort Order -->
 				<div>
-					<label for="sortOrder" class="block text-sm font-medium mb-1.5">
-						Sort Order
-					</label>
+					<label for="sortOrder" class="block text-sm font-medium mb-1.5"> Sort Order </label>
 					<select id="sortOrder" name="sortOrder" class="form-select">
 						<option value="oldest" selected={data.settings.defaultSortOrder === 'oldest'}>
 							Oldest first
@@ -184,9 +180,7 @@
 
 				<!-- Layout Style -->
 				<div>
-					<label for="layoutStyle" class="block text-sm font-medium mb-1.5">
-						Layout Style
-					</label>
+					<label for="layoutStyle" class="block text-sm font-medium mb-1.5"> Layout Style </label>
 					<select id="layoutStyle" name="layoutStyle" class="form-select">
 						<option value="grid" selected={data.settings.defaultLayoutStyle === 'grid'}>
 							Grid (Equal squares)

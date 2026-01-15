@@ -420,7 +420,10 @@ export const actions: Actions = {
 				message: `Regenerated ${regenerated} thumbnail(s) and medium image(s), ${failed} failed`
 			};
 		}
-		return { success: true, message: `Regenerated ${regenerated} thumbnail(s) and medium image(s)` };
+		return {
+			success: true,
+			message: `Regenerated ${regenerated} thumbnail(s) and medium image(s)`
+		};
 	},
 
 	regenerateData: async ({ params }) => {

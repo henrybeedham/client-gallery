@@ -3,17 +3,17 @@
 	import { invalidateAll } from '$app/navigation';
 	import { slugify, formatFileSize } from '$lib/utils';
 	import { PUBLIC_BASE_URL as BASE_URL } from '$env/static/public';
-	import { 
-		ChevronLeft, 
+	import {
+		ChevronLeft,
 		ChevronRight,
-		Upload, 
-		Image, 
-		Check, 
-		X, 
-		Star, 
-		Trash2, 
-		Download, 
-		Eye, 
+		Upload,
+		Image,
+		Check,
+		X,
+		Star,
+		Trash2,
+		Download,
+		Eye,
 		RefreshCw,
 		DollarSign,
 		FolderOpen
@@ -311,7 +311,9 @@
 	{/if}
 
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 order-2 lg:order-1">
+		<div
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 order-2 lg:order-1"
+		>
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
 				<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
 					<h2 class="text-lg font-semibold">Photos ({data.photos.length})</h2>
@@ -703,7 +705,10 @@
 							class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
 							onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
 						>
-							<ChevronRight size={16} class="transition-transform {showAdvancedSettings ? 'rotate-90' : ''}" />
+							<ChevronRight
+								size={16}
+								class="transition-transform {showAdvancedSettings ? 'rotate-90' : ''}"
+							/>
 							Advanced Settings
 						</button>
 
@@ -883,7 +888,8 @@
 
 					<div class="border-t border-[var(--color-border)] pt-4">
 						<p class="text-sm text-gray-400 mb-3">
-							Re-extract photo metadata including dimensions, file size, and EXIF data (camera, lens, settings).
+							Re-extract photo metadata including dimensions, file size, and EXIF data (camera,
+							lens, settings).
 						</p>
 						<form
 							method="POST"

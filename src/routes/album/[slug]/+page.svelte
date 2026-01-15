@@ -227,10 +227,7 @@
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
 			// Build URL with query parameters to preserve filter state
-			const url = new URL(
-				`/album/${data.album.slug}/photo/${photoId}`,
-				window.location.origin
-			);
+			const url = new URL(`/album/${data.album.slug}/photo/${photoId}`, window.location.origin);
 			if (data.selectedTag) {
 				url.searchParams.set('tag', data.selectedTag);
 			}

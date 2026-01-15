@@ -58,7 +58,13 @@
 	}
 
 	function backToAlbum() {
-		goto(buildAlbumUrl(), { noScroll: true });
+		// Use browser's native back navigation to preserve scroll position
+		if (typeof window !== 'undefined' && window.history.length > 1) {
+			window.history.back();
+		} else {
+			// Fallback if no history (e.g., direct link to photo)
+			goto(buildAlbumUrl());
+		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
