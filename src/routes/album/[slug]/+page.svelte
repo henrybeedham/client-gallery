@@ -130,7 +130,7 @@
 	
 	// Scroll-to-photo constants
 	const SCROLL_RETRY_MAX = 20; // Max retries for scroll positioning
-	const LOAD_MORE_MAX_ATTEMPTS = 10; // Max attempts to load more photos when searching for target
+	const LOAD_MORE_MAX_ATTEMPTS = 100; // Max attempts to load more photos when searching for target
 
 	// Helper function to validate and sanitize aspect ratio values
 	function getAspectRatioStyle(width: number | null, height: number | null): string {
