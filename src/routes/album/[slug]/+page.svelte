@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { renderMarkdown, formatTimeRemaining } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 	import {
@@ -157,6 +158,23 @@
 		// Initial masonry calculation
 		if (data.album.layout_style === 'masonry') {
 			tick().then(() => calculateMasonryLayout());
+		}
+
+		// Handle scroll to photo if coming from photo detail page
+		const scrollToPhotoId = $page.url.searchParams.get('scrollToPhoto');
+		if (scrollToPhotoId) {
+			const photoId = parseInt(scrollToPhotoId);
+			if (!isNaN(photoId)) {
+				// Wait for photos to be rendered, then scroll to the photo
+				tick().then(() => {
+					setTimeout(() => {
+						const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
+						if (photoButton) {
+							photoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						}
+					}, 100); // Small delay to ensure masonry layout is complete
+				});
+			}
 		}
 
 		// Set up intersection observer
@@ -772,6 +790,7 @@
 						>
 							{#each displayedPhotos as photo, index}
 								<button
+									data-photo-id={photo.id}
 									class="group absolute bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 										photo.id
 									)
@@ -815,6 +834,7 @@
 						<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
 							{#each displayedPhotos as photo, index}
 								<button
+									data-photo-id={photo.id}
 									class="group relative bg-[var(--color-bg-secondary)] overflow-hidden transition-all duration-200 {selectedPhotos.has(
 										photo.id
 									)

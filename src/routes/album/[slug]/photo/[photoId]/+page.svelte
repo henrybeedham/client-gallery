@@ -34,13 +34,16 @@
 		return url.pathname + url.search;
 	}
 
-	function buildAlbumUrl(): string {
+	function buildAlbumUrl(scrollToPhotoId?: number): string {
 		const url = new URL(`/album/${data.album.slug}`, window.location.origin);
 		if (data.selectedTag) {
 			url.searchParams.set('tag', data.selectedTag);
 		}
 		if (data.selectedSort) {
 			url.searchParams.set('sort', data.selectedSort);
+		}
+		if (scrollToPhotoId) {
+			url.searchParams.set('scrollToPhoto', String(scrollToPhotoId));
 		}
 		return url.pathname + url.search;
 	}
@@ -58,13 +61,8 @@
 	}
 
 	function backToAlbum() {
-		// Use browser's native back navigation to preserve scroll position
-		if (typeof window !== 'undefined' && window.history.length > 1) {
-			window.history.back();
-		} else {
-			// Fallback if no history (e.g., direct link to photo)
-			goto(buildAlbumUrl());
-		}
+		// Navigate to album with scroll to current photo
+		goto(buildAlbumUrl(data.photo.id));
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
