@@ -663,7 +663,7 @@
 		{/if}
 
 		<header
-			class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50"
+			class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50 animate-fade-in"
 		>
 			<div class="container">
 				<div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
@@ -700,12 +700,12 @@
 						</div>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
-						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode}>
+						<button class="btn btn-secondary text-sm transition-all hover:scale-105" onclick={toggleSelectMode}>
 							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
 							<button
-								class="btn text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden transition-all hover:scale-105 animate-fade-in"
 								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadSelected}
 								disabled={isDownloading}
@@ -713,7 +713,7 @@
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-300"
 										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
@@ -722,7 +722,7 @@
 							</button>
 						{:else if !isSelecting}
 							<button
-								class="btn text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden transition-all hover:scale-105"
 								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadAlbum}
 								disabled={isDownloading}
@@ -730,7 +730,7 @@
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-300"
 										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
@@ -744,15 +744,15 @@
 		</header>
 
 		{#if isSelecting}
-			<div class="text-white py-3 relative z-10" style="background-color: var(--gallery-primary);">
+			<div class="text-white py-3 relative z-10 animate-slide-in" style="background-color: var(--gallery-primary);">
 				<div class="container flex items-center justify-between">
 					<span class="text-sm">{selectedPhotos.size} selected</span>
 					<div class="flex gap-4">
-						<button class="text-sm font-medium opacity-90 hover:opacity-100" onclick={selectAll}
+						<button class="text-sm font-medium opacity-90 hover:opacity-100 transition-opacity" onclick={selectAll}
 							>Select All</button
 						>
 						<button
-							class="text-sm font-medium opacity-90 hover:opacity-100"
+							class="text-sm font-medium opacity-90 hover:opacity-100 transition-opacity"
 							onclick={clearSelection}>Clear</button
 						>
 					</div>
@@ -821,7 +821,7 @@
 				</div>
 
 				{#if displayedPhotos.length === 0}
-					<div class="empty-state">
+					<div class="empty-state animate-scale-in">
 						<Image size={48} strokeWidth={1.5} />
 						<h3>No photos in this album</h3>
 						<p>Check back soon for new photos!</p>
@@ -921,12 +921,12 @@
 					<!-- Load more trigger and loading indicator -->
 					<div bind:this={loadMoreTrigger} class="py-8 flex justify-center">
 						{#if isLoadingMore}
-							<div class="flex items-center gap-2 text-gray-400">
+							<div class="flex items-center gap-2 text-gray-400 animate-fade-in">
 								<Loader2 class="animate-spin h-5 w-5" />
 								<span>Loading more photos...</span>
 							</div>
 						{:else if hasMore}
-							<button class="btn btn-secondary text-sm" onclick={loadMorePhotos}>
+							<button class="btn btn-secondary text-sm transition-all hover:scale-105" onclick={loadMorePhotos}>
 								Load More
 							</button>
 						{:else if displayedPhotos.length > 0}

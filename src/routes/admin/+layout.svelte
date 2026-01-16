@@ -44,14 +44,14 @@
 			<div class="p-5 border-b border-[var(--color-border)] flex items-center gap-3">
 				<a href="/" class="text-lg font-bold">Gallery</a>
 				<span
-					class="text-[10px] font-semibold uppercase tracking-wide px-2 py-1 bg-blue-500 text-white rounded"
+					class="text-[10px] font-semibold uppercase tracking-wide px-2 py-1 bg-blue-500 text-white"
 					>Admin</span
 				>
 			</div>
 			<nav class="flex-1 p-3 flex flex-col gap-1">
 				<a
 					href="/admin"
-					class="flex items-center gap-3 px-4 py-3  text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+					class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
 					onclick={closeMobileMenu}
 				>
 					<LayoutGrid size={18} />
@@ -59,7 +59,7 @@
 				</a>
 				<a
 					href="/admin/albums/new"
-					class="flex items-center gap-3 px-4 py-3  text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+					class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
 					onclick={closeMobileMenu}
 				>
 					<Plus size={18} />
@@ -67,7 +67,7 @@
 				</a>
 				<a
 					href="/admin/settings"
-					class="flex items-center gap-3 px-4 py-3  text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+					class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
 					onclick={closeMobileMenu}
 				>
 					<Settings size={18} />
@@ -78,7 +78,7 @@
 				<form action="/admin/logout" method="POST">
 					<button
 						type="submit"
-						class="flex items-center gap-3 w-full px-4 py-3  text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+						class="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
 					>
 						<LogOut size={18} />
 						Logout
@@ -87,7 +87,7 @@
 			</div>
 		</aside>
 		<main
-			class="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8 max-w-full lg:max-w-[calc(100%-16rem)]"
+			class="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8 max-w-full lg:max-w-[calc(100%-16rem)] animate-fade-in"
 		>
 			{@render children()}
 		</main>

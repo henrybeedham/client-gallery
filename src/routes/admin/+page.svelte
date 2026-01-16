@@ -12,41 +12,41 @@
 </svelte:head>
 
 <div class="max-w-6xl">
-	<div class="flex items-center justify-between mb-8">
+	<div class="flex items-center justify-between mb-8 animate-fade-in">
 		<h1 class="text-2xl font-bold">Dashboard</h1>
-		<a href="/admin/albums/new" class="btn btn-primary">
+		<a href="/admin/albums/new" class="btn btn-primary transition-all hover:scale-105">
 			<Plus size={18} />
 			New Album
 		</a>
 	</div>
 
-	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 stagger-children">
 		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]  p-6 text-center"
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 text-center transition-all hover:shadow-lg hover:-translate-y-1"
 		>
 			<div class="text-3xl font-bold mb-1">{data.stats.albums}</div>
 			<div class="text-sm text-gray-500">Albums</div>
 		</div>
 		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]  p-6 text-center"
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 text-center transition-all hover:shadow-lg hover:-translate-y-1"
 		>
 			<div class="text-3xl font-bold mb-1">{data.stats.photos}</div>
 			<div class="text-sm text-gray-500">Photos</div>
 		</div>
 		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]  p-6 text-center"
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 text-center transition-all hover:shadow-lg hover:-translate-y-1"
 		>
 			<div class="text-3xl font-bold mb-1">{data.stats.pageViews}</div>
 			<div class="text-sm text-gray-500">Page Views</div>
 		</div>
 		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]  p-6 text-center"
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 text-center transition-all hover:shadow-lg hover:-translate-y-1"
 		>
 			<div class="text-3xl font-bold mb-1">{data.stats.photoDownloads}</div>
 			<div class="text-sm text-gray-500">Photo Downloads</div>
 		</div>
 		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]  p-6 text-center"
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 text-center transition-all hover:shadow-lg hover:-translate-y-1"
 		>
 			<div class="text-3xl font-bold mb-1">{data.stats.albumDownloads}</div>
 			<div class="text-sm text-gray-500">Album Downloads</div>
