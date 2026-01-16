@@ -167,60 +167,68 @@
 		}
 
 		// Handle scroll to photo if coming from photo detail page
+		// Handle scroll to photo if coming from photo detail page
+		// Handle scroll to photo if coming from photo detail page
 		const scrollToPhotoId = $page.url.searchParams.get('scrollToPhoto');
+
 		if (scrollToPhotoId) {
 			const photoId = parseInt(scrollToPhotoId);
-			// Validate that the photo ID exists in the album's photo collection
+
 			if (!isNaN(photoId) && (data.allPhotoIds as number[]).includes(photoId)) {
-				// Function to perform the actual scroll
-				const SCROLL_CLEANUP_DELAY = 1000;
-				const performScroll = () => {
+				// We remove the strict "return true" logic.
+				// We want to scroll even if we scrolled previously, to track movement.
+				const performScroll = (behavior: ScrollBehavior = 'auto') => {
 					const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
 					if (photoButton) {
-						// Check if element is positioned (for masonry layout)
-						const rect = photoButton.getBoundingClientRect();
-						if (rect.width > 0 && rect.height > 0) {
-							photoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
-							// Remove scrollToPhoto param after scroll completes
-							setTimeout(() => {
-								const url = new URL(window.location.href);
-								url.searchParams.delete('scrollToPhoto');
-								window.history.replaceState({}, '', url.toString());
-							}, SCROLL_CLEANUP_DELAY);
-							return true;
-						}
+						photoButton.scrollIntoView({ behavior, block: 'center' });
+						return true;
 					}
 					return false;
 				};
 
-				// Function to load photos until target is displayed
 				const loadUntilPhotoVisible = async (attempts = 0) => {
-					// Check if photo is already in displayedPhotos
+					// 1. Check if photo is in the currently displayed array
 					if (displayedPhotos.some((p) => p.id === photoId)) {
-						// Wait for rendering and layout
-						await tick();
-						// Try scrolling with retry for layout completion
-						let retries = 0;
-						const tryScroll = () => {
-							if (performScroll() || retries++ >= SCROLL_RETRY_MAX) {
-								return;
+						await tick(); // Wait for DOM node to be created
+
+						// 2. STICKY SCROLL STRATEGY
+						// We scroll repeatedly for a short window (e.g. 500ms)
+						// to follow the element as Masonry/Layout moves it around.
+						let frames = 0;
+						const MAX_FRAMES = 30; // approx 500ms at 60fps
+
+						const trackElementPosition = () => {
+							const found = performScroll(frames === 0 ? 'auto' : 'auto');
+							// Note: Use 'auto' repeatedly. 'smooth' fights against moving targets.
+
+							if (found && frames < MAX_FRAMES) {
+								frames++;
+								requestAnimationFrame(trackElementPosition);
+							} else if (frames >= MAX_FRAMES) {
+								// Final adjustment with smooth scroll once layout is settled
+								setTimeout(() => {
+									performScroll('smooth');
+									// Cleanup URL
+									const url = new URL(window.location.href);
+									url.searchParams.delete('scrollToPhoto');
+									window.history.replaceState({}, '', url.toString());
+								}, 100);
+							} else {
+								// Element apparently disappeared or wasn't found, stop.
 							}
-							requestAnimationFrame(tryScroll);
 						};
-						requestAnimationFrame(tryScroll);
+
+						requestAnimationFrame(trackElementPosition);
 					} else if (hasMore && attempts < LOAD_MORE_MAX_ATTEMPTS) {
-						// Photo not loaded yet, load more photos
+						// 3. Prevent premature scrolling while loading
+						// We just wait for the data, we do NOT try to scroll here.
 						await loadMorePhotos();
-						// Recursively try again after loading with incremented attempt counter
 						await loadUntilPhotoVisible(attempts + 1);
-					} else if (attempts >= LOAD_MORE_MAX_ATTEMPTS) {
-						console.warn(
-							`Failed to load photo ${photoId} after ${LOAD_MORE_MAX_ATTEMPTS} attempts`
-						);
+					} else {
+						console.warn(`Could not reach photo ${photoId}`);
 					}
 				};
 
-				// Start the process
 				loadUntilPhotoVisible();
 			}
 		}
