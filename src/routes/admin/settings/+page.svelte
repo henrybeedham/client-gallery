@@ -72,7 +72,7 @@
 						name="heroImage"
 						accept="image/*"
 						class="hidden"
-						onchange={handleHeroFileSelect}
+						on:change={handleHeroFileSelect}
 					/>
 				</label>
 				{#if selectedHeroFile}

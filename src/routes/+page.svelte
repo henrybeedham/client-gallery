@@ -58,7 +58,7 @@
 					alt="Hero"
 					class="w-full h-full object-cover"
 				/>
-				<div class="absolute inset-0 bg-[var(--color-cream)]/80"></div>
+				<div class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/85 to-[var(--color-cream)]/75"></div>
 			</div>
 		{/if}
 		<div class="container relative z-10">
