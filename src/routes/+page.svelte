@@ -7,6 +7,10 @@
 
 	let { data } = $props();
 
+	// Timing constants for scroll restoration
+	const SCROLL_RESTORE_IMAGE_DELAY = 300; // Wait for images to load
+	const SCROLL_RESTORE_CLEANUP_DELAY = 1000; // Cleanup after scroll completes
+
 	// Save scroll position when clicking a featured photo
 	function saveScrollPosition(photoId: number) {
 		if (browser) {
@@ -23,17 +27,21 @@
 		
 		if (scrollPosition && scrollToPhoto) {
 			const position = parseInt(scrollPosition);
-			tick().then(() => {
-				// Give images time to load, then scroll
-				setTimeout(() => {
-					window.scrollTo({ top: position, behavior: 'smooth' });
-					// Clean up after scrolling
+			if (!isNaN(position)) {
+				tick().then(() => {
+					// Give images time to load, then scroll
 					setTimeout(() => {
-						sessionStorage.removeItem('homeScrollPosition');
-						sessionStorage.removeItem('homeScrollToPhoto');
-					}, 1000);
-				}, 300);
-			});
+						window.scrollTo({ top: position, behavior: 'smooth' });
+						// Clean up after scrolling
+						setTimeout(() => {
+							sessionStorage.removeItem('homeScrollPosition');
+							sessionStorage.removeItem('homeScrollToPhoto');
+						}, SCROLL_RESTORE_CLEANUP_DELAY);
+					}, SCROLL_RESTORE_IMAGE_DELAY);
+				}).catch(error => {
+					console.error('Failed to restore scroll position:', error);
+				});
+			}
 		}
 
 		// Intersection Observer for scroll animations
@@ -76,7 +84,7 @@
 			const columnIndex = columnHeights.indexOf(minHeight);
 			const left = columnIndex * (columnWidth + MASONRY_GAP);
 			const top = columnHeights[columnIndex];
-			const aspectRatio = photo.width && photo.height && photo.width > 0 ? photo.width / photo.height : 1;
+			const aspectRatio = photo.width && photo.height && photo.width > 0 && photo.height > 0 ? photo.width / photo.height : 1;
 			const itemHeight = columnWidth / aspectRatio;
 
 			positions.push({
