@@ -200,17 +200,19 @@
 	>
 		{#if data.settings.heroImage}
 			<div class="absolute inset-0 z-0">
-				<img
-					src="/api/hero/{data.settings.heroImage}"
-					alt="Hero"
-					class="w-full h-full object-cover"
-				/>
+				<div
+					class="absolute inset-0 bg-cover bg-center bg-no-repeat"
+					style="background-image: url('/api/hero/{data.settings.heroImage}');"
+					role="img"
+					aria-label="Hero Image"
+				></div>
 
 				<div
 					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/50 via-[var(--color-cream)]/65 to-[var(--color-cream)]"
 				></div>
 			</div>
 		{/if}
+
 		<div class="container relative z-10">
 			<div class="max-w-4xl">
 				<h1
@@ -258,7 +260,11 @@
 					<!-- Featured Album Photos with Layout Respect -->
 					{#if data.featuredAlbum.layout_style === 'masonry'}
 						<!-- Masonry Layout -->
-						<div bind:this={masonryContainer} class="relative scroll-fade-in" style="height: {masonryHeight}px">
+						<div
+							bind:this={masonryContainer}
+							class="relative scroll-fade-in"
+							style="height: {masonryHeight}px"
+						>
 							{#each data.featuredPhotos as photo, index}
 								{@const position = masonryPositions[index]}
 								{#if position}

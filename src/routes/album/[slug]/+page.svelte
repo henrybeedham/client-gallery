@@ -167,8 +167,6 @@
 		}
 
 		// Handle scroll to photo if coming from photo detail page
-		// Handle scroll to photo if coming from photo detail page
-		// Handle scroll to photo if coming from photo detail page
 		const scrollToPhotoId = $page.url.searchParams.get('scrollToPhoto');
 
 		if (scrollToPhotoId) {
