@@ -17,7 +17,7 @@
 	<div class="flex min-h-screen">
 		<!-- Mobile menu button -->
 		<button
-			class="fixed top-4 left-4 z-[60] p-2  bg-[var(--color-bg-secondary)] border border-[var(--color-border)] lg:hidden"
+			class="fixed top-4 left-4 z-[60] p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] lg:hidden"
 			onclick={toggleMobileMenu}
 			aria-label="Toggle menu"
 		>

@@ -295,6 +295,7 @@ _Simple, secure admin authentication_
    ```
 
 6. **Configure reverse proxy (Nginx example)**
+
    ```nginx
    server {
        listen 80;

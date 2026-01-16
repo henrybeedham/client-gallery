@@ -127,7 +127,7 @@
 
 	// Preload threshold for triggering more photos to load in lightbox
 	const LIGHTBOX_PRELOAD_THRESHOLD = 3;
-	
+
 	// Scroll-to-photo constants
 	const SCROLL_RETRY_MAX = 20; // Max retries for scroll positioning
 	const LOAD_MORE_MAX_ATTEMPTS = 100; // Max attempts to load more photos when searching for target
@@ -700,7 +700,10 @@
 						</div>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
-						<button class="btn btn-secondary text-sm transition-all hover:scale-105" onclick={toggleSelectMode}>
+						<button
+							class="btn btn-secondary text-sm transition-all hover:scale-105"
+							onclick={toggleSelectMode}
+						>
 							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
@@ -744,12 +747,16 @@
 		</header>
 
 		{#if isSelecting}
-			<div class="text-white py-3 relative z-10 animate-slide-in" style="background-color: var(--gallery-primary);">
+			<div
+				class="text-white py-3 relative z-10 animate-slide-in"
+				style="background-color: var(--gallery-primary);"
+			>
 				<div class="container flex items-center justify-between">
 					<span class="text-sm">{selectedPhotos.size} selected</span>
 					<div class="flex gap-4">
-						<button class="text-sm font-medium opacity-90 hover:opacity-100 transition-opacity" onclick={selectAll}
-							>Select All</button
+						<button
+							class="text-sm font-medium opacity-90 hover:opacity-100 transition-opacity"
+							onclick={selectAll}>Select All</button
 						>
 						<button
 							class="text-sm font-medium opacity-90 hover:opacity-100 transition-opacity"
@@ -926,7 +933,10 @@
 								<span>Loading more photos...</span>
 							</div>
 						{:else if hasMore}
-							<button class="btn btn-secondary text-sm transition-all hover:scale-105" onclick={loadMorePhotos}>
+							<button
+								class="btn btn-secondary text-sm transition-all hover:scale-105"
+								onclick={loadMorePhotos}
+							>
 								Load More
 							</button>
 						{:else if displayedPhotos.length > 0}

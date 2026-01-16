@@ -19,23 +19,19 @@
 	</div>
 
 	{#if form?.success}
-		<div
-			class="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3  text-sm mb-6"
-		>
+		<div class="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 text-sm mb-6">
 			{form.message}
 		</div>
 	{/if}
 
 	{#if form?.error}
-		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3  text-sm mb-6">
+		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 text-sm mb-6">
 			{form.error}
 		</div>
 	{/if}
 
 	<form method="POST" action="?/updateSettings" use:enhance>
-		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]  p-6 space-y-6"
-		>
+		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 space-y-6">
 			<!-- Default Description -->
 			<div>
 				<label for="defaultDescription" class="block text-sm font-medium mb-2">

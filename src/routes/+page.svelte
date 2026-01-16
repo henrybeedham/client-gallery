@@ -66,7 +66,9 @@
 								{/if}
 							</div>
 							<div class="p-4">
-								<h3 class="font-semibold text-lg transition-colors group-hover:text-blue-400">{album.title}</h3>
+								<h3 class="font-semibold text-lg transition-colors group-hover:text-blue-400">
+									{album.title}
+								</h3>
 							</div>
 						</a>
 					{/each}
