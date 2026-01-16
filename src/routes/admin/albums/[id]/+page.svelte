@@ -26,6 +26,7 @@
 	let description = $state(data.album.description || '');
 	let isPublic = $state(data.album.is_public === 1);
 	let showOnHome = $state(data.album.show_on_home === 1);
+	let featuredOnHome = $state(data.album.featured_on_home === 1);
 	let password = $state(data.album.password || '');
 	let sortOrder = $state(data.album.sort_order || 'oldest');
 	let layoutStyle = $state(data.album.layout_style || 'grid');
@@ -687,6 +688,7 @@
 						{#if !showAdvancedSettings}
 							<input type="hidden" name="isPublic" value={isPublic ? 'on' : ''} />
 							<input type="hidden" name="showOnHome" value={showOnHome ? 'on' : ''} />
+							<input type="hidden" name="featuredOnHome" value={featuredOnHome ? 'on' : ''} />
 							<input type="hidden" name="password" value={password} />
 							<input type="hidden" name="expiresAt" value={expiresAt} />
 							<input type="hidden" name="primaryColor" value={primaryColor} />
@@ -727,6 +729,16 @@
 											class="w-4 h-4 accent-blue-500"
 										/>
 										<span class="text-sm">Show on homepage</span>
+									</label>
+
+									<label class="flex items-center gap-2 cursor-pointer">
+										<input
+											type="checkbox"
+											name="featuredOnHome"
+											bind:checked={featuredOnHome}
+											class="w-4 h-4 accent-blue-500"
+										/>
+										<span class="text-sm">Featured on homepage (displays all photos)</span>
 									</label>
 								</div>
 

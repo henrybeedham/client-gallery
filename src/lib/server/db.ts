@@ -99,6 +99,13 @@ try {
 	// Column already exists, ignore error
 }
 
+// Migration: Add featured_on_home column if it doesn't exist
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN featured_on_home INTEGER DEFAULT 0`);
+} catch {
+	// Column already exists, ignore error
+}
+
 // Migration: Add EXIF metadata columns to photos table
 try {
 	db.exec(`ALTER TABLE photos ADD COLUMN camera_make TEXT`);
@@ -212,6 +219,24 @@ export function getAlbums(showOnHomeOnly = false, publicOnly = true): Album[] {
 	return db.prepare(query).all() as Album[];
 }
 
+export function getFeaturedAlbum(): Album | undefined {
+	return db
+		.prepare(
+			`
+    SELECT 
+      a.*,
+      (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename,
+      (SELECT filename FROM photos WHERE id = a.background_photo_id) as background_filename
+    FROM albums a
+    WHERE a.is_public = 1 AND a.featured_on_home = 1
+    ORDER BY a.created_at DESC
+    LIMIT 1
+  `
+		)
+		.get() as Album | undefined;
+}
+
 export function getAlbumBySlug(slug: string): Album | undefined {
 	return db
 		.prepare(
@@ -284,6 +309,7 @@ export function updateAlbum(
 	description: string | null,
 	isPublic: boolean,
 	showOnHome: boolean,
+	featuredOnHome: boolean,
 	password: string | null,
 	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
@@ -292,6 +318,11 @@ export function updateAlbum(
 	backgroundPhotoId: number | null = null,
 	layoutStyle: 'grid' | 'masonry' = 'grid'
 ): void {
+	// If setting this album as featured, unflag all other albums first
+	if (featuredOnHome) {
+		db.prepare('UPDATE albums SET featured_on_home = 0').run();
+	}
+
 	db.prepare(
 		`UPDATE albums SET 
       title = ?, 
@@ -299,6 +330,7 @@ export function updateAlbum(
       description = ?, 
       is_public = ?,
       show_on_home = ?,
+      featured_on_home = ?,
       password = ?,
       sort_order = ?,
       layout_style = ?,
@@ -314,6 +346,7 @@ export function updateAlbum(
 		description,
 		isPublic ? 1 : 0,
 		showOnHome ? 1 : 0,
+		featuredOnHome ? 1 : 0,
 		password || null,
 		sortOrder,
 		layoutStyle,
