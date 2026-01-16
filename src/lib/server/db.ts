@@ -912,10 +912,10 @@ export function getSettings(): Settings {
 		copyrightText: 'GALLERY',
 		heroTitle: 'Visual Stories,\nCaptured in Time',
 		heroDescription:
-			'Photography portfolio by Henry Beedham, a student at the University of Exeter exploring the art of visual storytelling through composition, light, and decisive moments.',
+			'Photography portfolio showcasing the art of visual storytelling through composition, light, and decisive moments.',
 		aboutTitle: 'About',
 		aboutText:
-			'Henry Beedham is a photographer and student at the University of Exeter. Over two years of capturing images, he has developed a passion for telling stories through visual composition, exploring the interplay of light, shadow, and moment.',
+			'A photography portfolio exploring the interplay of light, shadow, and moment. Each collection tells its own unique story through visual composition.',
 		contactEmail: '',
 		contactPhone: '',
 		discordWebhook: '',

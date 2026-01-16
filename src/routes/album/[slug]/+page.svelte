@@ -172,6 +172,7 @@
 			// Validate that the photo ID exists in the album's photo collection
 			if (!isNaN(photoId) && data.allPhotoIds.includes(photoId)) {
 				// Function to perform the actual scroll
+				const SCROLL_CLEANUP_DELAY = 1000;
 				const performScroll = () => {
 					const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
 					if (photoButton) {
@@ -184,7 +185,7 @@
 								const url = new URL(window.location.href);
 								url.searchParams.delete('scrollToPhoto');
 								window.history.replaceState({}, '', url.toString());
-							}, 1000);
+							}, SCROLL_CLEANUP_DELAY);
 							return true;
 						}
 					}

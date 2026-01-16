@@ -109,7 +109,7 @@ export const actions: Actions = {
 					try {
 						fs.unlinkSync(oldFilepath);
 					} catch (e) {
-						console.error('Failed to delete old hero image:', e);
+						console.error('Failed to delete old hero image at', oldFilepath, ':', e);
 					}
 				}
 			}
