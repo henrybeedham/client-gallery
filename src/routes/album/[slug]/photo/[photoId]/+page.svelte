@@ -54,7 +54,7 @@
 		const referrer = document.referrer;
 		const fromHome = sessionStorage.getItem('fromHomepage');
 		
-		if (fromHome === 'true' || (referrer && (referrer.includes('/#work') || referrer.endsWith('/') && !referrer.includes('/album/')))) {
+		if (fromHome === 'true' || (referrer && (referrer.includes('/#work') || (referrer.endsWith('/') && !referrer.includes('/album/'))))) {
 			sessionStorage.removeItem('fromHomepage');
 			goto('/');
 		} else {
