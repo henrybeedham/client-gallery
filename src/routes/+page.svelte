@@ -14,30 +14,38 @@
 	function saveScrollPosition(photoId: number) {
 		if (browser) {
 			sessionStorage.setItem('fromHomepage', 'true');
-			sessionStorage.setItem('scrollPosition', window.scrollY.toString());
+			sessionStorage.setItem('homeScrollToPhoto', photoId.toString());
 		}
 	}
 
 	// Restore scroll position when returning from photo detail
 	onMount(() => {
-		const scrollPosition = sessionStorage.getItem('scrollPosition');
+		const scrollToPhotoId = sessionStorage.getItem('homeScrollToPhoto');
 
-		if (scrollPosition) {
-			const position = parseInt(scrollPosition);
-			if (!isNaN(position)) {
+		if (scrollToPhotoId) {
+			const photoId = parseInt(scrollToPhotoId);
+			if (!isNaN(photoId)) {
 				tick()
 					.then(() => {
-						// Give images time to load, then scroll
+						// Give images and masonry layout time to calculate
 						setTimeout(() => {
-							window.scrollTo({ top: position, behavior: 'smooth' });
-							// Clean up after scrolling
-							setTimeout(() => {
-								sessionStorage.removeItem('scrollPosition');
-							}, SCROLL_RESTORE_CLEANUP_DELAY);
+							// Find the photo element
+							const photoLink = document.querySelector(`a[data-photo-id="${photoId}"]`);
+							if (photoLink) {
+								photoLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+								// Clean up after scrolling
+								setTimeout(() => {
+									sessionStorage.removeItem('homeScrollToPhoto');
+								}, SCROLL_RESTORE_CLEANUP_DELAY);
+							} else {
+								// Fallback: just clear storage if photo not found
+								sessionStorage.removeItem('homeScrollToPhoto');
+							}
 						}, SCROLL_RESTORE_IMAGE_DELAY);
 					})
 					.catch((error) => {
 						console.error('Failed to restore scroll position:', error);
+						sessionStorage.removeItem('homeScrollToPhoto');
 					});
 			}
 		}
@@ -229,14 +237,15 @@
 					<!-- Featured Album Photos with Layout Respect -->
 					{#if data.featuredAlbum.layout_style === 'masonry'}
 						<!-- Masonry Layout -->
-						<div bind:this={masonryContainer} class="relative" style="height: {masonryHeight}px">
+						<div bind:this={masonryContainer} class="relative scroll-fade-in" style="height: {masonryHeight}px">
 							{#each data.featuredPhotos as photo, index}
 								{@const position = masonryPositions[index]}
 								{#if position}
 									<a
 										href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
-										class="group block absolute scroll-fade-in"
+										class="group block absolute"
 										style="left: {position.left}; top: {position.top}; width: {position.width}"
+										data-photo-id={photo.id}
 										onclick={() => saveScrollPosition(photo.id)}
 									>
 										<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
@@ -260,6 +269,7 @@
 								<a
 									href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
 									class="group block scroll-fade-in"
+									data-photo-id={photo.id}
 									onclick={() => saveScrollPosition(photo.id)}
 								>
 									<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
