@@ -40,11 +40,6 @@
 						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
 						>About</a
 					>
-					<a
-						href="/admin"
-						class="nav-text text-[var(--color-text-muted)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-						>Admin</a
-					>
 				</nav>
 			</div>
 		</div>
