@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 
 	let { data } = $props();
-	
+
 	// Intersection Observer for scroll animations
 	onMount(() => {
 		const observer = new IntersectionObserver(
@@ -15,7 +15,7 @@
 					}
 				});
 			},
-			{ threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+			{ threshold: 0.1, rootMargin: '0px 0px 100px 0px' }
 		);
 
 		document.querySelectorAll('.scroll-fade-in').forEach((el) => {
@@ -132,8 +132,7 @@
 						{#each data.featuredPhotos as photo, index}
 							<a
 								href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
-								class="group block break-inside-avoid mb-6 md:mb-8 animate-fade-in"
-								style="animation-delay: {index * 0.05}s;"
+								class="group block break-inside-avoid mb-6 md:mb-8 scroll-fade-in"
 								onclick={() => sessionStorage.setItem('fromHomepage', 'true')}
 							>
 								<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
@@ -171,7 +170,9 @@
 
 			{#if data.showOnHomeAlbums && data.showOnHomeAlbums.length > 0}
 				<!-- Show on Home Albums Grid -->
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16 scroll-fade-in">
+				<div
+					class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16 scroll-fade-in"
+				>
 					{#each data.showOnHomeAlbums as album, index}
 						<a
 							href="/album/{album.slug}"
@@ -239,19 +240,30 @@
 				>
 					{data.settings.aboutTitle}
 				</h2>
-				<p class="text-lg md:text-xl text-[var(--color-text-secondary)] leading-relaxed mb-8" style="white-space: pre-line;">
+				<p
+					class="text-lg md:text-xl text-[var(--color-text-secondary)] leading-relaxed mb-8"
+					style="white-space: pre-line;"
+				>
 					{data.settings.aboutText}
 				</p>
 				{#if data.settings.showContactOnHome && (data.settings.contactEmail || data.settings.contactPhone)}
 					<div class="mt-8 space-y-2">
 						{#if data.settings.contactEmail}
 							<p class="text-base text-[var(--color-text-muted)]">
-								Email: <a href="mailto:{data.settings.contactEmail}" class="underline hover:text-[var(--color-charcoal)] transition-colors">{data.settings.contactEmail}</a>
+								Email: <a
+									href="mailto:{data.settings.contactEmail}"
+									class="underline hover:text-[var(--color-charcoal)] transition-colors"
+									>{data.settings.contactEmail}</a
+								>
 							</p>
 						{/if}
 						{#if data.settings.contactPhone}
 							<p class="text-base text-[var(--color-text-muted)]">
-								Phone: <a href="tel:{data.settings.contactPhone}" class="underline hover:text-[var(--color-charcoal)] transition-colors">{data.settings.contactPhone}</a>
+								Phone: <a
+									href="tel:{data.settings.contactPhone}"
+									class="underline hover:text-[var(--color-charcoal)] transition-colors"
+									>{data.settings.contactPhone}</a
+								>
 							</p>
 						{/if}
 					</div>
