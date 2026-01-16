@@ -54,7 +54,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
 				filePath = webpPath;
 				contentType = 'image/webp';
 			} catch {
-				// WebP not available, fall back to JPEG
+				// WebP not available, try JPEG
 				filePath = path.join(UPLOAD_DIR, album, size, `${baseFilename}.jpg`);
 				contentType = 'image/jpeg';
 			}
@@ -62,6 +62,13 @@ export const GET: RequestHandler = async ({ params, request }) => {
 			// Client doesn't support WebP, serve JPEG
 			filePath = path.join(UPLOAD_DIR, album, size, `${baseFilename}.jpg`);
 			contentType = 'image/jpeg';
+		}
+
+		// Verify the file exists before reading
+		try {
+			await fs.access(filePath);
+		} catch {
+			throw error(404, 'Image not found');
 		}
 
 		const buffer = await fs.readFile(filePath);
@@ -73,7 +80,12 @@ export const GET: RequestHandler = async ({ params, request }) => {
 				Vary: 'Accept'
 			}
 		});
-	} catch {
-		throw error(404, 'Image not found');
+	} catch (e) {
+		// If it's already an error we threw, re-throw it
+		if (e && typeof e === 'object' && 'status' in e) {
+			throw e;
+		}
+		// Otherwise, it's an unexpected error
+		throw error(500, 'Failed to load image');
 	}
 };
