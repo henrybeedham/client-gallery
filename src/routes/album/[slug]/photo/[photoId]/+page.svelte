@@ -238,7 +238,7 @@ transform: scale(1.1);"
 				{#if data.prevPhoto}
 					<button
 						onclick={navigatePrev}
-						class="absolute left-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
+						class="absolute left-2 top-1/2 -translate-y-1/2 p-3  bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
 						aria-label="Previous photo"
 					>
 						<ChevronLeft size={24} />
@@ -248,14 +248,14 @@ transform: scale(1.1);"
 				<img
 					src="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 					alt={data.photo.original_filename}
-					class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+					class="max-w-full max-h-full object-contain  shadow-2xl"
 					in:fly={{ y: 20, duration: 400, easing: cubicOut }}
 				/>
 
 				{#if data.nextPhoto}
 					<button
 						onclick={navigateNext}
-						class="absolute right-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
+						class="absolute right-2 top-1/2 -translate-y-1/2 p-3  bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
 						aria-label="Next photo"
 					>
 						<ChevronRight size={24} />

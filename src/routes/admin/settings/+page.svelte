@@ -20,21 +20,21 @@
 
 	{#if form?.success}
 		<div
-			class="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-lg text-sm mb-6"
+			class="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3  text-sm mb-6"
 		>
 			{form.message}
 		</div>
 	{/if}
 
 	{#if form?.error}
-		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
+		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3  text-sm mb-6">
 			{form.error}
 		</div>
 	{/if}
 
 	<form method="POST" action="?/updateSettings" use:enhance>
 		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 space-y-6"
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]  p-6 space-y-6"
 		>
 			<!-- Default Description -->
 			<div>
@@ -62,7 +62,7 @@
 						type="color"
 						id="defaultColor"
 						name="defaultColor"
-						class="h-10 w-20 rounded border border-[var(--color-border)]"
+						class="h-10 w-20 border border-[var(--color-border)]"
 						bind:value={colorValue}
 					/>
 					<input
@@ -114,7 +114,7 @@
 					<input
 						type="checkbox"
 						name="defaultIsPublic"
-						class="w-4 h-4 rounded border-[var(--color-border)]"
+						class="w-4 h-4 border-[var(--color-border)]"
 						checked={data.settings.defaultIsPublic}
 					/>
 					<span class="text-sm">
@@ -127,7 +127,7 @@
 					<input
 						type="checkbox"
 						name="defaultShowOnHome"
-						class="w-4 h-4 rounded border-[var(--color-border)]"
+						class="w-4 h-4 border-[var(--color-border)]"
 						checked={data.settings.defaultShowOnHome}
 					/>
 					<span class="text-sm">

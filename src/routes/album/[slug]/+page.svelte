@@ -585,11 +585,11 @@
 	{@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
 </svelte:head>
 
-{#if data.isExpired}
-	<!-- Expired gallery page -->
-	<div class="min-h-screen flex items-center justify-center p-4">
+{#if data.isExpired && !data.isAdmin}
+	<!-- Expired gallery page (for non-admin users) -->
+	<div class="min-h-screen flex items-center justify-center p-4 animate-fade-in">
 		<div
-			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full text-center"
+			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] p-8 max-w-md w-full text-center"
 		>
 			<Clock size={64} class="mx-auto mb-4 text-gray-500" strokeWidth={1.5} />
 			<h1 class="text-2xl font-bold mb-2">{data.album.title}</h1>
@@ -601,7 +601,7 @@
 					{#if data.contactEmail}
 						<a
 							href="mailto:{data.contactEmail}"
-							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 mb-2"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors mb-2"
 						>
 							<Mail size={16} />
 							{data.contactEmail}
@@ -610,7 +610,7 @@
 					{#if data.contactPhone}
 						<a
 							href="tel:{data.contactPhone}"
-							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
 						>
 							<Phone size={16} />
 							{data.contactPhone}
@@ -621,16 +621,16 @@
 		</div>
 	</div>
 {:else if data.requiresPassword}
-	<div class="min-h-screen flex items-center justify-center p-4">
+	<div class="min-h-screen flex items-center justify-center p-4 animate-fade-in">
 		<div
-			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full"
+			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] p-8 max-w-md w-full"
 		>
 			<h1 class="text-2xl font-bold mb-2 text-center">{data.album.title}</h1>
 			<p class="text-gray-400 text-center mb-6">This album is password protected</p>
 
 			{#if form?.error}
 				<div
-					class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-4"
+					class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 text-sm mb-4 animate-slide-in"
 				>
 					{form.error}
 				</div>
@@ -668,11 +668,11 @@
 			<div class="container">
 				<div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
 					<div class="min-w-0">
-						<div class="flex items-center gap-3">
+						<div class="flex items-center gap-3 flex-wrap">
 							<h1 class="text-lg font-semibold">{data.album.title}</h1>
 							{#if data.album.album_date}
 								<span
-									class="text-sm text-center font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20"
+									class="text-sm text-center font-medium px-2 py-0.5 bg-[var(--gallery-primary)]/20 transition-colors"
 									style="color: var(--gallery-primary);"
 								>
 									{new Date(data.album.album_date).toLocaleDateString('en-UK', {
@@ -680,6 +680,13 @@
 										month: 'long',
 										day: 'numeric'
 									})}
+								</span>
+							{/if}
+							{#if data.isExpired && data.isAdmin}
+								<span
+									class="text-sm text-center font-medium px-2 py-0.5 bg-red-500/20 text-red-400 animate-fade-in"
+								>
+									Expired
 								</span>
 							{/if}
 						</div>
@@ -766,7 +773,7 @@
 						<a
 							href="/album/{data.album.slug}?sort={data.selectedSort}"
 							data-sveltekit-noscroll
-							class="px-3 py-1.5 rounded-full text-sm transition-colors {!data.selectedTag
+							class="px-3 py-1.5 text-sm transition-all duration-200 {!data.selectedTag
 								? ' text-white'
 								: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
 							style={!data.selectedTag ? `background-color: var(--gallery-primary);` : ''}
@@ -777,7 +784,7 @@
 							<a
 								href="/album/{data.album.slug}?tag={tag.slug}&sort={data.selectedSort}"
 								data-sveltekit-noscroll
-								class="px-3 py-1.5 rounded-full text-sm transition-colors {data.selectedTag ===
+								class="px-3 py-1.5 text-sm transition-all duration-200 {data.selectedTag ===
 								tag.slug
 									? ' text-white'
 									: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
@@ -851,7 +858,7 @@
 									/>
 									{#if isSelecting}
 										<div
-											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+											class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center transition-colors duration-200 {selectedPhotos.has(
 												photo.id
 											)
 												? 'text-white'
@@ -892,7 +899,7 @@
 									/>
 									{#if isSelecting}
 										<div
-											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+											class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center transition-colors duration-200 {selectedPhotos.has(
 												photo.id
 											)
 												? 'text-white'

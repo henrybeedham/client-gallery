@@ -29,13 +29,15 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const contactEmail = env.GALLERY_CONTACT_EMAIL || null;
 	const contactPhone = env.GALLERY_CONTACT_PHONE || null;
 
-	if (isExpired) {
+	// If expired and NOT admin, show expired page
+	if (isExpired && !isAuthenticated) {
 		return {
 			album,
 			photos: [],
 			tags: [],
 			requiresPassword: false,
 			isExpired: true,
+			isAdmin: false,
 			expiresIn: null,
 			selectedTag: undefined,
 			selectedSort: album.sort_order || 'oldest',
@@ -57,6 +59,7 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				tags: [],
 				requiresPassword: true,
 				isExpired: false,
+				isAdmin: isAuthenticated,
 				expiresIn,
 				selectedSort: album.sort_order || 'oldest',
 				contactEmail,
@@ -99,7 +102,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		photos,
 		tags,
 		requiresPassword: false,
-		isExpired: false,
+		isExpired: isExpired, // Still mark as expired, but allow access for admin
+		isAdmin: isAuthenticated,
 		expiresIn,
 		selectedTag: tagSlug,
 		selectedSort: sortOrder,

@@ -17,7 +17,7 @@
 	<div class="flex min-h-screen">
 		<!-- Mobile menu button -->
 		<button
-			class="fixed top-4 left-4 z-[60] p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] lg:hidden"
+			class="fixed top-4 left-4 z-[60] p-2  bg-[var(--color-bg-secondary)] border border-[var(--color-border)] lg:hidden"
 			onclick={toggleMobileMenu}
 			aria-label="Toggle menu"
 		>
@@ -51,7 +51,7 @@
 			<nav class="flex-1 p-3 flex flex-col gap-1">
 				<a
 					href="/admin"
-					class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+					class="flex items-center gap-3 px-4 py-3  text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
 					onclick={closeMobileMenu}
 				>
 					<LayoutGrid size={18} />
@@ -59,7 +59,7 @@
 				</a>
 				<a
 					href="/admin/albums/new"
-					class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+					class="flex items-center gap-3 px-4 py-3  text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
 					onclick={closeMobileMenu}
 				>
 					<Plus size={18} />
@@ -67,7 +67,7 @@
 				</a>
 				<a
 					href="/admin/settings"
-					class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+					class="flex items-center gap-3 px-4 py-3  text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
 					onclick={closeMobileMenu}
 				>
 					<Settings size={18} />
@@ -78,7 +78,7 @@
 				<form action="/admin/logout" method="POST">
 					<button
 						type="submit"
-						class="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+						class="flex items-center gap-3 w-full px-4 py-3  text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
 					>
 						<LogOut size={18} />
 						Logout
