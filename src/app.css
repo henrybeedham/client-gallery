@@ -6,11 +6,11 @@
 	--color-bg-secondary: #ffffff;
 	--color-bg-tertiary: #f5f5f4;
 	--color-text: #1c1917;
-	--color-text-secondary: #44403c;
+	--color-text-secondary: #57534e;
 	--color-text-muted: #78716c;
 	--color-charcoal: #292524;
 	--color-cream: #fafaf9;
-	--color-accent: #a8a29e;
+	--color-accent: #78716c;
 	--color-primary: #292524;
 	--color-primary-hover: #1c1917;
 	--color-border: #e7e5e4;
@@ -217,6 +217,7 @@ nav a,
 /* Prose styles for markdown */
 .prose {
 	line-height: 1.7;
+	color: var(--color-text-secondary);
 }
 
 .prose h1,
@@ -225,22 +226,28 @@ nav a,
 	margin-top: 1.5rem;
 	margin-bottom: 0.75rem;
 	font-weight: 600;
+	color: var(--color-text);
 }
 
 .prose p {
 	margin-bottom: 1rem;
+	color: var(--color-text-secondary);
 }
 
 .prose a {
-	color: #3b82f6;
+	color: var(--color-charcoal);
+	text-decoration: underline;
+	text-decoration-color: var(--color-border);
+	transition: text-decoration-color 0.2s;
 }
 
 .prose a:hover {
-	text-decoration: underline;
+	text-decoration-color: var(--color-charcoal);
 }
 
 .prose strong {
 	font-weight: 600;
+	color: var(--color-text);
 }
 
 .prose ul,

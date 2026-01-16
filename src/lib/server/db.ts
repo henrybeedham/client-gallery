@@ -106,6 +106,13 @@ try {
 	// Column already exists, ignore error
 }
 
+// Migration: Add show_on_galleries column if it doesn't exist
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN show_on_galleries INTEGER DEFAULT 1`);
+} catch {
+	// Column already exists, ignore error
+}
+
 // Migration: Add EXIF metadata columns to photos table
 try {
 	db.exec(`ALTER TABLE photos ADD COLUMN camera_make TEXT`);
@@ -153,6 +160,7 @@ export interface Album {
 	is_public: number;
 	show_on_home: number;
 	featured_on_home: number;
+	show_on_galleries: number;
 	password: string | null;
 	sort_order: 'newest' | 'oldest' | 'random';
 	layout_style: 'grid' | 'masonry';
@@ -238,6 +246,38 @@ export function getFeaturedAlbum(): Album | undefined {
 		.get() as Album | undefined;
 }
 
+export function getAlbumsForShowOnHome(): Album[] {
+	return db
+		.prepare(
+			`
+    SELECT 
+      a.*,
+      (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+    FROM albums a
+    WHERE a.is_public = 1 AND a.show_on_home = 1 AND a.featured_on_home = 0
+    ORDER BY a.created_at DESC
+  `
+		)
+		.all() as Album[];
+}
+
+export function getAlbumsForGalleries(): Album[] {
+	return db
+		.prepare(
+			`
+    SELECT 
+      a.*,
+      (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+    FROM albums a
+    WHERE a.is_public = 1 AND a.show_on_galleries = 1
+    ORDER BY a.created_at DESC
+  `
+		)
+		.all() as Album[];
+}
+
 export function getAlbumBySlug(slug: string): Album | undefined {
 	return db
 		.prepare(
@@ -277,6 +317,7 @@ export function createAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	featuredOnHome: boolean,
+	showOnGalleries: boolean,
 	password: string | null,
 	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
@@ -291,7 +332,7 @@ export function createAlbum(
 
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, featured_on_home, password, sort_order, layout_style, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, featured_on_home, show_on_galleries, password, sort_order, layout_style, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
 		.run(
 			title,
@@ -300,6 +341,7 @@ export function createAlbum(
 			isPublic ? 1 : 0,
 			showOnHome ? 1 : 0,
 			featuredOnHome ? 1 : 0,
+			showOnGalleries ? 1 : 0,
 			password || null,
 			sortOrder,
 			layoutStyle,
@@ -318,6 +360,7 @@ export function updateAlbum(
 	isPublic: boolean,
 	showOnHome: boolean,
 	featuredOnHome: boolean,
+	showOnGalleries: boolean,
 	password: string | null,
 	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
@@ -339,6 +382,7 @@ export function updateAlbum(
       is_public = ?,
       show_on_home = ?,
       featured_on_home = ?,
+      show_on_galleries = ?,
       password = ?,
       sort_order = ?,
       layout_style = ?,
@@ -355,6 +399,7 @@ export function updateAlbum(
 		isPublic ? 1 : 0,
 		showOnHome ? 1 : 0,
 		featuredOnHome ? 1 : 0,
+		showOnGalleries ? 1 : 0,
 		password || null,
 		sortOrder,
 		layoutStyle,

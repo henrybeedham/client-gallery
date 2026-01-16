@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Image, Lock } from 'lucide-svelte';
+	import { renderMarkdown } from '$lib/utils';
 
 	let { data } = $props();
 </script>
@@ -87,11 +88,11 @@
 						>
 							{data.featuredAlbum.title}
 						</h2>
-						<div class="w-24 h-0.5 bg-[var(--color-charcoal)] mb-4"></div>
+						<div class="w-24 h-0.5 bg-[var(--color-charcoal)] mb-6"></div>
 						{#if data.featuredAlbum.description}
-							<p class="text-lg text-[var(--color-text-secondary)] max-w-3xl">
-								{data.featuredAlbum.description}
-							</p>
+							<div class="prose max-w-3xl">
+								{@html renderMarkdown(data.featuredAlbum.description)}
+							</div>
 						{/if}
 					</div>
 
@@ -138,11 +139,55 @@
 				<div class="w-24 h-0.5 bg-[var(--color-charcoal)]"></div>
 			</div>
 
-			<div class="text-center py-16">
-				<p class="text-lg md:text-xl text-[var(--color-text-secondary)] mb-8 max-w-2xl mx-auto">
-					Discover the complete collection of galleries, each showcasing unique stories and
-					perspectives.
-				</p>
+			{#if data.showOnHomeAlbums && data.showOnHomeAlbums.length > 0}
+				<!-- Show on Home Albums Grid -->
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16">
+					{#each data.showOnHomeAlbums as album, index}
+						<a
+							href="/album/{album.slug}"
+							class="group block animate-fade-in"
+							style="animation-delay: {index * 0.1}s;"
+						>
+							<div class="relative overflow-hidden bg-[var(--color-bg-secondary)] mb-4">
+								{#if album.cover_filename}
+									<img
+										src="/api/photos/{album.slug}/{album.cover_filename}/medium"
+										alt={album.title}
+										loading="lazy"
+										class="w-full aspect-[4/3] object-cover transition-all duration-700 group-hover:scale-105 group-hover:brightness-95"
+									/>
+								{:else}
+									<div
+										class="w-full aspect-[4/3] flex items-center justify-center bg-[var(--color-bg-tertiary)]"
+									>
+										<Image size={64} strokeWidth={1} class="text-[var(--color-accent)]" />
+									</div>
+								{/if}
+								{#if album.password}
+									<div class="absolute top-4 right-4">
+										<Lock size={18} class="text-white drop-shadow-lg" strokeWidth={1.5} />
+									</div>
+								{/if}
+							</div>
+							<div>
+								<h3
+									class="text-2xl md:text-3xl font-bold text-[var(--color-charcoal)] mb-2 transition-colors group-hover:text-[var(--color-text-secondary)]"
+									style="font-family: 'Playfair Display', serif;"
+								>
+									{album.title}
+								</h3>
+								{#if album.photo_count}
+									<p class="nav-text text-[var(--color-text-muted)]">
+										{album.photo_count} {album.photo_count === 1 ? 'Image' : 'Images'}
+									</p>
+								{/if}
+							</div>
+						</a>
+					{/each}
+				</div>
+			{/if}
+
+			<div class="text-center py-8">
 				<a
 					href="/galleries"
 					class="btn btn-primary inline-flex items-center gap-2 hover:scale-105 transition-transform"
