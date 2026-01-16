@@ -5,70 +5,138 @@
 </script>
 
 <svelte:head>
-	<title>Gallery - Photography Portfolio</title>
+	<title>Photography Portfolio</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
-<div class="min-h-screen flex flex-col">
+<div class="min-h-screen flex flex-col bg-[var(--color-cream)]">
+	<!-- Navigation -->
 	<header
-		class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50 animate-fade-in"
+		class="sticky top-0 bg-[var(--color-cream)]/95 backdrop-blur-sm border-b border-[var(--color-border)] z-50 animate-fade-in"
 	>
 		<div class="container">
-			<div class="flex items-center justify-between py-4">
-				<a href="/" class="text-xl font-bold tracking-tight">Gallery</a>
-				<nav>
-					<a href="/admin" class="text-sm text-gray-400 hover:text-white transition-colors">Admin</a
+			<div class="flex items-center justify-between py-6 md:py-8">
+				<a href="/" class="text-xl md:text-2xl font-bold tracking-tight serif-heading">
+					<span class="font-playfair">Gallery</span>
+				</a>
+				<nav class="flex items-center gap-8 md:gap-12">
+					<a
+						href="/#work"
+						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
+						>Work</a
+					>
+					<a
+						href="/#about"
+						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
+						>About</a
+					>
+					<a
+						href="/admin"
+						class="nav-text text-[var(--color-text-muted)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
+						>Admin</a
 					>
 				</nav>
 			</div>
 		</div>
 	</header>
 
-	<main class="flex-1 py-8">
+	<!-- Hero Section -->
+	<section class="py-20 md:py-32 lg:py-40 animate-fade-in">
 		<div class="container">
-			<h1 class="text-3xl font-bold mb-8 animate-fade-in">Albums</h1>
+			<div class="max-w-4xl">
+				<h1
+					class="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 md:mb-8 text-[var(--color-charcoal)] leading-[1.1]"
+					style="font-family: 'Playfair Display', serif;"
+				>
+					Capturing Moments,<br />Creating Memories
+				</h1>
+				<p
+					class="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl leading-relaxed mb-10"
+				>
+					A curated collection of photography work showcasing the art of visual storytelling through
+					light, composition, and emotion.
+				</p>
+				<a
+					href="/#work"
+					class="btn btn-primary inline-flex items-center gap-2 hover:scale-105 transition-transform"
+				>
+					View Work
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- Work Section -->
+	<main class="flex-1 pb-20 md:pb-32" id="work">
+		<div class="container">
+			<div class="mb-16 md:mb-24">
+				<h2
+					class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-4"
+					style="font-family: 'Playfair Display', serif;"
+				>
+					Selected Work
+				</h2>
+				<div class="w-24 h-0.5 bg-[var(--color-charcoal)]"></div>
+			</div>
 
 			{#if data.albums.length === 0}
-				<div class="empty-state animate-scale-in">
-					<Image size={48} strokeWidth={1.5} />
-					<h3>No albums yet</h3>
-					<p>Check back soon for new photos!</p>
+				<div class="text-center py-32 animate-scale-in">
+					<Image size={64} strokeWidth={1} class="mx-auto mb-6 text-[var(--color-accent)]" />
+					<h3
+						class="text-2xl font-bold mb-3 text-[var(--color-charcoal)]"
+						style="font-family: 'Playfair Display', serif;"
+					>
+						Portfolio Coming Soon
+					</h3>
+					<p class="text-[var(--color-text-secondary)]">New collections will be added shortly.</p>
 				</div>
 			{:else}
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-					{#each data.albums as album}
+				<!-- Masonry Grid -->
+				<div class="columns-1 md:columns-2 lg:columns-3 gap-8 md:gap-12 space-y-8 md:space-y-12">
+					{#each data.albums as album, index}
 						<a
 							href="/album/{album.slug}"
-							class="group block bg-[var(--color-bg-secondary)] border border-[var(--color-border)] overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-gray-600"
+							class="group block break-inside-avoid mb-8 md:mb-12 animate-fade-in"
+							style="animation-delay: {index * 0.1}s;"
 						>
-							<div class="relative aspect-[4/3] bg-[var(--color-bg-tertiary)] overflow-hidden">
+							<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
 								{#if album.cover_filename}
 									<img
-										src="/api/photos/{album.slug}/{album.cover_filename}/thumbnail"
+										src="/api/photos/{album.slug}/{album.cover_filename}/medium"
 										alt={album.title}
 										loading="lazy"
-										class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+										class="w-full h-auto transition-all duration-700 group-hover:scale-105 group-hover:brightness-95"
 									/>
 								{:else}
-									<div class="w-full h-full flex items-center justify-center text-gray-600">
-										<Image size={48} strokeWidth={1.5} />
+									<div
+										class="w-full aspect-[4/5] flex items-center justify-center bg-[var(--color-bg-tertiary)]"
+									>
+										<Image size={64} strokeWidth={1} class="text-[var(--color-accent)]" />
 									</div>
 								{/if}
-								<div
-									class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4"
-								>
-									<span class="text-white text-sm font-medium">{album.photo_count || 0} photos</span
-									>
-								</div>
 								{#if album.password}
-									<div class="absolute top-3 right-3">
-										<Lock size={16} class="text-white drop-shadow-lg" />
+									<div class="absolute top-4 right-4">
+										<Lock size={18} class="text-white drop-shadow-lg" strokeWidth={1.5} />
 									</div>
 								{/if}
 							</div>
-							<div class="p-4">
-								<h3 class="font-semibold text-lg transition-colors group-hover:text-blue-400">
+							<div class="pt-6">
+								<h3
+									class="text-2xl md:text-3xl font-bold text-[var(--color-charcoal)] mb-2 transition-colors group-hover:text-[var(--color-text-secondary)]"
+									style="font-family: 'Playfair Display', serif;"
+								>
 									{album.title}
 								</h3>
+								{#if album.photo_count}
+									<p class="nav-text text-[var(--color-text-muted)]">
+										{album.photo_count} {album.photo_count === 1 ? 'Image' : 'Images'}
+									</p>
+								{/if}
 							</div>
 						</a>
 					{/each}
@@ -76,4 +144,43 @@
 			{/if}
 		</div>
 	</main>
+
+	<!-- About Section -->
+	<section class="py-20 md:py-32 bg-[var(--color-bg-secondary)]" id="about">
+		<div class="container">
+			<div class="max-w-3xl mx-auto text-center">
+				<h2
+					class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-8"
+					style="font-family: 'Playfair Display', serif;"
+				>
+					About
+				</h2>
+				<p class="text-lg md:text-xl text-[var(--color-text-secondary)] leading-relaxed mb-8">
+					This gallery showcases a carefully curated selection of photographic work, each collection
+					telling its own unique story through composition, light, and moment.
+				</p>
+				<p class="text-base text-[var(--color-text-muted)] leading-relaxed">
+					For inquiries about prints, commissioned work, or collaboration opportunities, please reach
+					out through the contact information provided.
+				</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- Footer -->
+	<footer class="py-12 border-t border-[var(--color-border)] bg-[var(--color-cream)]">
+		<div class="container">
+			<div class="text-center">
+				<p class="nav-text text-[var(--color-text-muted)]">
+					© {new Date().getFullYear()} Gallery. All rights reserved.
+				</p>
+			</div>
+		</div>
+	</footer>
 </div>
+
+<style>
+	.serif-heading {
+		font-family: 'Playfair Display', serif;
+	}
+</style>
