@@ -10,6 +10,8 @@ const UPLOAD_DIR = env.UPLOAD_DIR || './uploads';
 const IMPORT_DIR = env.IMPORT_DIR || './import';
 const THUMBNAIL_SIZE = 800;
 const MEDIUM_SIZE = 1600;
+const JPEG_QUALITY = 85; // Good balance between quality and file size
+const WEBP_QUALITY = 80; // WebP can maintain quality at lower settings
 
 // Ensure base upload directory exists
 if (!existsSync(UPLOAD_DIR)) {
@@ -44,17 +46,30 @@ function ensureAlbumDirs(albumSlug: string): void {
 
 /**
  * Generate thumbnail with cover fit for consistent grid layout
+ * Creates both JPEG and WebP versions for optimal browser support
  */
 async function generateThumbnail(
 	image: sharp.Sharp,
 	albumSlug: string,
 	filename: string
 ): Promise<void> {
-	const thumbnailPath = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', filename);
+	const baseFilename = filename.replace(/\.[^.]+$/, '');
+	const thumbnailPathJpeg = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', `${baseFilename}.jpg`);
+	const thumbnailPathWebP = path.join(UPLOAD_DIR, albumSlug, 'thumbnail', `${baseFilename}.webp`);
+
+	// Generate JPEG thumbnail with progressive encoding and optimized quality
 	await image
 		.clone()
 		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
-		.toFile(thumbnailPath);
+		.jpeg({ quality: JPEG_QUALITY, progressive: true, mozjpeg: true })
+		.toFile(thumbnailPathJpeg);
+
+	// Generate WebP thumbnail for better compression (smaller file size)
+	await image
+		.clone()
+		.resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
+		.webp({ quality: WEBP_QUALITY })
+		.toFile(thumbnailPathWebP);
 }
 
 export interface ExifMetadata {
@@ -197,16 +212,28 @@ export async function processAndSaveImage(
 	// Extract comprehensive EXIF metadata from the original buffer
 	const exifMetadata = await extractExifMetadata(buffer);
 
-	// Save original
+	// Save original (keep as original format and quality)
 	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);
 	await fs.writeFile(originalPath, buffer);
 
-	// Generate medium size (for lightbox - preserve aspect ratio)
-	const mediumPath = path.join(UPLOAD_DIR, albumSlug, 'medium', filename);
+	// Generate medium size with both JPEG and WebP
+	const baseFilename = filename.replace(/\.[^.]+$/, '');
+	const mediumPathJpeg = path.join(UPLOAD_DIR, albumSlug, 'medium', `${baseFilename}.jpg`);
+	const mediumPathWebP = path.join(UPLOAD_DIR, albumSlug, 'medium', `${baseFilename}.webp`);
+
+	// Generate progressive JPEG for faster loading
 	await image
 		.clone()
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
-		.toFile(mediumPath);
+		.jpeg({ quality: JPEG_QUALITY, progressive: true, mozjpeg: true })
+		.toFile(mediumPathJpeg);
+
+	// Generate WebP for better compression
+	await image
+		.clone()
+		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
+		.webp({ quality: WEBP_QUALITY })
+		.toFile(mediumPathWebP);
 
 	// Generate thumbnail using shared helper function
 	await generateThumbnail(image, albumSlug, filename);
@@ -225,13 +252,33 @@ export async function processAndSaveImage(
 
 export async function deleteImageFiles(filename: string, albumSlug: string): Promise<void> {
 	const sizes = ['original', 'medium', 'thumbnail'];
+	const baseFilename = filename.replace(/\.[^.]+$/, '');
 
 	for (const size of sizes) {
-		const filePath = path.join(UPLOAD_DIR, albumSlug, size, filename);
-		try {
-			await fs.unlink(filePath);
-		} catch {
-			// File may not exist, ignore error
+		if (size === 'original') {
+			// Delete original file with its original extension
+			const filePath = path.join(UPLOAD_DIR, albumSlug, size, filename);
+			try {
+				await fs.unlink(filePath);
+			} catch {
+				// File may not exist, ignore error
+			}
+		} else {
+			// Delete both JPEG and WebP versions for medium and thumbnail
+			const jpegPath = path.join(UPLOAD_DIR, albumSlug, size, `${baseFilename}.jpg`);
+			const webpPath = path.join(UPLOAD_DIR, albumSlug, size, `${baseFilename}.webp`);
+
+			try {
+				await fs.unlink(jpegPath);
+			} catch {
+				// File may not exist, ignore error
+			}
+
+			try {
+				await fs.unlink(webpPath);
+			} catch {
+				// File may not exist, ignore error
+			}
 		}
 	}
 }
@@ -305,12 +352,24 @@ export async function regenerateImageFromOriginal(
 	// Extract comprehensive EXIF metadata from buffer
 	const exifMetadata = await extractExifMetadata(buffer);
 
-	// Regenerate medium size (for lightbox - preserve aspect ratio)
-	const mediumPath = path.join(UPLOAD_DIR, albumSlug, 'medium', filename);
+	// Regenerate medium size with both JPEG and WebP
+	const baseFilename = filename.replace(/\.[^.]+$/, '');
+	const mediumPathJpeg = path.join(UPLOAD_DIR, albumSlug, 'medium', `${baseFilename}.jpg`);
+	const mediumPathWebP = path.join(UPLOAD_DIR, albumSlug, 'medium', `${baseFilename}.webp`);
+
+	// Generate progressive JPEG for faster loading
 	await image
 		.clone()
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
-		.toFile(mediumPath);
+		.jpeg({ quality: JPEG_QUALITY, progressive: true, mozjpeg: true })
+		.toFile(mediumPathJpeg);
+
+	// Generate WebP for better compression
+	await image
+		.clone()
+		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
+		.webp({ quality: WEBP_QUALITY })
+		.toFile(mediumPathWebP);
 
 	// Regenerate thumbnail using shared helper function
 	await generateThumbnail(image, albumSlug, filename);
@@ -427,16 +486,28 @@ export async function processImageFromImportFolder(
 	// Extract comprehensive EXIF metadata from buffer
 	const exifMetadata = await extractExifMetadata(buffer);
 
-	// Save original
+	// Save original (keep as original format and quality)
 	const originalPath = path.join(UPLOAD_DIR, albumSlug, 'original', filename);
 	await fs.writeFile(originalPath, buffer);
 
-	// Generate medium size (for lightbox - preserve aspect ratio)
-	const mediumPath = path.join(UPLOAD_DIR, albumSlug, 'medium', filename);
+	// Generate medium size with both JPEG and WebP
+	const baseFilename = filename.replace(/\.[^.]+$/, '');
+	const mediumPathJpeg = path.join(UPLOAD_DIR, albumSlug, 'medium', `${baseFilename}.jpg`);
+	const mediumPathWebP = path.join(UPLOAD_DIR, albumSlug, 'medium', `${baseFilename}.webp`);
+
+	// Generate progressive JPEG for faster loading
 	await image
 		.clone()
 		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
-		.toFile(mediumPath);
+		.jpeg({ quality: JPEG_QUALITY, progressive: true, mozjpeg: true })
+		.toFile(mediumPathJpeg);
+
+	// Generate WebP for better compression
+	await image
+		.clone()
+		.resize(MEDIUM_SIZE, MEDIUM_SIZE, { fit: 'inside', withoutEnlargement: true })
+		.webp({ quality: WEBP_QUALITY })
+		.toFile(mediumPathWebP);
 
 	// Generate thumbnail using shared helper function
 	await generateThumbnail(image, albumSlug, filename);
