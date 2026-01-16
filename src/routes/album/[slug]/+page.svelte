@@ -16,8 +16,11 @@
 		Loader2,
 		ArrowLeft
 	} from 'lucide-svelte';
+	import Navigation from '$lib/components/Navigation.svelte';
+	import Footer from '$lib/components/Footer.svelte';
 
 	let { data, form } = $props();
+	let scrollY = $state(0);
 
 	let selectedPhotos: Set<number> = $state(new Set());
 	let isSelecting = $state(false);
@@ -566,7 +569,7 @@
 	let safeColor = $derived(sanitizeColor(data.album.primary_color || '#3b82f6'));
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} bind:scrollY />
 
 <svelte:head>
 	<title>{data.album.title} - Gallery</title>
@@ -673,6 +676,9 @@
 	</div>
 {:else}
 	<div class="min-h-screen flex flex-col relative">
+		<!-- Navigation -->
+		<Navigation siteTitle={data.settings.siteTitle} {scrollY} />
+
 		<!-- Background image if set -->
 		{#if data.album.background_filename}
 			<div
@@ -979,17 +985,7 @@
 		</main>
 
 		<!-- Footer -->
-		<footer
-			class="py-8 border-t border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-xl relative z-10"
-		>
-			<div class="container">
-				<div class="text-center">
-					<p class="nav-text text-[var(--color-text-muted)]">
-						{data.settings.copyrightText}
-					</p>
-				</div>
-			</div>
-		</footer>
+		<Footer copyrightText={data.settings.copyrightText} />
 	</div>
 {/if}
 

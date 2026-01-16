@@ -3,10 +3,11 @@
 	import { renderMarkdown } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
+	import Navigation from '$lib/components/Navigation.svelte';
+	import Footer from '$lib/components/Footer.svelte';
 
 	let { data } = $props();
 	let scrollY = $state(0);
-	let isAtTop = $derived(scrollY < 50);
 
 	// Timing constants for scroll restoration
 	const SCROLL_RESTORE_IMAGE_DELAY = 300; // Wait for images to load
@@ -162,37 +163,7 @@
 
 <div class="min-h-screen flex flex-col bg-[var(--color-cream)]">
 	<!-- Navigation -->
-	<header
-		class="fixed w-full top-0 z-50 transition-all duration-300 animate-fade-in
-  {isAtTop
-			? 'bg-transparent border-transparent'
-			: 'bg-[var(--color-cream)]/50 backdrop-blur-sm border-b border-[var(--color-border)]'}"
-	>
-		<div class="container">
-			<div class="flex items-center justify-between py-6 md:py-8">
-				<a href="/" class="text-xl md:text-2xl font-bold tracking-tight serif-heading">
-					{data.settings.siteTitle}
-				</a>
-				<nav class="flex items-center gap-8 md:gap-12">
-					<a
-						href="/#work"
-						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-						>Work</a
-					>
-					<a
-						href="/galleries"
-						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-						>Galleries</a
-					>
-					<a
-						href="/#about"
-						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-						>About</a
-					>
-				</nav>
-			</div>
-		</div>
-	</header>
+	<Navigation siteTitle={data.settings.siteTitle} {scrollY} />
 
 	<!-- Hero Section -->
 	<section
@@ -438,24 +409,5 @@
 	</section>
 
 	<!-- Footer -->
-	<footer class="py-12 border-t border-[var(--color-border)] bg-[var(--color-cream)]">
-		<div class="container">
-			<div class="flex items-center justify-between flex-wrap gap-4">
-				<p class="nav-text text-[var(--color-text-muted)]">
-					{data.settings.copyrightText}
-				</p>
-				<a
-					href="/admin"
-					class="nav-text text-[var(--color-text-muted)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-					>Admin</a
-				>
-			</div>
-		</div>
-	</footer>
+	<Footer copyrightText={data.settings.copyrightText} />
 </div>
-
-<style>
-	.serif-heading {
-		font-family: 'Playfair Display', serif;
-	}
-</style>

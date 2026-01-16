@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { Image, Lock } from 'lucide-svelte';
+	import Navigation from '$lib/components/Navigation.svelte';
+	import Footer from '$lib/components/Footer.svelte';
 
 	let { data } = $props();
+	let scrollY = $state(0);
 </script>
 
 <svelte:head>
@@ -14,36 +17,11 @@
 	/>
 </svelte:head>
 
+<svelte:window bind:scrollY />
+
 <div class="min-h-screen flex flex-col bg-[var(--color-cream)]">
 	<!-- Navigation -->
-	<header
-		class="sticky top-0 bg-[var(--color-cream)]/95 backdrop-blur-sm border-b border-[var(--color-border)] z-50"
-	>
-		<div class="container">
-			<div class="flex items-center justify-between py-6 md:py-8">
-				<a href="/" class="text-xl md:text-2xl font-bold tracking-tight serif-heading">
-					{data.settings.siteTitle}
-				</a>
-				<nav class="flex items-center gap-8 md:gap-12">
-					<a
-						href="/"
-						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-						>Home</a
-					>
-					<a
-						href="/galleries"
-						class="nav-text text-[var(--color-charcoal)] transition-colors duration-300"
-						>Galleries</a
-					>
-					<a
-						href="/#about"
-						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-						>About</a
-					>
-				</nav>
-			</div>
-		</div>
-	</header>
+	<Navigation siteTitle={data.settings.siteTitle} {scrollY} />
 
 	<!-- Galleries Section -->
 	<main class="flex-1 py-20 md:py-32">
@@ -123,19 +101,5 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="py-12 border-t border-[var(--color-border)] bg-[var(--color-cream)]">
-		<div class="container">
-			<div class="text-center">
-				<p class="nav-text text-[var(--color-text-muted)]">
-					{data.settings.copyrightText}
-				</p>
-			</div>
-		</div>
-	</footer>
+	<Footer copyrightText={data.settings.copyrightText} />
 </div>
-
-<style>
-	.serif-heading {
-		font-family: 'Playfair Display', serif;
-	}
-</style>

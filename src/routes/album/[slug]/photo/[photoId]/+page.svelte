@@ -4,8 +4,11 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { ArrowLeft, ChevronLeft, ChevronRight, Download, Camera, Aperture } from 'lucide-svelte';
+	import Navigation from '$lib/components/Navigation.svelte';
+	import Footer from '$lib/components/Footer.svelte';
 
 	let { data } = $props();
+	let scrollY = $state(0);
 
 	let touchStartX = 0;
 	let touchStartY = 0;
@@ -53,15 +56,19 @@
 		// Check if we came from homepage based on referrer or sessionStorage
 		const referrer = document.referrer;
 		let fromHome = false;
-		
+
 		// Safely access sessionStorage
 		try {
 			fromHome = typeof window !== 'undefined' && sessionStorage.getItem('fromHomepage') === 'true';
 		} catch (e) {
 			// SessionStorage not available
 		}
-		
-		if (fromHome || (referrer && (referrer.includes('/#work') || (referrer.endsWith('/') && !referrer.includes('/album/'))))) {
+
+		if (
+			fromHome ||
+			(referrer &&
+				(referrer.includes('/#work') || (referrer.endsWith('/') && !referrer.includes('/album/'))))
+		) {
 			try {
 				if (typeof window !== 'undefined') {
 					sessionStorage.removeItem('fromHomepage');
@@ -149,7 +156,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} bind:scrollY />
 
 <svelte:head>
 	<title
@@ -208,8 +215,13 @@
 	ontouchstart={handleTouchStart}
 	ontouchend={handleTouchEnd}
 >
+	<!-- Navigation -->
+	<Navigation siteTitle={data.settings.siteTitle} {scrollY} />
+
 	<!-- Header -->
-	<header class="sticky top-0 bg-[var(--color-cream)]/95 backdrop-blur-sm border-b border-[var(--color-border)] z-50">
+	<header
+		class="sticky top-0 bg-[var(--color-cream)]/95 backdrop-blur-sm border-b border-[var(--color-border)] z-50"
+	>
 		<div class="container">
 			<div class="flex items-center justify-between py-4 gap-4">
 				<div class="flex items-center gap-4">
@@ -229,9 +241,7 @@
 	</header>
 
 	<!-- Main content -->
-	<main
-		class="flex-1 flex flex-col lg:flex-row relative animate-fade-in"
-	>
+	<main class="flex-1 flex flex-col lg:flex-row relative animate-fade-in">
 		<!-- Image section -->
 		<div class="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white">
 			<div
@@ -276,9 +286,16 @@
 			<div class="p-8 space-y-6">
 				<!-- Title -->
 				<div>
-					<h1 class="text-2xl font-bold mb-2 text-[var(--color-charcoal)]" style="font-family: 'Playfair Display', serif;">{data.album.title}</h1>
+					<h1
+						class="text-2xl font-bold mb-2 text-[var(--color-charcoal)]"
+						style="font-family: 'Playfair Display', serif;"
+					>
+						{data.album.title}
+					</h1>
 					{#if data.photo.date_taken}
-						<p class="text-sm text-[var(--color-text-secondary)]">{formatDateTime(data.photo.date_taken)}</p>
+						<p class="text-sm text-[var(--color-text-secondary)]">
+							{formatDateTime(data.photo.date_taken)}
+						</p>
 					{/if}
 				</div>
 
@@ -298,13 +315,15 @@
 				<!-- EXIF metadata -->
 				{#if data.photo.camera_make || data.photo.camera_model || data.photo.lens_model || data.photo.focal_length || data.photo.aperture || data.photo.shutter_speed || data.photo.iso}
 					<div class="border-t border-[var(--color-border)] pt-6">
-						<h2 class="nav-text text-[var(--color-text-muted)] mb-4">
-							Camera & Settings
-						</h2>
+						<h2 class="nav-text text-[var(--color-text-muted)] mb-4">Camera & Settings</h2>
 						<dl class="space-y-3">
 							{#if data.photo.camera_model}
 								<div class="flex items-start gap-3">
-									<Camera size={16} class="text-[var(--color-accent)] mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+									<Camera
+										size={16}
+										class="text-[var(--color-accent)] mt-0.5 flex-shrink-0"
+										strokeWidth={1.5}
+									/>
 									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
 										{data.photo.camera_model}
 									</dd>
@@ -312,8 +331,14 @@
 							{/if}
 							{#if data.photo.lens_model}
 								<div class="flex items-start gap-3">
-									<Aperture size={16} class="text-[var(--color-accent)] mt-0.5 flex-shrink-0" strokeWidth={1.5} />
-									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">{data.photo.lens_model}</dd>
+									<Aperture
+										size={16}
+										class="text-[var(--color-accent)] mt-0.5 flex-shrink-0"
+										strokeWidth={1.5}
+									/>
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
+										{data.photo.lens_model}
+									</dd>
 								</div>
 							{/if}
 							{#if data.photo.focal_length}
@@ -332,12 +357,16 @@
 							{/if}
 							{#if data.photo.shutter_speed}
 								<div>
-									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">{data.photo.shutter_speed}</dd>
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
+										{data.photo.shutter_speed}
+									</dd>
 								</div>
 							{/if}
 							{#if data.photo.iso}
 								<div>
-									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">ISO {data.photo.iso}</dd>
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
+										ISO {data.photo.iso}
+									</dd>
 								</div>
 							{/if}
 						</dl>
@@ -346,9 +375,7 @@
 
 				<!-- File info -->
 				<div class="border-t border-[var(--color-border)] pt-6">
-					<h2 class="nav-text text-[var(--color-text-muted)] mb-4">
-						File Information
-					</h2>
+					<h2 class="nav-text text-[var(--color-text-muted)] mb-4">File Information</h2>
 					<dl class="space-y-3">
 						<div>
 							<dt class="text-xs text-[var(--color-text-muted)] mb-1">Dimensions</dt>
@@ -369,4 +396,7 @@
 			</div>
 		</aside>
 	</main>
+
+	<!-- Footer -->
+	<Footer copyrightText={data.settings.copyrightText} />
 </div>
