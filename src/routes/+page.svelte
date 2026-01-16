@@ -24,13 +24,16 @@
 
 		if (scrollToPhotoId) {
 			const photoId = parseInt(scrollToPhotoId);
-			if (!isNaN(photoId)) {
+			// Validate photo ID is a positive number
+			if (!isNaN(photoId) && photoId > 0) {
 				tick()
 					.then(() => {
 						// Give images and masonry layout time to calculate
 						setTimeout(() => {
-							// Find the photo element
-							const photoLink = document.querySelector(`a[data-photo-id="${photoId}"]`);
+							// Find the photo element with validated ID
+							const photoLink = document.querySelector(
+								`a[data-photo-id="${photoId}"]`
+							) as HTMLElement;
 							if (photoLink) {
 								photoLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
 								// Clean up after scrolling
@@ -47,6 +50,9 @@
 						console.error('Failed to restore scroll position:', error);
 						sessionStorage.removeItem('homeScrollToPhoto');
 					});
+			} else {
+				// Clear invalid photo ID from storage
+				sessionStorage.removeItem('homeScrollToPhoto');
 			}
 		}
 
@@ -62,7 +68,13 @@
 			{ threshold: 0.1, rootMargin: '0px 0px 100px 0px' }
 		);
 
-		document.querySelectorAll('.scroll-fade-in').forEach((el) => {
+		const elements = document.querySelectorAll('.scroll-fade-in');
+		elements.forEach((el) => {
+			// Immediately add visible class to elements already in viewport
+			const rect = el.getBoundingClientRect();
+			if (rect.top < window.innerHeight && rect.bottom > 0) {
+				el.classList.add('visible');
+			}
 			observer.observe(el);
 		});
 
