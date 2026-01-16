@@ -152,6 +152,7 @@ export interface Album {
 	background_photo_id: number | null;
 	is_public: number;
 	show_on_home: number;
+	featured_on_home: number;
 	password: string | null;
 	sort_order: 'newest' | 'oldest' | 'random';
 	layout_style: 'grid' | 'masonry';
@@ -275,6 +276,7 @@ export function createAlbum(
 	description: string | null,
 	isPublic: boolean,
 	showOnHome: boolean,
+	featuredOnHome: boolean,
 	password: string | null,
 	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
@@ -282,9 +284,14 @@ export function createAlbum(
 	primaryColor: string = '#3b82f6',
 	layoutStyle: 'grid' | 'masonry' = 'grid'
 ): number {
+	// If setting this album as featured, unflag all other albums first
+	if (featuredOnHome) {
+		db.prepare('UPDATE albums SET featured_on_home = 0').run();
+	}
+
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, sort_order, layout_style, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, featured_on_home, password, sort_order, layout_style, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
 		.run(
 			title,
@@ -292,6 +299,7 @@ export function createAlbum(
 			description,
 			isPublic ? 1 : 0,
 			showOnHome ? 1 : 0,
+			featuredOnHome ? 1 : 0,
 			password || null,
 			sortOrder,
 			layoutStyle,
