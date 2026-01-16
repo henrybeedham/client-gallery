@@ -3,7 +3,6 @@
 	import { renderMarkdown } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
-	import { page } from '$app/stores';
 
 	let { data } = $props();
 
@@ -15,32 +14,31 @@
 	function saveScrollPosition(photoId: number) {
 		if (browser) {
 			sessionStorage.setItem('fromHomepage', 'true');
-			sessionStorage.setItem('homeScrollPosition', window.scrollY.toString());
-			sessionStorage.setItem('homeScrollToPhoto', photoId.toString());
+			sessionStorage.setItem('scrollPosition', window.scrollY.toString());
 		}
 	}
 
 	// Restore scroll position when returning from photo detail
 	onMount(() => {
-		const scrollPosition = sessionStorage.getItem('homeScrollPosition');
-		const scrollToPhoto = sessionStorage.getItem('homeScrollToPhoto');
-		
-		if (scrollPosition && scrollToPhoto) {
+		const scrollPosition = sessionStorage.getItem('scrollPosition');
+
+		if (scrollPosition) {
 			const position = parseInt(scrollPosition);
 			if (!isNaN(position)) {
-				tick().then(() => {
-					// Give images time to load, then scroll
-					setTimeout(() => {
-						window.scrollTo({ top: position, behavior: 'smooth' });
-						// Clean up after scrolling
+				tick()
+					.then(() => {
+						// Give images time to load, then scroll
 						setTimeout(() => {
-							sessionStorage.removeItem('homeScrollPosition');
-							sessionStorage.removeItem('homeScrollToPhoto');
-						}, SCROLL_RESTORE_CLEANUP_DELAY);
-					}, SCROLL_RESTORE_IMAGE_DELAY);
-				}).catch(error => {
-					console.error('Failed to restore scroll position:', error);
-				});
+							window.scrollTo({ top: position, behavior: 'smooth' });
+							// Clean up after scrolling
+							setTimeout(() => {
+								sessionStorage.removeItem('scrollPosition');
+							}, SCROLL_RESTORE_CLEANUP_DELAY);
+						}, SCROLL_RESTORE_IMAGE_DELAY);
+					})
+					.catch((error) => {
+						console.error('Failed to restore scroll position:', error);
+					});
 			}
 		}
 
@@ -71,7 +69,8 @@
 	const MASONRY_GAP = 8;
 
 	function calculateMasonryLayout() {
-		if (!masonryContainer || !data.featuredAlbum || data.featuredAlbum.layout_style !== 'masonry') return;
+		if (!masonryContainer || !data.featuredAlbum || data.featuredAlbum.layout_style !== 'masonry')
+			return;
 		if (columnCount <= 0 || data.featuredPhotos.length === 0) return;
 
 		const containerWidth = masonryContainer.offsetWidth;
@@ -84,7 +83,10 @@
 			const columnIndex = columnHeights.indexOf(minHeight);
 			const left = columnIndex * (columnWidth + MASONRY_GAP);
 			const top = columnHeights[columnIndex];
-			const aspectRatio = photo.width && photo.height && photo.width > 0 && photo.height > 0 ? photo.width / photo.height : 1;
+			const aspectRatio =
+				photo.width && photo.height && photo.width > 0 && photo.height > 0
+					? photo.width / photo.height
+					: 1;
 			const itemHeight = columnWidth / aspectRatio;
 
 			positions.push({
@@ -113,7 +115,7 @@
 		if (data.featuredAlbum?.layout_style === 'masonry' && browser) {
 			updateColumnCount();
 			calculateMasonryLayout();
-			
+
 			const handleResize = () => {
 				updateColumnCount();
 				calculateMasonryLayout();
@@ -227,11 +229,7 @@
 					<!-- Featured Album Photos with Layout Respect -->
 					{#if data.featuredAlbum.layout_style === 'masonry'}
 						<!-- Masonry Layout -->
-						<div
-							bind:this={masonryContainer}
-							class="relative"
-							style="height: {masonryHeight}px"
-						>
+						<div bind:this={masonryContainer} class="relative" style="height: {masonryHeight}px">
 							{#each data.featuredPhotos as photo, index}
 								{@const position = masonryPositions[index]}
 								{#if position}

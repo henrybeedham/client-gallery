@@ -171,7 +171,7 @@
 		if (scrollToPhotoId) {
 			const photoId = parseInt(scrollToPhotoId);
 			// Validate that the photo ID exists in the album's photo collection
-			if (!isNaN(photoId) && data.allPhotoIds.includes(photoId)) {
+			if (!isNaN(photoId) && (data.allPhotoIds as number[]).includes(photoId)) {
 				// Function to perform the actual scroll
 				const SCROLL_CLEANUP_DELAY = 1000;
 				const performScroll = () => {
@@ -291,6 +291,7 @@
 
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
+		sessionStorage.setItem('fromHomepage', 'false');
 		if (!isSelecting) {
 			// Show loading state
 			isNavigating = true;
@@ -302,6 +303,7 @@
 			if (data.selectedSort) {
 				url.searchParams.set('sort', data.selectedSort);
 			}
+
 			// Navigate to photo detail page with smooth client-side navigation
 			goto(url.pathname + url.search).catch(() => {
 				// Reset loading state if navigation fails
@@ -828,7 +830,9 @@
 
 				<!-- Sort dropdown -->
 				<div class="flex items-center gap-2 mb-4">
-					<label for="sortSelect" class="text-sm text-[var(--color-text-muted)] nav-text">Sort:</label>
+					<label for="sortSelect" class="text-sm text-[var(--color-text-muted)] nav-text"
+						>Sort:</label
+					>
 					<select
 						id="sortSelect"
 						class="form-select text-sm py-2 px-3 bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text)]"
@@ -969,7 +973,9 @@
 		</main>
 
 		<!-- Footer -->
-		<footer class="py-8 border-t border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-xl relative z-10">
+		<footer
+			class="py-8 border-t border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-xl relative z-10"
+		>
 			<div class="container">
 				<div class="text-center">
 					<p class="nav-text text-[var(--color-text-muted)]">
@@ -1063,7 +1069,9 @@
 
 <!-- Loading overlay when navigating to photo detail -->
 {#if isNavigating}
-	<div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1001] flex items-center justify-center animate-fade-in">
+	<div
+		class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1001] flex items-center justify-center animate-fade-in"
+	>
 		<div class="bg-[var(--color-bg-secondary)] p-6 flex flex-col items-center gap-3">
 			<Loader2 class="animate-spin h-8 w-8 text-[var(--color-charcoal)]" />
 			<span class="text-sm text-[var(--color-text-secondary)]">Loading photo...</span>
