@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { ArrowLeft, ChevronLeft, ChevronRight, Download, Camera, Aperture, Home } from 'lucide-svelte';
+	import { ArrowLeft, ChevronLeft, ChevronRight, Download, Camera, Aperture } from 'lucide-svelte';
 
 	let { data } = $props();
 
@@ -204,13 +204,6 @@
 						<ArrowLeft size={18} strokeWidth={1.5} />
 						<span class="hidden sm:inline">Back</span>
 					</button>
-					<a
-						href="/"
-						class="flex items-center gap-2 text-sm hover:opacity-70 transition-all nav-text text-[var(--color-charcoal)]"
-					>
-						<Home size={18} strokeWidth={1.5} />
-						<span class="hidden sm:inline">Home</span>
-					</a>
 				</div>
 				<div class="nav-text text-[var(--color-text-muted)]">
 					{data.currentIndex + 1} / {data.totalPhotos}

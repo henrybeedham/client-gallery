@@ -179,6 +179,12 @@
 						const rect = photoButton.getBoundingClientRect();
 						if (rect.width > 0 && rect.height > 0) {
 							photoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+							// Remove scrollToPhoto param after scroll completes
+							setTimeout(() => {
+								const url = new URL(window.location.href);
+								url.searchParams.delete('scrollToPhoto');
+								window.history.replaceState({}, '', url.toString());
+							}, 1000);
 							return true;
 						}
 					}

@@ -758,10 +758,11 @@ export function recordAnalyticsEvent(
 			photoId,
 			eventType
 		);
-		// Send data to discord webhook (env variable) - non-blocking
+		// Send data to discord webhook - non-blocking
 		void (async () => {
 			if (eventType !== 'page_view') {
-				const webhookUrl = env.DISCORD_WEBHOOK_URL;
+				const settings = getSettings();
+				const webhookUrl = settings.discordWebhook;
 
 				if (!webhookUrl) return;
 
@@ -886,6 +887,16 @@ export interface Settings {
 	defaultIsPublic: boolean;
 	defaultShowOnHome: boolean;
 	heroImage: string | null;
+	siteTitle: string;
+	copyrightText: string;
+	heroTitle: string;
+	heroDescription: string;
+	aboutTitle: string;
+	aboutText: string;
+	contactEmail: string;
+	contactPhone: string;
+	discordWebhook: string;
+	showContactOnHome: boolean;
 }
 
 export function getSettings(): Settings {
@@ -896,7 +907,19 @@ export function getSettings(): Settings {
 		defaultSortOrder: 'oldest',
 		defaultIsPublic: true,
 		defaultShowOnHome: true,
-		heroImage: null
+		heroImage: null,
+		siteTitle: 'Gallery',
+		copyrightText: 'GALLERY',
+		heroTitle: 'Visual Stories,\nCaptured in Time',
+		heroDescription:
+			'Photography portfolio by Henry Beedham, a student at the University of Exeter exploring the art of visual storytelling through composition, light, and decisive moments.',
+		aboutTitle: 'About',
+		aboutText:
+			'Henry Beedham is a photographer and student at the University of Exeter. Over two years of capturing images, he has developed a passion for telling stories through visual composition, exploring the interplay of light, shadow, and moment.',
+		contactEmail: '',
+		contactPhone: '',
+		discordWebhook: '',
+		showContactOnHome: false
 	};
 
 	try {
@@ -933,6 +956,36 @@ export function getSettings(): Settings {
 				case 'heroImage':
 					settings.heroImage = row.value || null;
 					break;
+				case 'siteTitle':
+					settings.siteTitle = row.value;
+					break;
+				case 'copyrightText':
+					settings.copyrightText = row.value;
+					break;
+				case 'heroTitle':
+					settings.heroTitle = row.value;
+					break;
+				case 'heroDescription':
+					settings.heroDescription = row.value;
+					break;
+				case 'aboutTitle':
+					settings.aboutTitle = row.value;
+					break;
+				case 'aboutText':
+					settings.aboutText = row.value;
+					break;
+				case 'contactEmail':
+					settings.contactEmail = row.value;
+					break;
+				case 'contactPhone':
+					settings.contactPhone = row.value;
+					break;
+				case 'discordWebhook':
+					settings.discordWebhook = row.value;
+					break;
+				case 'showContactOnHome':
+					settings.showContactOnHome = row.value === 'true';
+					break;
 			}
 		}
 
@@ -967,6 +1020,36 @@ export function updateSettings(settings: Partial<Settings>): void {
 		}
 		if (settings.heroImage !== undefined) {
 			stmt.run('heroImage', settings.heroImage || '');
+		}
+		if (settings.siteTitle !== undefined) {
+			stmt.run('siteTitle', settings.siteTitle);
+		}
+		if (settings.copyrightText !== undefined) {
+			stmt.run('copyrightText', settings.copyrightText);
+		}
+		if (settings.heroTitle !== undefined) {
+			stmt.run('heroTitle', settings.heroTitle);
+		}
+		if (settings.heroDescription !== undefined) {
+			stmt.run('heroDescription', settings.heroDescription);
+		}
+		if (settings.aboutTitle !== undefined) {
+			stmt.run('aboutTitle', settings.aboutTitle);
+		}
+		if (settings.aboutText !== undefined) {
+			stmt.run('aboutText', settings.aboutText);
+		}
+		if (settings.contactEmail !== undefined) {
+			stmt.run('contactEmail', settings.contactEmail);
+		}
+		if (settings.contactPhone !== undefined) {
+			stmt.run('contactPhone', settings.contactPhone);
+		}
+		if (settings.discordWebhook !== undefined) {
+			stmt.run('discordWebhook', settings.discordWebhook);
+		}
+		if (settings.showContactOnHome !== undefined) {
+			stmt.run('showContactOnHome', settings.showContactOnHome.toString());
 		}
 	});
 	transaction();

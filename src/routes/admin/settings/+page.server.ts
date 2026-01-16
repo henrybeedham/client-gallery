@@ -25,6 +25,18 @@ export const actions: Actions = {
 			| 'random';
 		const defaultIsPublic = data.get('defaultIsPublic') === 'on';
 		const defaultShowOnHome = data.get('defaultShowOnHome') === 'on';
+		
+		// New homepage content settings
+		const siteTitle = data.get('siteTitle')?.toString() || 'Gallery';
+		const copyrightText = data.get('copyrightText')?.toString() || 'GALLERY';
+		const heroTitle = data.get('heroTitle')?.toString() || 'Visual Stories,\nCaptured in Time';
+		const heroDescription = data.get('heroDescription')?.toString() || '';
+		const aboutTitle = data.get('aboutTitle')?.toString() || 'About';
+		const aboutText = data.get('aboutText')?.toString() || '';
+		const contactEmail = data.get('contactEmail')?.toString() || '';
+		const contactPhone = data.get('contactPhone')?.toString() || '';
+		const discordWebhook = data.get('discordWebhook')?.toString() || '';
+		const showContactOnHome = data.get('showContactOnHome') === 'on';
 
 		try {
 			updateSettings({
@@ -33,7 +45,17 @@ export const actions: Actions = {
 				defaultLayoutStyle,
 				defaultSortOrder,
 				defaultIsPublic,
-				defaultShowOnHome
+				defaultShowOnHome,
+				siteTitle,
+				copyrightText,
+				heroTitle,
+				heroDescription,
+				aboutTitle,
+				aboutText,
+				contactEmail,
+				contactPhone,
+				discordWebhook,
+				showContactOnHome
 			});
 			return { success: true, message: 'Settings updated successfully' };
 		} catch (e) {
@@ -56,6 +78,10 @@ export const actions: Actions = {
 		}
 
 		try {
+			// Get current hero image before updating
+			const currentSettings = getSettings();
+			const oldHeroImage = currentSettings.heroImage;
+			
 			// Create hero directory if it doesn't exist
 			const heroDir = path.resolve('./uploads/hero');
 			if (!fs.existsSync(heroDir)) {
@@ -75,6 +101,18 @@ export const actions: Actions = {
 
 			// Update settings
 			updateSettings({ heroImage: filename });
+			
+			// Delete old hero image if it exists
+			if (oldHeroImage) {
+				const oldFilepath = path.join(heroDir, oldHeroImage);
+				if (fs.existsSync(oldFilepath)) {
+					try {
+						fs.unlinkSync(oldFilepath);
+					} catch (e) {
+						console.error('Failed to delete old hero image:', e);
+					}
+				}
+			}
 
 			return { success: true, message: 'Hero image uploaded successfully' };
 		} catch (e) {

@@ -3,10 +3,10 @@ import {
 	getAlbumBySlug,
 	getPhotosByAlbum,
 	getTagsByAlbum,
-	recordAnalyticsEvent
+	recordAnalyticsEvent,
+	getSettings
 } from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
 import { validateSession } from '$lib/server/auth';
 
 const INITIAL_PHOTOS = 24;
@@ -25,9 +25,10 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		? Math.max(0, new Date(album.expires_at).getTime() - Date.now())
 		: null;
 
-	// Get contact details from environment variables
-	const contactEmail = env.GALLERY_CONTACT_EMAIL || null;
-	const contactPhone = env.GALLERY_CONTACT_PHONE || null;
+	// Get contact details from settings
+	const settings = getSettings();
+	const contactEmail = settings.contactEmail || null;
+	const contactPhone = settings.contactPhone || null;
 
 	// If expired and NOT admin, show expired page
 	if (isExpired && !isAuthenticated) {

@@ -14,13 +14,13 @@ export const load: PageServerLoad = async () => {
 	// Get albums to show in the "Explore More" section (show_on_home = 1, featured_on_home = 0)
 	const showOnHomeAlbums = getAlbumsForShowOnHome();
 
-	// Get settings for hero image
+	// Get all settings for homepage content
 	const settings = getSettings();
 
 	return {
 		featuredAlbum,
 		featuredPhotos,
 		showOnHomeAlbums,
-		heroImage: settings.heroImage
+		settings
 	};
 };

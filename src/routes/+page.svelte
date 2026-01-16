@@ -1,8 +1,29 @@
 <script lang="ts">
 	import { Image, Lock } from 'lucide-svelte';
 	import { renderMarkdown } from '$lib/utils';
+	import { onMount } from 'svelte';
 
 	let { data } = $props();
+	
+	// Intersection Observer for scroll animations
+	onMount(() => {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					if (entry.isIntersecting) {
+						entry.target.classList.add('visible');
+					}
+				});
+			},
+			{ threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+		);
+
+		document.querySelectorAll('.scroll-fade-in').forEach((el) => {
+			observer.observe(el);
+		});
+
+		return () => observer.disconnect();
+	});
 </script>
 
 <svelte:head>
@@ -22,7 +43,9 @@
 	>
 		<div class="container">
 			<div class="flex items-center justify-between py-6 md:py-8">
-				<a href="/" class="text-xl md:text-2xl font-bold tracking-tight serif-heading"> Gallery </a>
+				<a href="/" class="text-xl md:text-2xl font-bold tracking-tight serif-heading">
+					{data.settings.siteTitle}
+				</a>
 				<nav class="flex items-center gap-8 md:gap-12">
 					<a
 						href="/#work"
@@ -39,11 +62,6 @@
 						class="nav-text text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
 						>About</a
 					>
-					<a
-						href="/admin"
-						class="nav-text text-[var(--color-text-muted)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
-						>Admin</a
-					>
 				</nav>
 			</div>
 		</div>
@@ -51,11 +69,15 @@
 
 	<!-- Hero Section -->
 	<section class="relative py-20 md:py-32 lg:py-40 animate-fade-in overflow-hidden">
-		{#if data.heroImage}
+		{#if data.settings.heroImage}
 			<div class="absolute inset-0 z-0">
-				<img src="/api/hero/{data.heroImage}" alt="Hero" class="w-full h-full object-cover" />
+				<img
+					src="/api/hero/{data.settings.heroImage}"
+					alt="Hero"
+					class="w-full h-full object-cover"
+				/>
 				<div
-					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/50 to-[var(--color-cream)]"
+					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/85 via-[var(--color-cream)]/80 to-[var(--color-cream)]"
 				></div>
 			</div>
 		{/if}
@@ -63,15 +85,14 @@
 			<div class="max-w-4xl">
 				<h1
 					class="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 md:mb-8 text-[var(--color-charcoal)] leading-[1.1]"
-					style="font-family: 'Playfair Display', serif;"
+					style="font-family: 'Playfair Display', serif; white-space: pre-line;"
 				>
-					Visual Stories,<br />Captured in Time
+					{data.settings.heroTitle}
 				</h1>
 				<p
 					class="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl leading-relaxed mb-10"
 				>
-					Photography portfolio by Henry Beedham, a student at the University of Exeter exploring
-					the art of visual storytelling through composition, light, and decisive moments.
+					{data.settings.heroDescription}
 				</p>
 				<a
 					href="/#work"
@@ -88,7 +109,7 @@
 		<div class="container">
 			<!-- Featured Album Photos -->
 			{#if data.featuredAlbum && data.featuredPhotos.length > 0}
-				<div class="mb-24 md:mb-32">
+				<div class="mb-24 md:mb-32 scroll-fade-in">
 					<div class="mb-12 md:mb-16">
 						<h2
 							class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-4"
@@ -137,7 +158,7 @@
 				</div>
 			{/if}
 
-			<div class="mb-16 md:mb-24">
+			<div class="mb-16 md:mb-24 scroll-fade-in">
 				<h2
 					class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-4"
 					style="font-family: 'Playfair Display', serif;"
@@ -149,7 +170,7 @@
 
 			{#if data.showOnHomeAlbums && data.showOnHomeAlbums.length > 0}
 				<!-- Show on Home Albums Grid -->
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16">
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16 scroll-fade-in">
 					{#each data.showOnHomeAlbums as album, index}
 						<a
 							href="/album/{album.slug}"
@@ -208,24 +229,32 @@
 	</main>
 
 	<!-- About Section -->
-	<section class="py-20 md:py-32 bg-[var(--color-bg-secondary)]" id="about">
+	<section class="py-20 md:py-32 bg-[var(--color-bg-secondary)] scroll-fade-in" id="about">
 		<div class="container">
 			<div class="max-w-3xl mx-auto text-center">
 				<h2
 					class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-8"
 					style="font-family: 'Playfair Display', serif;"
 				>
-					About
+					{data.settings.aboutTitle}
 				</h2>
-				<p class="text-lg md:text-xl text-[var(--color-text-secondary)] leading-relaxed mb-8">
-					Henry Beedham is a photographer and student at the University of Exeter. Over two years of
-					capturing images, this portfolio showcases work exploring composition, natural light, and
-					the decisive moments that tell compelling visual stories.
+				<p class="text-lg md:text-xl text-[var(--color-text-secondary)] leading-relaxed mb-8" style="white-space: pre-line;">
+					{data.settings.aboutText}
 				</p>
-				<p class="text-base text-[var(--color-text-muted)] leading-relaxed">
-					For inquiries about prints, commissioned work, or collaboration opportunities, please
-					reach out through the contact information provided.
-				</p>
+				{#if data.settings.showContactOnHome && (data.settings.contactEmail || data.settings.contactPhone)}
+					<div class="mt-8 space-y-2">
+						{#if data.settings.contactEmail}
+							<p class="text-base text-[var(--color-text-muted)]">
+								Email: <a href="mailto:{data.settings.contactEmail}" class="underline hover:text-[var(--color-charcoal)] transition-colors">{data.settings.contactEmail}</a>
+							</p>
+						{/if}
+						{#if data.settings.contactPhone}
+							<p class="text-base text-[var(--color-text-muted)]">
+								Phone: <a href="tel:{data.settings.contactPhone}" class="underline hover:text-[var(--color-charcoal)] transition-colors">{data.settings.contactPhone}</a>
+							</p>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</section>
@@ -233,10 +262,15 @@
 	<!-- Footer -->
 	<footer class="py-12 border-t border-[var(--color-border)] bg-[var(--color-cream)]">
 		<div class="container">
-			<div class="text-center">
+			<div class="flex items-center justify-between flex-wrap gap-4">
 				<p class="nav-text text-[var(--color-text-muted)]">
-					© {new Date().getFullYear()} Gallery. All rights reserved.
+					© {new Date().getFullYear()} {data.settings.copyrightText}. All rights reserved.
 				</p>
+				<a
+					href="/admin"
+					class="nav-text text-[var(--color-text-muted)] hover:text-[var(--color-charcoal)] transition-colors duration-300"
+					>Admin</a
+				>
 			</div>
 		</div>
 	</footer>
@@ -245,5 +279,16 @@
 <style>
 	.serif-heading {
 		font-family: 'Playfair Display', serif;
+	}
+	
+	.scroll-fade-in {
+		opacity: 0;
+		transform: translateY(30px);
+		transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	
+	.scroll-fade-in.visible {
+		opacity: 1;
+		transform: translateY(0);
 	}
 </style>

@@ -193,7 +193,196 @@
 
 			<!-- Submit Button -->
 			<div class="flex justify-end pt-4 border-t border-[var(--color-border)]">
-				<button type="submit" class="btn btn-primary"> Save Settings </button>
+				<button type="submit" class="btn btn-primary"> Save Album Defaults </button>
+			</div>
+		</div>
+	</form>
+
+	<!-- Site Branding -->
+	<form method="POST" action="?/updateSettings" use:enhance class="mt-6">
+		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 space-y-6">
+			<h2 class="text-lg font-semibold">Site Branding</h2>
+			<p class="text-sm text-gray-500 -mt-4">
+				Configure the site title and copyright text that appear throughout the application.
+			</p>
+
+			<div>
+				<label for="siteTitle" class="block text-sm font-medium mb-2">
+					Site Title
+				</label>
+				<input
+					type="text"
+					id="siteTitle"
+					name="siteTitle"
+					class="form-input"
+					placeholder="Gallery"
+					value={data.settings.siteTitle}
+				/>
+				<p class="text-xs text-gray-500 mt-1">Appears in navigation and page titles</p>
+			</div>
+
+			<div>
+				<label for="copyrightText" class="block text-sm font-medium mb-2">
+					Copyright Text
+				</label>
+				<input
+					type="text"
+					id="copyrightText"
+					name="copyrightText"
+					class="form-input"
+					placeholder="GALLERY"
+					value={data.settings.copyrightText}
+				/>
+				<p class="text-xs text-gray-500 mt-1">Used in the footer copyright notice</p>
+			</div>
+
+			<div class="flex justify-end pt-4 border-t border-[var(--color-border)]">
+				<button type="submit" class="btn btn-primary"> Save Branding </button>
+			</div>
+		</div>
+	</form>
+
+	<!-- Homepage Content -->
+	<form method="POST" action="?/updateSettings" use:enhance class="mt-6">
+		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 space-y-6">
+			<h2 class="text-lg font-semibold">Homepage Content</h2>
+			<p class="text-sm text-gray-500 -mt-4">
+				Customize the text content on your homepage.
+			</p>
+
+			<div>
+				<label for="heroTitle" class="block text-sm font-medium mb-2">
+					Hero Title
+				</label>
+				<textarea
+					id="heroTitle"
+					name="heroTitle"
+					class="form-textarea"
+					rows="2"
+					placeholder="Visual Stories,&#10;Captured in Time"
+					value={data.settings.heroTitle}
+				></textarea>
+				<p class="text-xs text-gray-500 mt-1">Use \n for line breaks</p>
+			</div>
+
+			<div>
+				<label for="heroDescription" class="block text-sm font-medium mb-2">
+					Hero Description
+				</label>
+				<textarea
+					id="heroDescription"
+					name="heroDescription"
+					class="form-textarea"
+					rows="3"
+					placeholder="Photography portfolio by..."
+					value={data.settings.heroDescription}
+				></textarea>
+			</div>
+
+			<div>
+				<label for="aboutTitle" class="block text-sm font-medium mb-2">
+					About Section Title
+				</label>
+				<input
+					type="text"
+					id="aboutTitle"
+					name="aboutTitle"
+					class="form-input"
+					placeholder="About"
+					value={data.settings.aboutTitle}
+				/>
+			</div>
+
+			<div>
+				<label for="aboutText" class="block text-sm font-medium mb-2">
+					About Section Text
+				</label>
+				<textarea
+					id="aboutText"
+					name="aboutText"
+					class="form-textarea"
+					rows="4"
+					placeholder="Your bio and story..."
+					value={data.settings.aboutText}
+				></textarea>
+			</div>
+
+			<div class="flex justify-end pt-4 border-t border-[var(--color-border)]">
+				<button type="submit" class="btn btn-primary"> Save Homepage Content </button>
+			</div>
+		</div>
+	</form>
+
+	<!-- Contact & Integration Settings -->
+	<form method="POST" action="?/updateSettings" use:enhance class="mt-6">
+		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 space-y-6">
+			<h2 class="text-lg font-semibold">Contact & Integration Settings</h2>
+			<p class="text-sm text-gray-500 -mt-4">
+				Configure contact information and external integrations.
+			</p>
+
+			<div>
+				<label for="contactEmail" class="block text-sm font-medium mb-2">
+					Contact Email
+				</label>
+				<input
+					type="email"
+					id="contactEmail"
+					name="contactEmail"
+					class="form-input"
+					placeholder="contact@example.com"
+					value={data.settings.contactEmail}
+				/>
+				<p class="text-xs text-gray-500 mt-1">Shown on expired gallery pages and optionally on homepage</p>
+			</div>
+
+			<div>
+				<label for="contactPhone" class="block text-sm font-medium mb-2">
+					Contact Phone
+				</label>
+				<input
+					type="tel"
+					id="contactPhone"
+					name="contactPhone"
+					class="form-input"
+					placeholder="+1 234 567 8900"
+					value={data.settings.contactPhone}
+				/>
+				<p class="text-xs text-gray-500 mt-1">Shown on expired gallery pages and optionally on homepage</p>
+			</div>
+
+			<div>
+				<label for="discordWebhook" class="block text-sm font-medium mb-2">
+					Discord Webhook URL
+				</label>
+				<input
+					type="url"
+					id="discordWebhook"
+					name="discordWebhook"
+					class="form-input"
+					placeholder="https://discord.com/api/webhooks/..."
+					value={data.settings.discordWebhook}
+				/>
+				<p class="text-xs text-gray-500 mt-1">Get notifications for photo and album downloads</p>
+			</div>
+
+			<div>
+				<label class="flex items-center gap-3 cursor-pointer">
+					<input
+						type="checkbox"
+						name="showContactOnHome"
+						class="w-4 h-4 border-[var(--color-border)]"
+						checked={data.settings.showContactOnHome}
+					/>
+					<span class="text-sm">
+						<span class="font-medium">Show contact details on homepage</span>
+						<span class="block text-xs text-gray-500">Display email and phone in the About section</span>
+					</span>
+				</label>
+			</div>
+
+			<div class="flex justify-end pt-4 border-t border-[var(--color-border)]">
+				<button type="submit" class="btn btn-primary"> Save Contact Settings </button>
 			</div>
 		</div>
 	</form>
