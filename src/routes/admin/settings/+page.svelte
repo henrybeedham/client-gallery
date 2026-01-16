@@ -1,8 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Upload } from 'lucide-svelte';
 
 	let { data, form } = $props();
 	let colorValue = $state(data.settings.defaultColor);
+	let selectedHeroFile: File | null = $state(null);
+	let heroImagePreview: string | null = $state(null);
+
+	function handleHeroFileSelect(event: Event) {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (file) {
+			selectedHeroFile = file;
+			heroImagePreview = URL.createObjectURL(file);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -11,10 +23,9 @@
 
 <div class="max-w-4xl">
 	<div class="mb-8">
-		<h1 class="text-2xl font-bold mb-2">Default Album Settings</h1>
+		<h1 class="text-2xl font-bold mb-2">Settings</h1>
 		<p class="text-sm text-gray-500">
-			Set default values for new albums. These can be overridden when creating or editing individual
-			albums.
+			Configure default album settings and homepage hero image.
 		</p>
 	</div>
 
@@ -30,8 +41,55 @@
 		</div>
 	{/if}
 
+	<!-- Hero Image Upload Section -->
+	<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 mb-6">
+		<h2 class="text-lg font-semibold mb-4">Homepage Hero Image</h2>
+		<p class="text-sm text-gray-500 mb-4">
+			Upload a background image for the homepage hero section. Recommended size: 2400x1600px.
+		</p>
+
+		{#if data.settings.heroImage || heroImagePreview}
+			<div class="mb-4">
+				<img
+					src={heroImagePreview || `/uploads/hero/${data.settings.heroImage}`}
+					alt="Hero preview"
+					class="w-full max-w-md h-48 object-cover border border-[var(--color-border)]"
+				/>
+			</div>
+		{/if}
+
+		<form method="POST" action="?/uploadHeroImage" enctype="multipart/form-data" use:enhance>
+			<div class="flex gap-4">
+				<label class="flex-1 cursor-pointer">
+					<div
+						class="flex items-center gap-2 px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
+					>
+						<Upload size={18} />
+						<span class="text-sm">{selectedHeroFile ? selectedHeroFile.name : 'Choose Image'}</span>
+					</div>
+					<input
+						type="file"
+						name="heroImage"
+						accept="image/*"
+						class="hidden"
+						onchange={handleHeroFileSelect}
+					/>
+				</label>
+				{#if selectedHeroFile}
+					<button type="submit" class="btn btn-primary"> Upload Hero Image </button>
+				{/if}
+			</div>
+		</form>
+	</div>
+
+	<!-- Default Album Settings -->
 	<form method="POST" action="?/updateSettings" use:enhance>
 		<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 space-y-6">
+			<h2 class="text-lg font-semibold">Default Album Settings</h2>
+			<p class="text-sm text-gray-500 -mt-4">
+				Set default values for new albums. These can be overridden when creating or editing
+				individual albums.
+			</p>
 			<!-- Default Description -->
 			<div>
 				<label for="defaultDescription" class="block text-sm font-medium mb-2">

@@ -878,6 +878,7 @@ export interface Settings {
 	defaultSortOrder: 'newest' | 'oldest' | 'random';
 	defaultIsPublic: boolean;
 	defaultShowOnHome: boolean;
+	heroImage: string | null;
 }
 
 export function getSettings(): Settings {
@@ -887,7 +888,8 @@ export function getSettings(): Settings {
 		defaultLayoutStyle: 'grid',
 		defaultSortOrder: 'oldest',
 		defaultIsPublic: true,
-		defaultShowOnHome: true
+		defaultShowOnHome: true,
+		heroImage: null
 	};
 
 	try {
@@ -921,6 +923,9 @@ export function getSettings(): Settings {
 				case 'defaultShowOnHome':
 					settings.defaultShowOnHome = row.value === 'true';
 					break;
+				case 'heroImage':
+					settings.heroImage = row.value || null;
+					break;
 			}
 		}
 
@@ -952,6 +957,9 @@ export function updateSettings(settings: Partial<Settings>): void {
 		}
 		if (settings.defaultShowOnHome !== undefined) {
 			stmt.run('defaultShowOnHome', settings.defaultShowOnHome.toString());
+		}
+		if (settings.heroImage !== undefined) {
+			stmt.run('heroImage', settings.heroImage || '');
 		}
 	});
 	transaction();

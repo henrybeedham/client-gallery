@@ -50,8 +50,18 @@
 	</header>
 
 	<!-- Hero Section -->
-	<section class="py-20 md:py-32 lg:py-40 animate-fade-in">
-		<div class="container">
+	<section class="relative py-20 md:py-32 lg:py-40 animate-fade-in overflow-hidden">
+		{#if data.heroImage}
+			<div class="absolute inset-0 z-0">
+				<img
+					src="/uploads/hero/{data.heroImage}"
+					alt="Hero"
+					class="w-full h-full object-cover"
+				/>
+				<div class="absolute inset-0 bg-[var(--color-cream)]/80"></div>
+			</div>
+		{/if}
+		<div class="container relative z-10">
 			<div class="max-w-4xl">
 				<h1
 					class="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 md:mb-8 text-[var(--color-charcoal)] leading-[1.1]"
