@@ -77,7 +77,7 @@
 					class="w-full h-full object-cover"
 				/>
 				<div
-					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/85 via-[var(--color-cream)]/80 to-[var(--color-cream)]"
+					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/60 via-[var(--color-cream)]/70 to-[var(--color-cream)]"
 				></div>
 			</div>
 		{/if}
@@ -134,6 +134,7 @@
 								href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
 								class="group block break-inside-avoid mb-6 md:mb-8 animate-fade-in"
 								style="animation-delay: {index * 0.05}s;"
+								onclick={() => sessionStorage.setItem('fromHomepage', 'true')}
 							>
 								<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
 									<img
@@ -264,7 +265,7 @@
 		<div class="container">
 			<div class="flex items-center justify-between flex-wrap gap-4">
 				<p class="nav-text text-[var(--color-text-muted)]">
-					© {new Date().getFullYear()} {data.settings.copyrightText}. All rights reserved.
+					{data.settings.copyrightText}
 				</p>
 				<a
 					href="/admin"
@@ -279,16 +280,5 @@
 <style>
 	.serif-heading {
 		font-family: 'Playfair Display', serif;
-	}
-	
-	.scroll-fade-in {
-		opacity: 0;
-		transform: translateY(30px);
-		transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-	}
-	
-	.scroll-fade-in.visible {
-		opacity: 1;
-		transform: translateY(0);
 	}
 </style>

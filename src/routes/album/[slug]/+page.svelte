@@ -27,6 +27,7 @@
 	let passwordInput = $state('');
 	let lastSelectedIndex: number | null = $state(null);
 	let downloadAbortController: AbortController | null = null;
+	let isNavigating = $state(false);
 
 	// Lazy loading state - use $derived to reset when data changes (e.g., tag filter changes)
 	let displayedPhotos = $state([...data.photos]);
@@ -291,6 +292,8 @@
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
 		if (!isSelecting) {
+			// Show loading state
+			isNavigating = true;
 			// Build URL with query parameters to preserve filter state
 			const url = new URL(`/album/${data.album.slug}/photo/${photoId}`, window.location.origin);
 			if (data.selectedTag) {
@@ -822,10 +825,10 @@
 
 				<!-- Sort dropdown -->
 				<div class="flex items-center gap-2 mb-4">
-					<label for="sortSelect" class="text-sm text-gray-400">Sort:</label>
+					<label for="sortSelect" class="text-sm text-[var(--color-text-muted)] nav-text">Sort:</label>
 					<select
 						id="sortSelect"
-						class="form-select text-sm py-1 px-2 bg-[var(--color-bg-secondary)] border-[var(--color-border)]"
+						class="form-select text-sm py-2 px-3 bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text)]"
 						onchange={(e) => {
 							const target = e.target as HTMLSelectElement;
 							const url = new URL(window.location.href);
@@ -961,6 +964,17 @@
 				{/if}
 			</div>
 		</main>
+
+		<!-- Footer -->
+		<footer class="py-8 border-t border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-xl relative z-10">
+			<div class="container">
+				<div class="text-center">
+					<p class="nav-text text-[var(--color-text-muted)]">
+						{data.settings.copyrightText}
+					</p>
+				</div>
+			</div>
+		</footer>
 	</div>
 {/if}
 
@@ -1040,6 +1054,16 @@
 			>
 				Download Photo
 			</a>
+		</div>
+	</div>
+{/if}
+
+<!-- Loading overlay when navigating to photo detail -->
+{#if isNavigating}
+	<div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1001] flex items-center justify-center animate-fade-in">
+		<div class="bg-[var(--color-bg-secondary)] p-6 flex flex-col items-center gap-3">
+			<Loader2 class="animate-spin h-8 w-8 text-[var(--color-charcoal)]" />
+			<span class="text-sm text-[var(--color-text-secondary)]">Loading photo...</span>
 		</div>
 	</div>
 {/if}

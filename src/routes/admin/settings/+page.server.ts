@@ -37,6 +37,7 @@ export const actions: Actions = {
 		const contactPhone = data.get('contactPhone')?.toString() || '';
 		const discordWebhook = data.get('discordWebhook')?.toString() || '';
 		const showContactOnHome = data.get('showContactOnHome') === 'on';
+		const theme = (data.get('theme')?.toString() || 'light') as 'light' | 'dark';
 
 		try {
 			updateSettings({
@@ -55,7 +56,8 @@ export const actions: Actions = {
 				contactEmail,
 				contactPhone,
 				discordWebhook,
-				showContactOnHome
+				showContactOnHome,
+				theme
 			});
 			return { success: true, message: 'Settings updated successfully' };
 		} catch (e) {

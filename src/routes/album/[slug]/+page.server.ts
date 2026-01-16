@@ -46,7 +46,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			contactPhone,
 			allPhotoIds: [],
 			hasMore: false,
-			totalCount: 0
+			totalCount: 0,
+			settings
 		};
 	}
 
@@ -67,7 +68,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				contactPhone,
 				allPhotoIds: [],
 				hasMore: false,
-				totalCount: 0
+				totalCount: 0,
+				settings
 			};
 		}
 	}
@@ -112,7 +114,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		contactPhone,
 		allPhotoIds,
 		hasMore,
-		totalCount
+		totalCount,
+		settings
 	};
 };
 

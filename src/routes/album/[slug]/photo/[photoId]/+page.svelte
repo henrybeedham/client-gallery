@@ -50,9 +50,12 @@
 	}
 
 	function backToAlbum() {
-		// Check if we came from homepage based on referrer
+		// Check if we came from homepage based on referrer or sessionStorage
 		const referrer = document.referrer;
-		if (referrer && (referrer.includes('/#work') || referrer.endsWith('/'))) {
+		const fromHome = sessionStorage.getItem('fromHomepage');
+		
+		if (fromHome === 'true' || (referrer && (referrer.includes('/#work') || referrer.endsWith('/') && !referrer.includes('/album/')))) {
+			sessionStorage.removeItem('fromHomepage');
 			goto('/');
 		} else {
 			goto(buildAlbumUrl(data.photo.id));

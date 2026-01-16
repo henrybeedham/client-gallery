@@ -897,6 +897,7 @@ export interface Settings {
 	contactPhone: string;
 	discordWebhook: string;
 	showContactOnHome: boolean;
+	theme: 'light' | 'dark';
 }
 
 export function getSettings(): Settings {
@@ -919,7 +920,8 @@ export function getSettings(): Settings {
 		contactEmail: '',
 		contactPhone: '',
 		discordWebhook: '',
-		showContactOnHome: false
+		showContactOnHome: false,
+		theme: 'light'
 	};
 
 	try {
@@ -986,6 +988,9 @@ export function getSettings(): Settings {
 				case 'showContactOnHome':
 					settings.showContactOnHome = row.value === 'true';
 					break;
+				case 'theme':
+					settings.theme = (row.value === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
+					break;
 			}
 		}
 
@@ -1050,6 +1055,9 @@ export function updateSettings(settings: Partial<Settings>): void {
 		}
 		if (settings.showContactOnHome !== undefined) {
 			stmt.run('showContactOnHome', settings.showContactOnHome.toString());
+		}
+		if (settings.theme !== undefined) {
+			stmt.run('theme', settings.theme);
 		}
 	});
 	transaction();

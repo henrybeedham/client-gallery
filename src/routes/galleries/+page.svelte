@@ -130,7 +130,7 @@
 		<div class="container">
 			<div class="text-center">
 				<p class="nav-text text-[var(--color-text-muted)]">
-					© {new Date().getFullYear()} Gallery. All rights reserved.
+					{data.settings.copyrightText}
 				</p>
 			</div>
 		</div>
