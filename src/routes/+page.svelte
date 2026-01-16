@@ -67,13 +67,12 @@
 					class="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 md:mb-8 text-[var(--color-charcoal)] leading-[1.1]"
 					style="font-family: 'Playfair Display', serif;"
 				>
-					Capturing Moments,<br />Creating Memories
+					Visual Stories,<br />Captured in Time
 				</h1>
 				<p
 					class="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl leading-relaxed mb-10"
 				>
-					A curated collection of photography work showcasing the art of visual storytelling through
-					light, composition, and emotion.
+					Photography portfolio by Henry Beedham, a student at the University of Exeter exploring the art of visual storytelling through composition, light, and decisive moments.
 				</p>
 				<a
 					href="/#work"
@@ -219,8 +218,7 @@
 					About
 				</h2>
 				<p class="text-lg md:text-xl text-[var(--color-text-secondary)] leading-relaxed mb-8">
-					This gallery showcases a carefully curated selection of photographic work, each collection
-					telling its own unique story through composition, light, and moment.
+					Henry Beedham is a photographer and student at the University of Exeter. Over two years of capturing images, this portfolio showcases work exploring composition, natural light, and the decisive moments that tell compelling visual stories.
 				</p>
 				<p class="text-base text-[var(--color-text-muted)] leading-relaxed">
 					For inquiries about prints, commissioned work, or collaboration opportunities, please

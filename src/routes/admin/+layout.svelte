@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, Menu, LayoutGrid, Plus, Settings, LogOut } from 'lucide-svelte';
+	import { X, Menu, LayoutGrid, Plus, Settings, LogOut, Home } from 'lucide-svelte';
 
 	let { data, children } = $props();
 	let mobileMenuOpen = $state(false);
@@ -49,6 +49,14 @@
 				>
 			</div>
 			<nav class="flex-1 p-3 flex flex-col gap-1">
+				<a
+					href="/"
+					class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
+					onclick={closeMobileMenu}
+				>
+					<Home size={18} />
+					Home
+				</a>
 				<a
 					href="/admin"
 					class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"

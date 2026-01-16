@@ -667,8 +667,15 @@
 		>
 			<div class="container">
 				<div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
-					<div class="min-w-0">
+					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-3 flex-wrap">
+							<a
+								href="/"
+								class="flex items-center gap-2 text-sm hover:opacity-70 transition-all text-gray-400"
+								title="Home"
+							>
+								<ArrowLeft size={18} strokeWidth={1.5} />
+							</a>
 							<h1 class="text-lg font-semibold">{data.album.title}</h1>
 							{#if data.album.album_date}
 								<span

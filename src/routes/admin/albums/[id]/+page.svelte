@@ -700,7 +700,7 @@
 						<!-- Advanced Settings Toggle -->
 						<button
 							type="button"
-							class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+							class="flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors"
 							onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
 						>
 							<ChevronRight
