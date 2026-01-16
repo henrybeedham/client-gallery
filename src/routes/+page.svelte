@@ -5,6 +5,8 @@
 	import { browser } from '$app/environment';
 
 	let { data } = $props();
+	let scrollY = $state(0);
+	let isAtTop = $derived(scrollY < 50);
 
 	// Timing constants for scroll restoration
 	const SCROLL_RESTORE_IMAGE_DELAY = 300; // Wait for images to load
@@ -136,10 +138,15 @@
 	/>
 </svelte:head>
 
+<svelte:window bind:scrollY />
+
 <div class="min-h-screen flex flex-col bg-[var(--color-cream)]">
 	<!-- Navigation -->
 	<header
-		class="sticky top-0 bg-[var(--color-cream)]/95 backdrop-blur-sm border-b border-[var(--color-border)] z-50 animate-fade-in"
+		class="fixed w-full top-0 z-50 transition-all duration-300 animate-fade-in
+  {isAtTop
+			? 'bg-transparent border-transparent'
+			: 'bg-[var(--color-cream)]/50 backdrop-blur-sm border-b border-[var(--color-border)]'}"
 	>
 		<div class="container">
 			<div class="flex items-center justify-between py-6 md:py-8">
@@ -168,7 +175,9 @@
 	</header>
 
 	<!-- Hero Section -->
-	<section class="relative py-20 md:py-32 lg:py-40 animate-fade-in overflow-hidden">
+	<section
+		class="relative pb-20 md:pb-32 lg:pb-40 pt-40 md:pt-64 lg:pt-64 animate-fade-in overflow-hidden"
+	>
 		{#if data.settings.heroImage}
 			<div class="absolute inset-0 z-0">
 				<img
@@ -176,7 +185,7 @@
 					alt="Hero"
 					class="w-full h-full object-cover"
 				/>
-				<!-- Improved overlay: less opacity for better image visibility -->
+
 				<div
 					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/50 via-[var(--color-cream)]/65 to-[var(--color-cream)]"
 				></div>
