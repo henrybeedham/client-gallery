@@ -26,6 +26,8 @@
 	let description = $state(data.album.description || '');
 	let isPublic = $state(data.album.is_public === 1);
 	let showOnHome = $state(data.album.show_on_home === 1);
+	let featuredOnHome = $state(data.album.featured_on_home === 1);
+	let showOnGalleries = $state(data.album.show_on_galleries === 1);
 	let password = $state(data.album.password || '');
 	let sortOrder = $state(data.album.sort_order || 'oldest');
 	let layoutStyle = $state(data.album.layout_style || 'grid');
@@ -271,7 +273,7 @@
 	<div class="flex items-start gap-3 mb-8">
 		<a
 			href="/admin"
-			class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors mt-1"
+			class="p-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors mt-1"
 			aria-label="Back to dashboard"
 		>
 			<ChevronLeft size={20} />
@@ -297,22 +299,20 @@
 	</div>
 
 	{#if form?.error}
-		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
+		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 text-sm mb-6">
 			{form.error}
 		</div>
 	{/if}
 
 	{#if form?.message}
-		<div
-			class="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-lg text-sm mb-6"
-		>
+		<div class="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 text-sm mb-6">
 			{form.message}
 		</div>
 	{/if}
 
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
 		<div
-			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 order-2 lg:order-1"
+			class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 order-2 lg:order-1"
 		>
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
 				<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -323,7 +323,7 @@
 						>
 						<select
 							id="photoSortSelect"
-							class="form-select text-sm py-1 px-2 bg-[var(--color-bg-tertiary)] border-[var(--color-border)] rounded"
+							class="form-select text-sm py-1 px-2 bg-[var(--color-bg-tertiary)] border-[var(--color-border)]"
 							bind:value={photoSortOrder}
 						>
 							<option value="oldest">Oldest first</option>
@@ -375,7 +375,7 @@
 							<span class="text-blue-400">{uploadProgress}%</span>
 						{/if}
 					</div>
-					<div class="h-2 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
+					<div class="h-2 bg-[var(--color-bg-tertiary)] overflow-hidden">
 						<div
 							class="h-full bg-blue-500 transition-all duration-300 ease-out"
 							style="width: {uploadProgress}%"
@@ -397,7 +397,7 @@
 				<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
 					{#each sortedPhotos as photo, index}
 						<div
-							class="group relative rounded-lg overflow-hidden bg-[var(--color-bg-tertiary)] cursor-pointer transition-all {photo.id ===
+							class="group relative overflow-hidden bg-[var(--color-bg-tertiary)] cursor-pointer transition-all {photo.id ===
 							data.album.cover_photo_id
 								? 'ring-2 ring-yellow-500'
 								: ''} {photo.id === data.album.background_photo_id
@@ -435,14 +435,14 @@
 											<input type="hidden" name="photoId" value={photo.id} />
 											<button
 												type="submit"
-												class="p-1.5 rounded bg-black/50 text-white hover:bg-yellow-500"
+												class="p-1.5 bg-black/50 text-white hover:bg-yellow-500"
 												title="Set as cover"
 											>
 												<Star size={14} />
 											</button>
 										</form>
 									{:else}
-										<span class="p-1.5 rounded bg-yellow-500 text-white" title="Cover photo">
+										<span class="p-1.5 bg-yellow-500 text-white" title="Cover photo">
 											<Star size={14} fill="currentColor" />
 										</span>
 									{/if}
@@ -461,7 +461,7 @@
 											<input type="hidden" name="photoId" value={photo.id} />
 											<button
 												type="submit"
-												class="p-1.5 rounded bg-black/50 text-white hover:bg-purple-500"
+												class="p-1.5 bg-black/50 text-white hover:bg-purple-500"
 												title="Set as background"
 											>
 												<Image size={14} />
@@ -480,7 +480,7 @@
 										>
 											<button
 												type="submit"
-												class="p-1.5 rounded bg-purple-500 text-white"
+												class="p-1.5 bg-purple-500 text-white"
 												title="Background photo (click to clear)"
 											>
 												<Image size={14} />
@@ -501,14 +501,14 @@
 											<input type="hidden" name="photoId" value={photo.id} />
 											<button
 												type="submit"
-												class="p-1.5 rounded bg-red-500 text-white"
+												class="p-1.5 bg-red-500 text-white"
 												title="Confirm delete"
 											>
 												<Check size={14} />
 											</button>
 										</form>
 										<button
-											class="p-1.5 rounded bg-black/50 text-white hover:bg-black/70"
+											class="p-1.5 bg-black/50 text-white hover:bg-black/70"
 											onclick={(e) => {
 												e.stopPropagation();
 												deleteConfirm = null;
@@ -519,7 +519,7 @@
 										</button>
 									{:else}
 										<button
-											class="p-1.5 rounded bg-black/50 text-white hover:bg-red-500"
+											class="p-1.5 bg-black/50 text-white hover:bg-red-500"
 											onclick={(e) => {
 												e.stopPropagation();
 												deleteConfirm = photo.id;
@@ -532,13 +532,13 @@
 								</div>
 							</div>
 							<div class="p-2 text-xs">
-								<p class="truncate text-gray-300" title={photo.original_filename}>
+								<p class="truncate text-gray-500" title={photo.original_filename}>
 									{photo.original_filename}
 								</p>
 								<div class="flex items-center gap-2 text-gray-500">
 									<span>{formatFileSize(photo.file_size || 0)}</span>
 									{#if getPhotoDownloads(photo.id) > 0}
-										<span class="text-green-400" title="Downloads"
+										<span class="text-green-600" title="Downloads"
 											>↓{getPhotoDownloads(photo.id)}</span
 										>
 									{/if}
@@ -548,7 +548,7 @@
 										{#each getPhotoTags(photo.id) as tagId}
 											{#each data.tags.filter((t) => t.id === tagId) as tag}
 												<span
-													class="inline-block bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full ml-1 mt-1"
+													class="inline-block bg-blue-500 text-white text-xs px-2 py-0.5 ml-1 mt-1"
 													title={tag.name}
 												>
 													{tag.name}
@@ -566,9 +566,7 @@
 
 		<div class="space-y-6 order-1 lg:order-2">
 			<!-- Analytics display -->
-			<div
-				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
-			>
+			<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6">
 				<h2 class="text-lg font-semibold mb-4">Analytics</h2>
 				<div class="grid grid-cols-3 gap-4">
 					<div class="text-center">
@@ -586,9 +584,7 @@
 				</div>
 			</div>
 
-			<div
-				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 top-6"
-			>
+			<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 top-6">
 				<h2 class="text-lg font-semibold mb-4">Settings</h2>
 				<form
 					method="POST"
@@ -693,6 +689,8 @@
 						{#if !showAdvancedSettings}
 							<input type="hidden" name="isPublic" value={isPublic ? 'on' : ''} />
 							<input type="hidden" name="showOnHome" value={showOnHome ? 'on' : ''} />
+							<input type="hidden" name="featuredOnHome" value={featuredOnHome ? 'on' : ''} />
+							<input type="hidden" name="showOnGalleries" value={showOnGalleries ? 'on' : ''} />
 							<input type="hidden" name="password" value={password} />
 							<input type="hidden" name="expiresAt" value={expiresAt} />
 							<input type="hidden" name="primaryColor" value={primaryColor} />
@@ -702,7 +700,7 @@
 						<!-- Advanced Settings Toggle -->
 						<button
 							type="button"
-							class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+							class="flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-charcoal)] transition-colors"
 							onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
 						>
 							<ChevronRight
@@ -732,7 +730,27 @@
 											bind:checked={showOnHome}
 											class="w-4 h-4 accent-blue-500"
 										/>
-										<span class="text-sm">Show on homepage</span>
+										<span class="text-sm">Show on homepage (in Explore More section)</span>
+									</label>
+
+									<label class="flex items-center gap-2 cursor-pointer">
+										<input
+											type="checkbox"
+											name="featuredOnHome"
+											bind:checked={featuredOnHome}
+											class="w-4 h-4 accent-blue-500"
+										/>
+										<span class="text-sm">Featured on homepage (displays all photos)</span>
+									</label>
+
+									<label class="flex items-center gap-2 cursor-pointer">
+										<input
+											type="checkbox"
+											name="showOnGalleries"
+											bind:checked={showOnGalleries}
+											class="w-4 h-4 accent-blue-500"
+										/>
+										<span class="text-sm">Show on galleries page</span>
 									</label>
 								</div>
 
@@ -778,7 +796,7 @@
 											id="primaryColor"
 											name="primaryColor"
 											bind:value={primaryColor}
-											class="w-10 h-10 rounded cursor-pointer border-0"
+											class="w-10 h-10 cursor-pointer border-0"
 										/>
 										<input
 											type="text"
@@ -799,7 +817,7 @@
 			</div>
 
 			<div
-				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6 top-[calc(1.5rem+600px)]"
+				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6 top-[calc(1.5rem+600px)]"
 				style="max-height: calc(100vh - 3rem); overflow-y: auto;"
 			>
 				<h2 class="text-lg font-semibold mb-4">Photo Tags</h2>
@@ -814,7 +832,7 @@
 								<input type="hidden" name="tagId" value={tag.id} />
 								<button
 									type="submit"
-									class="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-bg-tertiary)] rounded-full text-sm hover:bg-red-500/20 group transition-colors"
+									class="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-bg-tertiary)] text-sm hover:bg-red-500/20 group transition-colors"
 								>
 									{tag.name}
 									<X size={14} />
@@ -832,9 +850,7 @@
 									<button
 										type="button"
 										onclick={() => togglePhotoTag(selectedPhoto!, tag.id)}
-										class="px-3 py-1 rounded-full text-sm transition-colors {isTagAppliedToAllSelected(
-											tag.id
-										)
+										class="px-3 py-1 text-sm transition-colors {isTagAppliedToAllSelected(tag.id)
 											? 'bg-blue-500 text-white'
 											: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
 									>
@@ -855,9 +871,7 @@
 				{/if}
 			</div>
 			<!-- Maintenance section -->
-			<div
-				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
-			>
+			<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6">
 				<h2 class="text-lg font-semibold mb-4">Maintenance</h2>
 				<div class="space-y-4">
 					<div>
@@ -915,9 +929,7 @@
 				</div>
 			</div>
 			<!-- Import from Folder section -->
-			<div
-				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
-			>
+			<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6">
 				<h2 class="text-lg font-semibold mb-4">Import from Folder</h2>
 				<p class="text-sm text-gray-400 mb-4">
 					Import photos from the server's import folder (/opt/client-gallery/import). Files will be
@@ -953,9 +965,7 @@
 			</div>
 
 			<!-- Clear analytics folder -->
-			<div
-				class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6"
-			>
+			<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6">
 				<h2 class="text-lg font-semibold mb-4">Clear Analytics</h2>
 				<form
 					method="POST"

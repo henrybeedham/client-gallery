@@ -81,6 +81,8 @@ export const actions: Actions = {
 		const description = data.get('description')?.toString() || '';
 		const isPublic = data.get('isPublic') === 'on';
 		const showOnHome = data.get('showOnHome') === 'on';
+		const featuredOnHome = data.get('featuredOnHome') === 'on';
+		const showOnGalleries = data.get('showOnGalleries') === 'on';
 		const password = data.get('password')?.toString() || '';
 		const sortOrder = (data.get('sortOrder')?.toString() || 'oldest') as
 			| 'newest'
@@ -129,6 +131,8 @@ export const actions: Actions = {
 				description.trim() || null,
 				isPublic,
 				showOnHome,
+				featuredOnHome,
+				showOnGalleries,
 				password || null,
 				sortOrder,
 				albumDate || null,

@@ -1,22 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { ArrowLeft, ChevronLeft, ChevronRight, Download, Camera, Aperture } from 'lucide-svelte';
 
 	let { data } = $props();
-
-	// Sanitize color to prevent XSS
-	function sanitizeColor(color: string): string {
-		const hexPattern = /^#[0-9A-Fa-f]{3,8}$/;
-		const colorNames = /^(red|blue|green|yellow|orange|purple|pink|cyan|white|black|gray|grey)$/i;
-		if (hexPattern.test(color) || colorNames.test(color)) {
-			return color;
-		}
-		return '#3b82f6';
-	}
-
-	let safeColor = $derived(sanitizeColor(data.album.primary_color || '#3b82f6'));
 
 	let touchStartX = 0;
 	let touchStartY = 0;
@@ -61,8 +50,29 @@
 	}
 
 	function backToAlbum() {
-		// Navigate to album with scroll to current photo
-		goto(buildAlbumUrl(data.photo.id));
+		// Check if we came from homepage based on referrer or sessionStorage
+		const referrer = document.referrer;
+		let fromHome = false;
+		
+		// Safely access sessionStorage
+		try {
+			fromHome = typeof window !== 'undefined' && sessionStorage.getItem('fromHomepage') === 'true';
+		} catch (e) {
+			// SessionStorage not available
+		}
+		
+		if (fromHome || (referrer && (referrer.includes('/#work') || (referrer.endsWith('/') && !referrer.includes('/album/'))))) {
+			try {
+				if (typeof window !== 'undefined') {
+					sessionStorage.removeItem('fromHomepage');
+				}
+			} catch (e) {
+				// SessionStorage not available
+			}
+			goto('/');
+		} else {
+			goto(buildAlbumUrl(data.photo.id));
+		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -185,39 +195,33 @@
 			: ''}"
 	/>
 	<meta name="twitter:image" content="/api/photos/{data.album.slug}/{data.photo.filename}/medium" />
-
-	<!-- Custom color scheme -->
-	{@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
 <div
-	class="min-h-screen flex flex-col bg-[var(--color-bg)] relative"
+	class="min-h-screen flex flex-col bg-[var(--color-cream)] relative"
 	ontouchstart={handleTouchStart}
 	ontouchend={handleTouchEnd}
 >
-	<!-- Blurred background image -->
-	<div
-		class="fixed inset-0 z-0"
-		style="background-image: url('/api/photos/{data.album.slug}/{data.photo.filename}/medium'); 
-background-size: cover; 
-background-position: center;
-filter: blur(40px);
-transform: scale(1.1);"
-	></div>
-	<div class="fixed inset-0 z-0 bg-black/60"></div>
-
 	<!-- Header -->
-	<header class="sticky top-0 bg-black/40 backdrop-blur-xl border-b border-white/10 z-50 h-[50px]">
+	<header class="sticky top-0 bg-[var(--color-cream)]/95 backdrop-blur-sm border-b border-[var(--color-border)] z-50">
 		<div class="container">
-			<div class="flex items-center justify-between py-4">
-				<button
-					onclick={backToAlbum}
-					class="flex items-center gap-2 text-sm hover:opacity-70 transition-opacity text-white"
-				>
-					<ArrowLeft size={20} />
-					<span>Back to {data.album.title}</span>
-				</button>
-				<div class="text-sm text-gray-300">
+			<div class="flex items-center justify-between py-4 gap-4">
+				<div class="flex items-center gap-4">
+					<button
+						onclick={backToAlbum}
+						class="flex items-center gap-2 text-sm hover:opacity-70 transition-all nav-text text-[var(--color-charcoal)]"
+					>
+						<ArrowLeft size={18} strokeWidth={1.5} />
+						<span class="hidden sm:inline">Back</span>
+					</button>
+				</div>
+				<div class="nav-text text-[var(--color-text-muted)]">
 					{data.currentIndex + 1} / {data.totalPhotos}
 				</div>
 			</div>
@@ -226,39 +230,39 @@ transform: scale(1.1);"
 
 	<!-- Main content -->
 	<main
-		class="flex-1 flex flex-col lg:flex-row relative z-10 lg:max-h-[calc(100vh-50px)] overflow-hidden"
+		class="flex-1 flex flex-col lg:flex-row relative animate-fade-in"
 	>
 		<!-- Image section -->
-		<div class="flex-1 flex items-center justify-center p-4 lg:p-8 overflow-hidden">
+		<div class="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white">
 			<div
-				class="relative w-full h-full flex items-center justify-center lg:max-h-[70vh] lg:max-h-full"
+				class="relative w-full h-full flex items-center justify-center"
 				in:fade={{ duration: 300, easing: cubicOut }}
 			>
 				<!-- Navigation buttons -->
 				{#if data.prevPhoto}
 					<button
 						onclick={navigatePrev}
-						class="absolute left-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
+						class="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-[var(--color-charcoal)] text-[var(--color-cream)] hover:scale-110 transition-all z-10"
 						aria-label="Previous photo"
 					>
-						<ChevronLeft size={24} />
+						<ChevronLeft size={24} strokeWidth={1.5} />
 					</button>
 				{/if}
 
 				<img
 					src="/api/photos/{data.album.slug}/{data.photo.filename}/medium"
 					alt={data.photo.original_filename}
-					class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+					class="max-w-full max-h-[80vh] object-contain"
 					in:fly={{ y: 20, duration: 400, easing: cubicOut }}
 				/>
 
 				{#if data.nextPhoto}
 					<button
 						onclick={navigateNext}
-						class="absolute right-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all hover:scale-110 z-10 backdrop-blur-sm"
+						class="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-[var(--color-charcoal)] text-[var(--color-cream)] hover:scale-110 transition-all z-10"
 						aria-label="Next photo"
 					>
-						<ChevronRight size={24} />
+						<ChevronRight size={24} strokeWidth={1.5} />
 					</button>
 				{/if}
 			</div>
@@ -266,75 +270,74 @@ transform: scale(1.1);"
 
 		<!-- Info sidebar -->
 		<aside
-			class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-white/10 bg-black/40 backdrop-blur-xl overflow-y-auto lg:h-100vh"
+			class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-[var(--color-border)] bg-[var(--color-bg-secondary)] overflow-y-auto"
 			in:fly={{ x: 50, duration: 400, easing: cubicOut }}
 		>
-			<div class="p-6 space-y-6">
+			<div class="p-8 space-y-6">
 				<!-- Title -->
 				<div>
-					<h1 class="text-xl font-semibold mb-2 text-white">{data.photo.original_filename}</h1>
+					<h1 class="text-2xl font-bold mb-2 text-[var(--color-charcoal)]" style="font-family: 'Playfair Display', serif;">{data.album.title}</h1>
 					{#if data.photo.date_taken}
-						<p class="text-sm text-gray-300">{formatDateTime(data.photo.date_taken)}</p>
+						<p class="text-sm text-[var(--color-text-secondary)]">{formatDateTime(data.photo.date_taken)}</p>
 					{/if}
 				</div>
 
 				<!-- Actions -->
-				<div class="flex flex-col gap-2">
+				<div class="flex flex-col gap-3">
 					<a
 						href="/api/photos/{data.album.slug}/{data.photo.filename}/original"
 						download={data.photo.original_filename}
-						class="btn w-full"
-						style="background-color: var(--gallery-primary); color: white;"
+						class="btn btn-primary w-full flex items-center justify-center gap-2"
 						onclick={trackPhotoDownload}
 					>
-						<Download size={18} />
-						Download
+						<Download size={18} strokeWidth={1.5} />
+						Download Original
 					</a>
 				</div>
 
 				<!-- EXIF metadata -->
 				{#if data.photo.camera_make || data.photo.camera_model || data.photo.lens_model || data.photo.focal_length || data.photo.aperture || data.photo.shutter_speed || data.photo.iso}
-					<div class="border-t border-white/10 pt-6">
-						<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-4">
+					<div class="border-t border-[var(--color-border)] pt-6">
+						<h2 class="nav-text text-[var(--color-text-muted)] mb-4">
 							Camera & Settings
 						</h2>
 						<dl class="space-y-3">
 							{#if data.photo.camera_model}
 								<div class="flex items-start gap-3">
-									<Camera size={16} class="text-gray-400 mt-0.5 flex-shrink-0" />
-									<dd class="text-sm font-medium text-white">
+									<Camera size={16} class="text-[var(--color-accent)] mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
 										{data.photo.camera_model}
 									</dd>
 								</div>
 							{/if}
 							{#if data.photo.lens_model}
 								<div class="flex items-start gap-3">
-									<Aperture size={16} class="text-gray-400 mt-0.5 flex-shrink-0" />
-									<dd class="text-sm font-medium text-white">{data.photo.lens_model}</dd>
+									<Aperture size={16} class="text-[var(--color-accent)] mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">{data.photo.lens_model}</dd>
 								</div>
 							{/if}
 							{#if data.photo.focal_length}
 								<div>
-									<dd class="text-sm font-medium text-white">
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
 										{formatFocalLength(data.photo.focal_length)}
 									</dd>
 								</div>
 							{/if}
 							{#if data.photo.aperture}
 								<div>
-									<dd class="text-sm font-medium text-white">
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
 										{formatAperture(data.photo.aperture)}
 									</dd>
 								</div>
 							{/if}
 							{#if data.photo.shutter_speed}
 								<div>
-									<dd class="text-sm font-medium text-white">{data.photo.shutter_speed}</dd>
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">{data.photo.shutter_speed}</dd>
 								</div>
 							{/if}
 							{#if data.photo.iso}
 								<div>
-									<dd class="text-sm font-medium text-white">ISO {data.photo.iso}</dd>
+									<dd class="text-sm font-medium text-[var(--color-text-secondary)]">ISO {data.photo.iso}</dd>
 								</div>
 							{/if}
 						</dl>
@@ -342,21 +345,21 @@ transform: scale(1.1);"
 				{/if}
 
 				<!-- File info -->
-				<div class="border-t border-white/10 pt-6">
-					<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-4">
+				<div class="border-t border-[var(--color-border)] pt-6">
+					<h2 class="nav-text text-[var(--color-text-muted)] mb-4">
 						File Information
 					</h2>
 					<dl class="space-y-3">
 						<div>
-							<dt class="text-xs text-gray-400 mb-1">Dimensions</dt>
-							<dd class="text-sm font-medium text-white">
+							<dt class="text-xs text-[var(--color-text-muted)] mb-1">Dimensions</dt>
+							<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
 								{data.photo.width} × {data.photo.height}
 							</dd>
 						</div>
 						{#if data.photo.file_size}
 							<div>
-								<dt class="text-xs text-gray-400 mb-1">File Size</dt>
-								<dd class="text-sm font-medium text-white">
+								<dt class="text-xs text-[var(--color-text-muted)] mb-1">File Size</dt>
+								<dd class="text-sm font-medium text-[var(--color-text-secondary)]">
 									{(data.photo.file_size / 1024 / 1024).toFixed(2)} MB
 								</dd>
 							</div>

@@ -99,6 +99,20 @@ try {
 	// Column already exists, ignore error
 }
 
+// Migration: Add featured_on_home column if it doesn't exist
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN featured_on_home INTEGER DEFAULT 0`);
+} catch {
+	// Column already exists, ignore error
+}
+
+// Migration: Add show_on_galleries column if it doesn't exist
+try {
+	db.exec(`ALTER TABLE albums ADD COLUMN show_on_galleries INTEGER DEFAULT 1`);
+} catch {
+	// Column already exists, ignore error
+}
+
 // Migration: Add EXIF metadata columns to photos table
 try {
 	db.exec(`ALTER TABLE photos ADD COLUMN camera_make TEXT`);
@@ -145,6 +159,8 @@ export interface Album {
 	background_photo_id: number | null;
 	is_public: number;
 	show_on_home: number;
+	featured_on_home: number;
+	show_on_galleries: number;
 	password: string | null;
 	sort_order: 'newest' | 'oldest' | 'random';
 	layout_style: 'grid' | 'masonry';
@@ -212,6 +228,63 @@ export function getAlbums(showOnHomeOnly = false, publicOnly = true): Album[] {
 	return db.prepare(query).all() as Album[];
 }
 
+export function getFeaturedAlbum(): Album | undefined {
+	return db
+		.prepare(
+			`
+    SELECT 
+      a.*,
+      (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename,
+      (SELECT filename FROM photos WHERE id = a.background_photo_id) as background_filename
+    FROM albums a
+    WHERE a.is_public = 1 
+      AND a.featured_on_home = 1
+      AND (a.expires_at IS NULL OR a.expires_at > datetime('now'))
+    ORDER BY a.created_at DESC
+    LIMIT 1
+  `
+		)
+		.get() as Album | undefined;
+}
+
+export function getAlbumsForShowOnHome(): Album[] {
+	return db
+		.prepare(
+			`
+    SELECT 
+      a.*,
+      (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+    FROM albums a
+    WHERE a.is_public = 1 
+      AND a.show_on_home = 1 
+      AND a.featured_on_home = 0
+      AND (a.expires_at IS NULL OR a.expires_at > datetime('now'))
+    ORDER BY a.created_at DESC
+  `
+		)
+		.all() as Album[];
+}
+
+export function getAlbumsForGalleries(): Album[] {
+	return db
+		.prepare(
+			`
+    SELECT 
+      a.*,
+      (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
+      (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
+    FROM albums a
+    WHERE a.is_public = 1 
+      AND a.show_on_galleries = 1
+      AND (a.expires_at IS NULL OR a.expires_at > datetime('now'))
+    ORDER BY a.created_at DESC
+  `
+		)
+		.all() as Album[];
+}
+
 export function getAlbumBySlug(slug: string): Album | undefined {
 	return db
 		.prepare(
@@ -250,6 +323,8 @@ export function createAlbum(
 	description: string | null,
 	isPublic: boolean,
 	showOnHome: boolean,
+	featuredOnHome: boolean,
+	showOnGalleries: boolean,
 	password: string | null,
 	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
@@ -257,9 +332,14 @@ export function createAlbum(
 	primaryColor: string = '#3b82f6',
 	layoutStyle: 'grid' | 'masonry' = 'grid'
 ): number {
+	// If setting this album as featured, unflag all other albums first
+	if (featuredOnHome) {
+		db.prepare('UPDATE albums SET featured_on_home = 0').run();
+	}
+
 	const result = db
 		.prepare(
-			'INSERT INTO albums (title, slug, description, is_public, show_on_home, password, sort_order, layout_style, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO albums (title, slug, description, is_public, show_on_home, featured_on_home, show_on_galleries, password, sort_order, layout_style, album_date, expires_at, primary_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		)
 		.run(
 			title,
@@ -267,6 +347,8 @@ export function createAlbum(
 			description,
 			isPublic ? 1 : 0,
 			showOnHome ? 1 : 0,
+			featuredOnHome ? 1 : 0,
+			showOnGalleries ? 1 : 0,
 			password || null,
 			sortOrder,
 			layoutStyle,
@@ -284,6 +366,8 @@ export function updateAlbum(
 	description: string | null,
 	isPublic: boolean,
 	showOnHome: boolean,
+	featuredOnHome: boolean,
+	showOnGalleries: boolean,
 	password: string | null,
 	sortOrder: 'newest' | 'oldest' | 'random' = 'oldest',
 	albumDate: string | null = null,
@@ -292,6 +376,11 @@ export function updateAlbum(
 	backgroundPhotoId: number | null = null,
 	layoutStyle: 'grid' | 'masonry' = 'grid'
 ): void {
+	// If setting this album as featured, unflag all other albums first
+	if (featuredOnHome) {
+		db.prepare('UPDATE albums SET featured_on_home = 0').run();
+	}
+
 	db.prepare(
 		`UPDATE albums SET 
       title = ?, 
@@ -299,6 +388,8 @@ export function updateAlbum(
       description = ?, 
       is_public = ?,
       show_on_home = ?,
+      featured_on_home = ?,
+      show_on_galleries = ?,
       password = ?,
       sort_order = ?,
       layout_style = ?,
@@ -314,6 +405,8 @@ export function updateAlbum(
 		description,
 		isPublic ? 1 : 0,
 		showOnHome ? 1 : 0,
+		featuredOnHome ? 1 : 0,
+		showOnGalleries ? 1 : 0,
 		password || null,
 		sortOrder,
 		layoutStyle,
@@ -665,10 +758,11 @@ export function recordAnalyticsEvent(
 			photoId,
 			eventType
 		);
-		// Send data to discord webhook (env variable) - non-blocking
+		// Send data to discord webhook - non-blocking
 		void (async () => {
 			if (eventType !== 'page_view') {
-				const webhookUrl = env.DISCORD_WEBHOOK_URL;
+				const settings = getSettings();
+				const webhookUrl = settings.discordWebhook;
 
 				if (!webhookUrl) return;
 
@@ -792,6 +886,18 @@ export interface Settings {
 	defaultSortOrder: 'newest' | 'oldest' | 'random';
 	defaultIsPublic: boolean;
 	defaultShowOnHome: boolean;
+	heroImage: string | null;
+	siteTitle: string;
+	copyrightText: string;
+	heroTitle: string;
+	heroDescription: string;
+	aboutTitle: string;
+	aboutText: string;
+	contactEmail: string;
+	contactPhone: string;
+	discordWebhook: string;
+	showContactOnHome: boolean;
+	theme: 'light' | 'dark';
 }
 
 export function getSettings(): Settings {
@@ -801,7 +907,21 @@ export function getSettings(): Settings {
 		defaultLayoutStyle: 'grid',
 		defaultSortOrder: 'oldest',
 		defaultIsPublic: true,
-		defaultShowOnHome: true
+		defaultShowOnHome: true,
+		heroImage: null,
+		siteTitle: 'Gallery',
+		copyrightText: 'GALLERY',
+		heroTitle: 'Visual Stories,\nCaptured in Time',
+		heroDescription:
+			'Photography portfolio showcasing the art of visual storytelling through composition, light, and decisive moments.',
+		aboutTitle: 'About',
+		aboutText:
+			'A photography portfolio exploring the interplay of light, shadow, and moment. Each collection tells its own unique story through visual composition.',
+		contactEmail: '',
+		contactPhone: '',
+		discordWebhook: '',
+		showContactOnHome: false,
+		theme: 'light'
 	};
 
 	try {
@@ -835,6 +955,42 @@ export function getSettings(): Settings {
 				case 'defaultShowOnHome':
 					settings.defaultShowOnHome = row.value === 'true';
 					break;
+				case 'heroImage':
+					settings.heroImage = row.value || null;
+					break;
+				case 'siteTitle':
+					settings.siteTitle = row.value;
+					break;
+				case 'copyrightText':
+					settings.copyrightText = row.value;
+					break;
+				case 'heroTitle':
+					settings.heroTitle = row.value;
+					break;
+				case 'heroDescription':
+					settings.heroDescription = row.value;
+					break;
+				case 'aboutTitle':
+					settings.aboutTitle = row.value;
+					break;
+				case 'aboutText':
+					settings.aboutText = row.value;
+					break;
+				case 'contactEmail':
+					settings.contactEmail = row.value;
+					break;
+				case 'contactPhone':
+					settings.contactPhone = row.value;
+					break;
+				case 'discordWebhook':
+					settings.discordWebhook = row.value;
+					break;
+				case 'showContactOnHome':
+					settings.showContactOnHome = row.value === 'true';
+					break;
+				case 'theme':
+					settings.theme = (row.value === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
+					break;
 			}
 		}
 
@@ -866,6 +1022,42 @@ export function updateSettings(settings: Partial<Settings>): void {
 		}
 		if (settings.defaultShowOnHome !== undefined) {
 			stmt.run('defaultShowOnHome', settings.defaultShowOnHome.toString());
+		}
+		if (settings.heroImage !== undefined) {
+			stmt.run('heroImage', settings.heroImage || '');
+		}
+		if (settings.siteTitle !== undefined) {
+			stmt.run('siteTitle', settings.siteTitle);
+		}
+		if (settings.copyrightText !== undefined) {
+			stmt.run('copyrightText', settings.copyrightText);
+		}
+		if (settings.heroTitle !== undefined) {
+			stmt.run('heroTitle', settings.heroTitle);
+		}
+		if (settings.heroDescription !== undefined) {
+			stmt.run('heroDescription', settings.heroDescription);
+		}
+		if (settings.aboutTitle !== undefined) {
+			stmt.run('aboutTitle', settings.aboutTitle);
+		}
+		if (settings.aboutText !== undefined) {
+			stmt.run('aboutText', settings.aboutText);
+		}
+		if (settings.contactEmail !== undefined) {
+			stmt.run('contactEmail', settings.contactEmail);
+		}
+		if (settings.contactPhone !== undefined) {
+			stmt.run('contactPhone', settings.contactPhone);
+		}
+		if (settings.discordWebhook !== undefined) {
+			stmt.run('discordWebhook', settings.discordWebhook);
+		}
+		if (settings.showContactOnHome !== undefined) {
+			stmt.run('showContactOnHome', settings.showContactOnHome.toString());
+		}
+		if (settings.theme !== undefined) {
+			stmt.run('theme', settings.theme);
 		}
 	});
 	transaction();

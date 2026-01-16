@@ -20,7 +20,7 @@
 	<div class="flex items-center gap-3 mb-8">
 		<a
 			href="/admin"
-			class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+			class="p-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
 			aria-label="Back to dashboard"
 		>
 			<ChevronLeft size={20} />
@@ -29,12 +29,12 @@
 	</div>
 
 	{#if form?.error}
-		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-6">
+		<div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 text-sm mb-6">
 			{form.error}
 		</div>
 	{/if}
 
-	<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
+	<div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-6">
 		<form
 			method="POST"
 			use:enhance={() => {
@@ -147,7 +147,7 @@
 							type="color"
 							id="primaryColor"
 							name="primaryColor"
-							class="h-10 w-20 rounded border border-[var(--color-border)]"
+							class="h-10 w-20 border border-[var(--color-border)]"
 							value={data.settings.defaultColor}
 						/>
 						<input

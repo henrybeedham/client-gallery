@@ -1,10 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAlbumBySlug, getPhotosByAlbum } from '$lib/server/db';
+import { validateSession } from '$lib/server/auth';
 
 const PHOTOS_PER_PAGE = 24;
 
 export const GET: RequestHandler = async ({ params, url, cookies }) => {
+	const isAuthenticated = validateSession(cookies);
 	const album = getAlbumBySlug(params.slug);
 
 	if (!album || !album.is_public) {
@@ -13,7 +15,8 @@ export const GET: RequestHandler = async ({ params, url, cookies }) => {
 
 	// Check if album has expired
 	const isExpired = album.expires_at ? new Date(album.expires_at) < new Date() : false;
-	if (isExpired) {
+	// If expired and NOT admin, deny access
+	if (isExpired && !isAuthenticated) {
 		throw error(403, 'Album has expired');
 	}
 

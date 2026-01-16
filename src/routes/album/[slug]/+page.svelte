@@ -13,7 +13,8 @@
 		ChevronRight,
 		Check,
 		Image,
-		Loader2
+		Loader2,
+		ArrowLeft
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -26,6 +27,7 @@
 	let passwordInput = $state('');
 	let lastSelectedIndex: number | null = $state(null);
 	let downloadAbortController: AbortController | null = null;
+	let isNavigating = $state(false);
 
 	// Lazy loading state - use $derived to reset when data changes (e.g., tag filter changes)
 	let displayedPhotos = $state([...data.photos]);
@@ -127,7 +129,7 @@
 
 	// Preload threshold for triggering more photos to load in lightbox
 	const LIGHTBOX_PRELOAD_THRESHOLD = 3;
-	
+
 	// Scroll-to-photo constants
 	const SCROLL_RETRY_MAX = 20; // Max retries for scroll positioning
 	const LOAD_MORE_MAX_ATTEMPTS = 100; // Max attempts to load more photos when searching for target
@@ -166,52 +168,65 @@
 
 		// Handle scroll to photo if coming from photo detail page
 		const scrollToPhotoId = $page.url.searchParams.get('scrollToPhoto');
+
 		if (scrollToPhotoId) {
 			const photoId = parseInt(scrollToPhotoId);
-			// Validate that the photo ID exists in the album's photo collection
-			if (!isNaN(photoId) && data.allPhotoIds.includes(photoId)) {
-				// Function to perform the actual scroll
-				const performScroll = () => {
+
+			if (!isNaN(photoId) && (data.allPhotoIds as number[]).includes(photoId)) {
+				// We remove the strict "return true" logic.
+				// We want to scroll even if we scrolled previously, to track movement.
+				const performScroll = (behavior: ScrollBehavior = 'auto') => {
 					const photoButton = document.querySelector(`button[data-photo-id="${photoId}"]`);
 					if (photoButton) {
-						// Check if element is positioned (for masonry layout)
-						const rect = photoButton.getBoundingClientRect();
-						if (rect.width > 0 && rect.height > 0) {
-							photoButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
-							return true;
-						}
+						photoButton.scrollIntoView({ behavior, block: 'center' });
+						return true;
 					}
 					return false;
 				};
 
-				// Function to load photos until target is displayed
 				const loadUntilPhotoVisible = async (attempts = 0) => {
-					// Check if photo is already in displayedPhotos
+					// 1. Check if photo is in the currently displayed array
 					if (displayedPhotos.some((p) => p.id === photoId)) {
-						// Wait for rendering and layout
-						await tick();
-						// Try scrolling with retry for layout completion
-						let retries = 0;
-						const tryScroll = () => {
-							if (performScroll() || retries++ >= SCROLL_RETRY_MAX) {
-								return;
+						await tick(); // Wait for DOM node to be created
+
+						// 2. STICKY SCROLL STRATEGY
+						// We scroll repeatedly for a short window (e.g. 500ms)
+						// to follow the element as Masonry/Layout moves it around.
+						let frames = 0;
+						const MAX_FRAMES = 30; // approx 500ms at 60fps
+
+						const trackElementPosition = () => {
+							const found = performScroll(frames === 0 ? 'auto' : 'auto');
+							// Note: Use 'auto' repeatedly. 'smooth' fights against moving targets.
+
+							if (found && frames < MAX_FRAMES) {
+								frames++;
+								requestAnimationFrame(trackElementPosition);
+							} else if (frames >= MAX_FRAMES) {
+								// Final adjustment with smooth scroll once layout is settled
+								setTimeout(() => {
+									performScroll('smooth');
+									// Cleanup URL
+									const url = new URL(window.location.href);
+									url.searchParams.delete('scrollToPhoto');
+									window.history.replaceState({}, '', url.toString());
+								}, 100);
+							} else {
+								// Element apparently disappeared or wasn't found, stop.
 							}
-							requestAnimationFrame(tryScroll);
 						};
-						requestAnimationFrame(tryScroll);
+
+						requestAnimationFrame(trackElementPosition);
 					} else if (hasMore && attempts < LOAD_MORE_MAX_ATTEMPTS) {
-						// Photo not loaded yet, load more photos
+						// 3. Prevent premature scrolling while loading
+						// We just wait for the data, we do NOT try to scroll here.
 						await loadMorePhotos();
-						// Recursively try again after loading with incremented attempt counter
 						await loadUntilPhotoVisible(attempts + 1);
-					} else if (attempts >= LOAD_MORE_MAX_ATTEMPTS) {
-						console.warn(
-							`Failed to load photo ${photoId} after ${LOAD_MORE_MAX_ATTEMPTS} attempts`
-						);
+					} else {
+						console.warn(`Could not reach photo ${photoId}`);
 					}
 				};
 
-				// Start the process
 				loadUntilPhotoVisible();
 			}
 		}
@@ -282,7 +297,10 @@
 
 	// Handle shift+click selection
 	function handlePhotoClick(photoId: number, index: number, event: MouseEvent) {
+		sessionStorage.setItem('fromHomepage', 'false');
 		if (!isSelecting) {
+			// Show loading state
+			isNavigating = true;
 			// Build URL with query parameters to preserve filter state
 			const url = new URL(`/album/${data.album.slug}/photo/${photoId}`, window.location.origin);
 			if (data.selectedTag) {
@@ -291,8 +309,12 @@
 			if (data.selectedSort) {
 				url.searchParams.set('sort', data.selectedSort);
 			}
+
 			// Navigate to photo detail page with smooth client-side navigation
-			goto(url.pathname + url.search);
+			goto(url.pathname + url.search).catch(() => {
+				// Reset loading state if navigation fails
+				isNavigating = false;
+			});
 			return;
 		}
 
@@ -585,11 +607,11 @@
 	{@html `<style>:root { --gallery-primary: ${safeColor}; }</style>`}
 </svelte:head>
 
-{#if data.isExpired}
-	<!-- Expired gallery page -->
-	<div class="min-h-screen flex items-center justify-center p-4">
+{#if data.isExpired && !data.isAdmin}
+	<!-- Expired gallery page (for non-admin users) -->
+	<div class="min-h-screen flex items-center justify-center p-4 animate-fade-in">
 		<div
-			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full text-center"
+			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] p-8 max-w-md w-full text-center"
 		>
 			<Clock size={64} class="mx-auto mb-4 text-gray-500" strokeWidth={1.5} />
 			<h1 class="text-2xl font-bold mb-2">{data.album.title}</h1>
@@ -601,7 +623,7 @@
 					{#if data.contactEmail}
 						<a
 							href="mailto:{data.contactEmail}"
-							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 mb-2"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors mb-2"
 						>
 							<Mail size={16} />
 							{data.contactEmail}
@@ -610,7 +632,7 @@
 					{#if data.contactPhone}
 						<a
 							href="tel:{data.contactPhone}"
-							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300"
+							class="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
 						>
 							<Phone size={16} />
 							{data.contactPhone}
@@ -621,16 +643,16 @@
 		</div>
 	</div>
 {:else if data.requiresPassword}
-	<div class="min-h-screen flex items-center justify-center p-4">
+	<div class="min-h-screen flex items-center justify-center p-4 animate-fade-in">
 		<div
-			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-8 max-w-md w-full"
+			class="bg-[var(--color-bg-secondary)]/80 backdrop-blur-xl border border-[var(--color-border)] p-8 max-w-md w-full"
 		>
 			<h1 class="text-2xl font-bold mb-2 text-center">{data.album.title}</h1>
 			<p class="text-gray-400 text-center mb-6">This album is password protected</p>
 
 			{#if form?.error}
 				<div
-					class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg text-sm mb-4"
+					class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 text-sm mb-4 animate-slide-in"
 				>
 					{form.error}
 				</div>
@@ -663,16 +685,23 @@
 		{/if}
 
 		<header
-			class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50"
+			class="sticky top-0 bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-[var(--color-border)] z-50 animate-fade-in"
 		>
 			<div class="container">
 				<div class="flex flex-col md:flex-row items-center justify-between py-4 gap-4">
-					<div class="min-w-0">
-						<div class="flex items-center gap-3">
+					<div class="min-w-0 flex-1">
+						<div class="flex items-center gap-3 flex-wrap">
+							<a
+								href="/"
+								class="flex items-center gap-2 text-sm hover:opacity-70 transition-all text-gray-400"
+								title="Home"
+							>
+								<ArrowLeft size={18} strokeWidth={1.5} />
+							</a>
 							<h1 class="text-lg font-semibold">{data.album.title}</h1>
 							{#if data.album.album_date}
 								<span
-									class="text-sm text-center font-medium px-2 py-0.5 rounded-full bg-[var(--gallery-primary)]/20"
+									class="text-sm text-center font-medium px-2 py-0.5 bg-[var(--gallery-primary)]/20 transition-colors"
 									style="color: var(--gallery-primary);"
 								>
 									{new Date(data.album.album_date).toLocaleDateString('en-UK', {
@@ -680,6 +709,13 @@
 										month: 'long',
 										day: 'numeric'
 									})}
+								</span>
+							{/if}
+							{#if data.isExpired && data.isAdmin}
+								<span
+									class="text-sm text-center font-medium px-2 py-0.5 bg-red-500/20 text-red-400 animate-fade-in"
+								>
+									Expired
 								</span>
 							{/if}
 						</div>
@@ -693,12 +729,15 @@
 						</div>
 					</div>
 					<div class="flex gap-2 flex-shrink-0">
-						<button class="btn btn-secondary text-sm" onclick={toggleSelectMode}>
+						<button
+							class="btn btn-secondary text-sm transition-all hover:scale-105"
+							onclick={toggleSelectMode}
+						>
 							{isSelecting ? 'Cancel' : 'Select to download'}
 						</button>
 						{#if isSelecting && selectedPhotos.size > 0}
 							<button
-								class="btn text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden transition-all hover:scale-105 animate-fade-in"
 								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadSelected}
 								disabled={isDownloading}
@@ -706,7 +745,7 @@
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-300"
 										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
@@ -715,7 +754,7 @@
 							</button>
 						{:else if !isSelecting}
 							<button
-								class="btn text-sm relative overflow-hidden"
+								class="btn text-sm relative overflow-hidden transition-all hover:scale-105"
 								style="background-color: var(--gallery-primary); color: white;"
 								onclick={downloadAlbum}
 								disabled={isDownloading}
@@ -723,7 +762,7 @@
 								{#if isDownloading}
 									<span class="relative z-10">Downloading... {downloadProgress}%</span>
 									<span
-										class="absolute left-0 top-0 bottom-0 transition-all duration-200"
+										class="absolute left-0 top-0 bottom-0 transition-all duration-300"
 										style="width: {downloadProgress}%; background-color: color-mix(in srgb, var(--gallery-primary), black 15%);"
 									></span>
 								{:else}
@@ -737,15 +776,19 @@
 		</header>
 
 		{#if isSelecting}
-			<div class="text-white py-3 relative z-10" style="background-color: var(--gallery-primary);">
+			<div
+				class="text-white py-3 relative z-10 animate-slide-in"
+				style="background-color: var(--gallery-primary);"
+			>
 				<div class="container flex items-center justify-between">
 					<span class="text-sm">{selectedPhotos.size} selected</span>
 					<div class="flex gap-4">
-						<button class="text-sm font-medium opacity-90 hover:opacity-100" onclick={selectAll}
-							>Select All</button
+						<button
+							class="text-sm font-medium opacity-90 hover:opacity-100 transition-opacity"
+							onclick={selectAll}>Select All</button
 						>
 						<button
-							class="text-sm font-medium opacity-90 hover:opacity-100"
+							class="text-sm font-medium opacity-90 hover:opacity-100 transition-opacity"
 							onclick={clearSelection}>Clear</button
 						>
 					</div>
@@ -766,7 +809,7 @@
 						<a
 							href="/album/{data.album.slug}?sort={data.selectedSort}"
 							data-sveltekit-noscroll
-							class="px-3 py-1.5 rounded-full text-sm transition-colors {!data.selectedTag
+							class="px-3 py-1.5 text-sm transition-all duration-200 {!data.selectedTag
 								? ' text-white'
 								: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
 							style={!data.selectedTag ? `background-color: var(--gallery-primary);` : ''}
@@ -777,7 +820,7 @@
 							<a
 								href="/album/{data.album.slug}?tag={tag.slug}&sort={data.selectedSort}"
 								data-sveltekit-noscroll
-								class="px-3 py-1.5 rounded-full text-sm transition-colors {data.selectedTag ===
+								class="px-3 py-1.5 text-sm transition-all duration-200 {data.selectedTag ===
 								tag.slug
 									? ' text-white'
 									: 'bg-[var(--color-bg-tertiary)] text-gray-300 hover:bg-[var(--color-border)]'}"
@@ -793,10 +836,12 @@
 
 				<!-- Sort dropdown -->
 				<div class="flex items-center gap-2 mb-4">
-					<label for="sortSelect" class="text-sm text-gray-400">Sort:</label>
+					<label for="sortSelect" class="text-sm text-[var(--color-text-muted)] nav-text"
+						>Sort:</label
+					>
 					<select
 						id="sortSelect"
-						class="form-select text-sm py-1 px-2 bg-[var(--color-bg-secondary)] border-[var(--color-border)] rounded"
+						class="form-select text-sm py-2 px-3 bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text)]"
 						onchange={(e) => {
 							const target = e.target as HTMLSelectElement;
 							const url = new URL(window.location.href);
@@ -814,7 +859,7 @@
 				</div>
 
 				{#if displayedPhotos.length === 0}
-					<div class="empty-state">
+					<div class="empty-state animate-scale-in">
 						<Image size={48} strokeWidth={1.5} />
 						<h3>No photos in this album</h3>
 						<p>Check back soon for new photos!</p>
@@ -851,7 +896,7 @@
 									/>
 									{#if isSelecting}
 										<div
-											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+											class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center transition-colors duration-200 {selectedPhotos.has(
 												photo.id
 											)
 												? 'text-white'
@@ -892,7 +937,7 @@
 									/>
 									{#if isSelecting}
 										<div
-											class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center transition-colors {selectedPhotos.has(
+											class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center transition-colors duration-200 {selectedPhotos.has(
 												photo.id
 											)
 												? 'text-white'
@@ -914,12 +959,15 @@
 					<!-- Load more trigger and loading indicator -->
 					<div bind:this={loadMoreTrigger} class="py-8 flex justify-center">
 						{#if isLoadingMore}
-							<div class="flex items-center gap-2 text-gray-400">
+							<div class="flex items-center gap-2 text-gray-400 animate-fade-in">
 								<Loader2 class="animate-spin h-5 w-5" />
 								<span>Loading more photos...</span>
 							</div>
 						{:else if hasMore}
-							<button class="btn btn-secondary text-sm" onclick={loadMorePhotos}>
+							<button
+								class="btn btn-secondary text-sm transition-all hover:scale-105"
+								onclick={loadMorePhotos}
+							>
 								Load More
 							</button>
 						{:else if displayedPhotos.length > 0}
@@ -929,6 +977,19 @@
 				{/if}
 			</div>
 		</main>
+
+		<!-- Footer -->
+		<footer
+			class="py-8 border-t border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-xl relative z-10"
+		>
+			<div class="container">
+				<div class="text-center">
+					<p class="nav-text text-[var(--color-text-muted)]">
+						{data.settings.copyrightText}
+					</p>
+				</div>
+			</div>
+		</footer>
 	</div>
 {/if}
 
@@ -1008,6 +1069,18 @@
 			>
 				Download Photo
 			</a>
+		</div>
+	</div>
+{/if}
+
+<!-- Loading overlay when navigating to photo detail -->
+{#if isNavigating}
+	<div
+		class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1001] flex items-center justify-center animate-fade-in"
+	>
+		<div class="bg-[var(--color-bg-secondary)] p-6 flex flex-col items-center gap-3">
+			<Loader2 class="animate-spin h-8 w-8 text-[var(--color-charcoal)]" />
+			<span class="text-sm text-[var(--color-text-secondary)]">Loading photo...</span>
 		</div>
 	</div>
 {/if}

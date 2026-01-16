@@ -23,6 +23,10 @@ export const actions: Actions = {
 		const showOnHome = data.has('showOnHome')
 			? data.get('showOnHome') === 'on'
 			: settings.defaultShowOnHome;
+		const featuredOnHome = data.get('featuredOnHome') === 'on';
+		const showOnGalleries = data.has('showOnGalleries')
+			? data.get('showOnGalleries') === 'on'
+			: true; // Default to true for new albums
 		const password = data.get('password')?.toString() || '';
 		const sortOrder =
 			(data.get('sortOrder')?.toString() as 'newest' | 'oldest' | 'random') ||
@@ -60,6 +64,8 @@ export const actions: Actions = {
 				description.trim() || null,
 				isPublic,
 				showOnHome,
+				featuredOnHome,
+				showOnGalleries,
 				password || null,
 				sortOrder,
 				albumDate,

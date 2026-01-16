@@ -3,10 +3,10 @@ import {
 	getAlbumBySlug,
 	getPhotosByAlbum,
 	getTagsByAlbum,
-	recordAnalyticsEvent
+	recordAnalyticsEvent,
+	getSettings
 } from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
 import { validateSession } from '$lib/server/auth';
 
 const INITIAL_PHOTOS = 24;
@@ -25,17 +25,20 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		? Math.max(0, new Date(album.expires_at).getTime() - Date.now())
 		: null;
 
-	// Get contact details from environment variables
-	const contactEmail = env.GALLERY_CONTACT_EMAIL || null;
-	const contactPhone = env.GALLERY_CONTACT_PHONE || null;
+	// Get contact details from settings
+	const settings = getSettings();
+	const contactEmail = settings.contactEmail || null;
+	const contactPhone = settings.contactPhone || null;
 
-	if (isExpired) {
+	// If expired and NOT admin, show expired page
+	if (isExpired && !isAuthenticated) {
 		return {
 			album,
 			photos: [],
 			tags: [],
 			requiresPassword: false,
 			isExpired: true,
+			isAdmin: false,
 			expiresIn: null,
 			selectedTag: undefined,
 			selectedSort: album.sort_order || 'oldest',
@@ -43,7 +46,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			contactPhone,
 			allPhotoIds: [],
 			hasMore: false,
-			totalCount: 0
+			totalCount: 0,
+			settings
 		};
 	}
 
@@ -57,13 +61,15 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 				tags: [],
 				requiresPassword: true,
 				isExpired: false,
+				isAdmin: isAuthenticated,
 				expiresIn,
 				selectedSort: album.sort_order || 'oldest',
 				contactEmail,
 				contactPhone,
 				allPhotoIds: [],
 				hasMore: false,
-				totalCount: 0
+				totalCount: 0,
+				settings
 			};
 		}
 	}
@@ -99,7 +105,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		photos,
 		tags,
 		requiresPassword: false,
-		isExpired: false,
+		isExpired: isExpired, // Still mark as expired, but allow access for admin
+		isAdmin: isAuthenticated,
 		expiresIn,
 		selectedTag: tagSlug,
 		selectedSort: sortOrder,
@@ -107,7 +114,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 		contactPhone,
 		allPhotoIds,
 		hasMore,
-		totalCount
+		totalCount,
+		settings
 	};
 };
 
