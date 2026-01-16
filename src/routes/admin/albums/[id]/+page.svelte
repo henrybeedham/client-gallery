@@ -532,13 +532,13 @@
 								</div>
 							</div>
 							<div class="p-2 text-xs">
-								<p class="truncate text-gray-300" title={photo.original_filename}>
+								<p class="truncate text-gray-500" title={photo.original_filename}>
 									{photo.original_filename}
 								</p>
 								<div class="flex items-center gap-2 text-gray-500">
 									<span>{formatFileSize(photo.file_size || 0)}</span>
 									{#if getPhotoDownloads(photo.id) > 0}
-										<span class="text-green-400" title="Downloads"
+										<span class="text-green-600" title="Downloads"
 											>↓{getPhotoDownloads(photo.id)}</span
 										>
 									{/if}
