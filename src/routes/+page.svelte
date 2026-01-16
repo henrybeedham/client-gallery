@@ -53,12 +53,10 @@
 	<section class="relative py-20 md:py-32 lg:py-40 animate-fade-in overflow-hidden">
 		{#if data.heroImage}
 			<div class="absolute inset-0 z-0">
-				<img
-					src="/api/hero/{data.heroImage}"
-					alt="Hero"
-					class="w-full h-full object-cover"
-				/>
-				<div class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/85 to-[var(--color-cream)]/75"></div>
+				<img src="/api/hero/{data.heroImage}" alt="Hero" class="w-full h-full object-cover" />
+				<div
+					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/50 to-[var(--color-cream)]"
+				></div>
 			</div>
 		{/if}
 		<div class="container relative z-10">
@@ -72,7 +70,8 @@
 				<p
 					class="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl leading-relaxed mb-10"
 				>
-					Photography portfolio by Henry Beedham, a student at the University of Exeter exploring the art of visual storytelling through composition, light, and decisive moments.
+					Photography portfolio by Henry Beedham, a student at the University of Exeter exploring
+					the art of visual storytelling through composition, light, and decisive moments.
 				</p>
 				<a
 					href="/#work"
@@ -187,7 +186,8 @@
 								</h3>
 								{#if album.photo_count}
 									<p class="nav-text text-[var(--color-text-muted)]">
-										{album.photo_count} {album.photo_count === 1 ? 'Image' : 'Images'}
+										{album.photo_count}
+										{album.photo_count === 1 ? 'Image' : 'Images'}
 									</p>
 								{/if}
 							</div>
@@ -218,7 +218,9 @@
 					About
 				</h2>
 				<p class="text-lg md:text-xl text-[var(--color-text-secondary)] leading-relaxed mb-8">
-					Henry Beedham is a photographer and student at the University of Exeter. Over two years of capturing images, this portfolio showcases work exploring composition, natural light, and the decisive moments that tell compelling visual stories.
+					Henry Beedham is a photographer and student at the University of Exeter. Over two years of
+					capturing images, this portfolio showcases work exploring composition, natural light, and
+					the decisive moments that tell compelling visual stories.
 				</p>
 				<p class="text-base text-[var(--color-text-muted)] leading-relaxed">
 					For inquiries about prints, commissioned work, or collaboration opportunities, please

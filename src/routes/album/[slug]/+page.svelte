@@ -13,7 +13,8 @@
 		ChevronRight,
 		Check,
 		Image,
-		Loader2
+		Loader2,
+		ArrowLeft
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
