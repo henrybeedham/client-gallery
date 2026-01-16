@@ -3,8 +3,30 @@
 	import { page } from '$app/stores';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 
-	let { children } = $props();
+	let { children, data } = $props();
+
+	// Apply theme from settings
+	function applyTheme(theme: string) {
+		if (browser) {
+			document.documentElement.setAttribute('data-theme', theme);
+		}
+	}
+
+	// Apply theme on mount and when data changes
+	$effect(() => {
+		if (data?.settings?.theme) {
+			applyTheme(data.settings.theme);
+		}
+	});
+
+	onMount(() => {
+		if (data?.settings?.theme) {
+			applyTheme(data.settings.theme);
+		}
+	});
 </script>
 
 <svelte:head>

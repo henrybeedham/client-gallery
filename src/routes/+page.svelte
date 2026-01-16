@@ -1,12 +1,42 @@
 <script lang="ts">
 	import { Image, Lock } from 'lucide-svelte';
 	import { renderMarkdown } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
 
 	let { data } = $props();
 
-	// Intersection Observer for scroll animations
+	// Save scroll position when clicking a featured photo
+	function saveScrollPosition(photoId: number) {
+		if (browser) {
+			sessionStorage.setItem('fromHomepage', 'true');
+			sessionStorage.setItem('homeScrollPosition', window.scrollY.toString());
+			sessionStorage.setItem('homeScrollToPhoto', photoId.toString());
+		}
+	}
+
+	// Restore scroll position when returning from photo detail
 	onMount(() => {
+		const scrollPosition = sessionStorage.getItem('homeScrollPosition');
+		const scrollToPhoto = sessionStorage.getItem('homeScrollToPhoto');
+		
+		if (scrollPosition && scrollToPhoto) {
+			const position = parseInt(scrollPosition);
+			tick().then(() => {
+				// Give images time to load, then scroll
+				setTimeout(() => {
+					window.scrollTo({ top: position, behavior: 'smooth' });
+					// Clean up after scrolling
+					setTimeout(() => {
+						sessionStorage.removeItem('homeScrollPosition');
+						sessionStorage.removeItem('homeScrollToPhoto');
+					}, 1000);
+				}, 300);
+			});
+		}
+
+		// Intersection Observer for scroll animations
 		const observer = new IntersectionObserver(
 			(entries) => {
 				entries.forEach((entry) => {
@@ -23,6 +53,66 @@
 		});
 
 		return () => observer.disconnect();
+	});
+
+	// Masonry layout for featured album (if layout_style is masonry)
+	let masonryContainer: HTMLDivElement | null = null;
+	let masonryPositions = $state<{ left: string; top: string; width: string }[]>([]);
+	let masonryHeight = $state(0);
+	let columnCount = $state(4);
+	const MASONRY_GAP = 8;
+
+	function calculateMasonryLayout() {
+		if (!masonryContainer || !data.featuredAlbum || data.featuredAlbum.layout_style !== 'masonry') return;
+		if (columnCount <= 0 || data.featuredPhotos.length === 0) return;
+
+		const containerWidth = masonryContainer.offsetWidth;
+		const columnWidth = (containerWidth - MASONRY_GAP * (columnCount - 1)) / columnCount;
+		const columnHeights = new Array(columnCount).fill(0);
+		const positions: { left: string; top: string; width: string }[] = [];
+
+		for (const photo of data.featuredPhotos) {
+			const minHeight = Math.min(...columnHeights);
+			const columnIndex = columnHeights.indexOf(minHeight);
+			const left = columnIndex * (columnWidth + MASONRY_GAP);
+			const top = columnHeights[columnIndex];
+			const aspectRatio = photo.width && photo.height && photo.width > 0 ? photo.width / photo.height : 1;
+			const itemHeight = columnWidth / aspectRatio;
+
+			positions.push({
+				left: `${left}px`,
+				top: `${top}px`,
+				width: `${columnWidth}px`
+			});
+
+			columnHeights[columnIndex] += itemHeight + MASONRY_GAP;
+		}
+
+		masonryPositions = positions;
+		masonryHeight = Math.max(...columnHeights);
+	}
+
+	function updateColumnCount() {
+		if (typeof window === 'undefined') return;
+		if (window.innerWidth >= 1280) columnCount = 4;
+		else if (window.innerWidth >= 1024) columnCount = 3;
+		else if (window.innerWidth >= 640) columnCount = 2;
+		else columnCount = 1;
+	}
+
+	// Re-calculate masonry when layout changes or window resizes
+	$effect(() => {
+		if (data.featuredAlbum?.layout_style === 'masonry' && browser) {
+			updateColumnCount();
+			calculateMasonryLayout();
+			
+			const handleResize = () => {
+				updateColumnCount();
+				calculateMasonryLayout();
+			};
+			window.addEventListener('resize', handleResize);
+			return () => window.removeEventListener('resize', handleResize);
+		}
 	});
 </script>
 
@@ -76,21 +166,22 @@
 					alt="Hero"
 					class="w-full h-full object-cover"
 				/>
+				<!-- Improved overlay: less opacity for better image visibility -->
 				<div
-					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/60 via-[var(--color-cream)]/70 to-[var(--color-cream)]"
+					class="absolute inset-0 bg-gradient-to-b from-[var(--color-cream)]/50 via-[var(--color-cream)]/65 to-[var(--color-cream)]"
 				></div>
 			</div>
 		{/if}
 		<div class="container relative z-10">
 			<div class="max-w-4xl">
 				<h1
-					class="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 md:mb-8 text-[var(--color-charcoal)] leading-[1.1]"
+					class="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 md:mb-8 text-[var(--color-charcoal)] leading-[1.1] drop-shadow-sm"
 					style="font-family: 'Playfair Display', serif; white-space: pre-line;"
 				>
 					{data.settings.heroTitle}
 				</h1>
 				<p
-					class="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl leading-relaxed mb-10"
+					class="text-lg md:text-xl text-[var(--color-text-secondary)] max-w-2xl leading-relaxed mb-10 drop-shadow-sm"
 				>
 					{data.settings.heroDescription}
 				</p>
@@ -125,27 +216,58 @@
 						{/if}
 					</div>
 
-					<!-- Masonry Grid for Featured Photos -->
-					<div
-						class="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 md:gap-8 space-y-6 md:space-y-8"
-					>
-						{#each data.featuredPhotos as photo, index}
-							<a
-								href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
-								class="group block break-inside-avoid mb-6 md:mb-8 scroll-fade-in"
-								onclick={() => sessionStorage.setItem('fromHomepage', 'true')}
-							>
-								<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
-									<img
-										src="/api/photos/{data.featuredAlbum.slug}/{photo.filename}/medium"
-										alt={photo.original_filename}
-										loading="lazy"
-										class="w-full h-auto transition-all duration-700 group-hover:scale-105 group-hover:brightness-95"
-									/>
-								</div>
-							</a>
-						{/each}
-					</div>
+					<!-- Featured Album Photos with Layout Respect -->
+					{#if data.featuredAlbum.layout_style === 'masonry'}
+						<!-- Masonry Layout -->
+						<div
+							bind:this={masonryContainer}
+							class="relative"
+							style="height: {masonryHeight}px"
+						>
+							{#each data.featuredPhotos as photo, index}
+								{@const position = masonryPositions[index]}
+								{#if position}
+									<a
+										href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
+										class="group block absolute scroll-fade-in"
+										style="left: {position.left}; top: {position.top}; width: {position.width}"
+										onclick={() => saveScrollPosition(photo.id)}
+									>
+										<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
+											<img
+												src="/api/photos/{data.featuredAlbum.slug}/{photo.filename}/medium"
+												alt={photo.original_filename}
+												loading="lazy"
+												class="w-full h-auto transition-all duration-700 group-hover:scale-105 group-hover:brightness-95"
+											/>
+										</div>
+									</a>
+								{/if}
+							{/each}
+						</div>
+					{:else}
+						<!-- Grid Layout -->
+						<div
+							class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"
+						>
+							{#each data.featuredPhotos as photo}
+								<a
+									href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
+									class="group block scroll-fade-in"
+									onclick={() => saveScrollPosition(photo.id)}
+								>
+									<div class="relative overflow-hidden bg-[var(--color-bg-secondary)]">
+										<img
+											src="/api/photos/{data.featuredAlbum.slug}/{photo.filename}/medium"
+											alt={photo.original_filename}
+											loading="lazy"
+											class="w-full aspect-square object-cover transition-all duration-700 group-hover:scale-105 group-hover:brightness-95"
+										/>
+									</div>
+								</a>
+							{/each}
+						</div>
+					{/if}
 
 					<div class="text-center mt-12 md:mt-16">
 						<a

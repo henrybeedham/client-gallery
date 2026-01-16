@@ -13,31 +13,28 @@ export const load: PageServerLoad = async () => {
 export const actions: Actions = {
 	updateSettings: async ({ request }) => {
 		const data = await request.formData();
+		const currentSettings = getSettings();
 
-		const defaultDescription = data.get('defaultDescription')?.toString() || '';
-		const defaultColor = data.get('defaultColor')?.toString() || '#3b82f6';
-		const defaultLayoutStyle = (data.get('defaultLayoutStyle')?.toString() || 'grid') as
-			| 'grid'
-			| 'masonry';
-		const defaultSortOrder = (data.get('defaultSortOrder')?.toString() || 'oldest') as
-			| 'newest'
-			| 'oldest'
-			| 'random';
-		const defaultIsPublic = data.get('defaultIsPublic') === 'on';
-		const defaultShowOnHome = data.get('defaultShowOnHome') === 'on';
+		// Get values from form data, falling back to current settings
+		const defaultDescription = data.get('defaultDescription')?.toString() ?? currentSettings.defaultDescription;
+		const defaultColor = data.get('defaultColor')?.toString() ?? currentSettings.defaultColor;
+		const defaultLayoutStyle = (data.get('defaultLayoutStyle')?.toString() ?? currentSettings.defaultLayoutStyle) as 'grid' | 'masonry';
+		const defaultSortOrder = (data.get('defaultSortOrder')?.toString() ?? currentSettings.defaultSortOrder) as 'newest' | 'oldest' | 'random';
+		const defaultIsPublic = data.has('defaultIsPublic') ? data.get('defaultIsPublic') === 'on' : currentSettings.defaultIsPublic;
+		const defaultShowOnHome = data.has('defaultShowOnHome') ? data.get('defaultShowOnHome') === 'on' : currentSettings.defaultShowOnHome;
 		
-		// New homepage content settings
-		const siteTitle = data.get('siteTitle')?.toString() || 'Gallery';
-		const copyrightText = data.get('copyrightText')?.toString() || 'GALLERY';
-		const heroTitle = data.get('heroTitle')?.toString() || 'Visual Stories,\nCaptured in Time';
-		const heroDescription = data.get('heroDescription')?.toString() || '';
-		const aboutTitle = data.get('aboutTitle')?.toString() || 'About';
-		const aboutText = data.get('aboutText')?.toString() || '';
-		const contactEmail = data.get('contactEmail')?.toString() || '';
-		const contactPhone = data.get('contactPhone')?.toString() || '';
-		const discordWebhook = data.get('discordWebhook')?.toString() || '';
-		const showContactOnHome = data.get('showContactOnHome') === 'on';
-		const theme = (data.get('theme')?.toString() || 'light') as 'light' | 'dark';
+		// Homepage content settings
+		const siteTitle = data.get('siteTitle')?.toString() ?? currentSettings.siteTitle;
+		const copyrightText = data.get('copyrightText')?.toString() ?? currentSettings.copyrightText;
+		const heroTitle = data.get('heroTitle')?.toString() ?? currentSettings.heroTitle;
+		const heroDescription = data.get('heroDescription')?.toString() ?? currentSettings.heroDescription;
+		const aboutTitle = data.get('aboutTitle')?.toString() ?? currentSettings.aboutTitle;
+		const aboutText = data.get('aboutText')?.toString() ?? currentSettings.aboutText;
+		const contactEmail = data.get('contactEmail')?.toString() ?? currentSettings.contactEmail;
+		const contactPhone = data.get('contactPhone')?.toString() ?? currentSettings.contactPhone;
+		const discordWebhook = data.get('discordWebhook')?.toString() ?? currentSettings.discordWebhook;
+		const showContactOnHome = data.has('showContactOnHome') ? data.get('showContactOnHome') === 'on' : currentSettings.showContactOnHome;
+		const theme = (data.get('theme')?.toString() ?? currentSettings.theme) as 'light' | 'dark';
 
 		try {
 			updateSettings({

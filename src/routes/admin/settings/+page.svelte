@@ -298,9 +298,9 @@
 						</label>
 						<select id="theme" name="theme" class="form-select">
 							<option value="light" selected={data.settings.theme === 'light'}>Light</option>
-							<option value="dark" disabled>Dark (Coming Soon)</option>
+							<option value="dark" selected={data.settings.theme === 'dark'}>Dark</option>
 						</select>
-						<p class="text-xs text-[var(--color-text-muted)] mt-1">Dark theme coming in future update</p>
+						<p class="text-xs text-[var(--color-text-muted)] mt-1">Switch between light and dark themes</p>
 					</div>
 
 					<div class="flex justify-end pt-4 border-t border-[var(--color-border)]">
