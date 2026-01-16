@@ -21,7 +21,9 @@
 	>
 		<div class="container">
 			<div class="flex items-center justify-between py-6 md:py-8">
-				<a href="/" class="text-xl md:text-2xl font-bold tracking-tight serif-heading"> Gallery </a>
+				<a href="/" class="text-xl md:text-2xl font-bold tracking-tight serif-heading">
+					{data.settings.siteTitle}
+				</a>
 				<nav class="flex items-center gap-8 md:gap-12">
 					<a
 						href="/"
