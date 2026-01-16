@@ -1,8 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { getAlbumBySlug, getPhotoById, getPhotosByAlbum } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
+import { validateSession } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ params, cookies, url }) => {
+	const isAuthenticated = validateSession(cookies);
 	const album = getAlbumBySlug(params.slug);
 	if (!album) {
 		throw error(404, 'Album not found');
@@ -12,10 +14,15 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const now = new Date().toISOString();
 	const isExpired = album.expires_at && album.expires_at < now;
 
+	// If expired and NOT admin, deny access
+	if (isExpired && !isAuthenticated) {
+		throw error(403, 'Album has expired');
+	}
+
 	// If album requires password and not unlocked, require password
 	if (album.password && !isExpired) {
-		const unlocked = cookies.get(`album_${album.id}_unlocked`);
-		if (!unlocked || unlocked !== album.password) {
+		const sessionPassword = cookies.get(`album_${album.id}_auth`);
+		if (!sessionPassword || sessionPassword !== album.password) {
 			throw error(403, 'Album is password protected');
 		}
 	}

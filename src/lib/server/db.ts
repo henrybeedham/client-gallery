@@ -238,7 +238,9 @@ export function getFeaturedAlbum(): Album | undefined {
       (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename,
       (SELECT filename FROM photos WHERE id = a.background_photo_id) as background_filename
     FROM albums a
-    WHERE a.is_public = 1 AND a.featured_on_home = 1
+    WHERE a.is_public = 1 
+      AND a.featured_on_home = 1
+      AND (a.expires_at IS NULL OR a.expires_at > datetime('now'))
     ORDER BY a.created_at DESC
     LIMIT 1
   `
@@ -255,7 +257,10 @@ export function getAlbumsForShowOnHome(): Album[] {
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
       (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
     FROM albums a
-    WHERE a.is_public = 1 AND a.show_on_home = 1 AND a.featured_on_home = 0
+    WHERE a.is_public = 1 
+      AND a.show_on_home = 1 
+      AND a.featured_on_home = 0
+      AND (a.expires_at IS NULL OR a.expires_at > datetime('now'))
     ORDER BY a.created_at DESC
   `
 		)
@@ -271,7 +276,9 @@ export function getAlbumsForGalleries(): Album[] {
       (SELECT COUNT(*) FROM photos WHERE album_id = a.id) as photo_count,
       (SELECT filename FROM photos WHERE id = a.cover_photo_id) as cover_filename
     FROM albums a
-    WHERE a.is_public = 1 AND a.show_on_galleries = 1
+    WHERE a.is_public = 1 
+      AND a.show_on_galleries = 1
+      AND (a.expires_at IS NULL OR a.expires_at > datetime('now'))
     ORDER BY a.created_at DESC
   `
 		)

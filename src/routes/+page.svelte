@@ -54,7 +54,7 @@
 		{#if data.heroImage}
 			<div class="absolute inset-0 z-0">
 				<img
-					src="/uploads/hero/{data.heroImage}"
+					src="/api/hero/{data.heroImage}"
 					alt="Hero"
 					class="w-full h-full object-cover"
 				/>
