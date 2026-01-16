@@ -51,10 +51,10 @@
 					Background image for your homepage hero section. Recommended: 2400×1600px
 				</p>
 
-				{#if data.settings.heroImage || heroImagePreview}
+				{#if heroImagePreview || data.settings.heroImage}
 					<div class="mb-4">
 						<img
-							src={heroImagePreview || `/api/hero/${data.settings.heroImage}`}
+							src={heroImagePreview || (data.settings.heroImage ? `/api/hero/${data.settings.heroImage}` : '')}
 							alt="Hero preview"
 							class="w-full h-48 object-cover border border-[var(--color-border)]"
 						/>

@@ -52,10 +52,23 @@
 	function backToAlbum() {
 		// Check if we came from homepage based on referrer or sessionStorage
 		const referrer = document.referrer;
-		const fromHome = sessionStorage.getItem('fromHomepage');
+		let fromHome = false;
 		
-		if (fromHome === 'true' || (referrer && (referrer.includes('/#work') || (referrer.endsWith('/') && !referrer.includes('/album/'))))) {
-			sessionStorage.removeItem('fromHomepage');
+		// Safely access sessionStorage
+		try {
+			fromHome = typeof window !== 'undefined' && sessionStorage.getItem('fromHomepage') === 'true';
+		} catch (e) {
+			// SessionStorage not available
+		}
+		
+		if (fromHome || (referrer && (referrer.includes('/#work') || (referrer.endsWith('/') && !referrer.includes('/album/'))))) {
+			try {
+				if (typeof window !== 'undefined') {
+					sessionStorage.removeItem('fromHomepage');
+				}
+			} catch (e) {
+				// SessionStorage not available
+			}
 			goto('/');
 		} else {
 			goto(buildAlbumUrl(data.photo.id));

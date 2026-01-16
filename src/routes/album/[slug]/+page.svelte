@@ -303,7 +303,10 @@
 				url.searchParams.set('sort', data.selectedSort);
 			}
 			// Navigate to photo detail page with smooth client-side navigation
-			goto(url.pathname + url.search);
+			goto(url.pathname + url.search).catch(() => {
+				// Reset loading state if navigation fails
+				isNavigating = false;
+			});
 			return;
 		}
 
