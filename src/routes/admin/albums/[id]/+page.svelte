@@ -321,7 +321,7 @@
 						>
 						<select
 							id="photoSortSelect"
-							class="form-select text-sm py-1 px-2 bg-[var(--color-bg-tertiary)] border-[var(--color-border)] rounded"
+							class="form-select text-sm py-1 px-2 bg-[var(--color-bg-tertiary)] border-[var(--color-border)]"
 							bind:value={photoSortOrder}
 						>
 							<option value="oldest">Oldest first</option>

@@ -810,7 +810,7 @@
 					<label for="sortSelect" class="text-sm text-gray-400">Sort:</label>
 					<select
 						id="sortSelect"
-						class="form-select text-sm py-1 px-2 bg-[var(--color-bg-secondary)] border-[var(--color-border)] rounded"
+						class="form-select text-sm py-1 px-2 bg-[var(--color-bg-secondary)] border-[var(--color-border)]"
 						onchange={(e) => {
 							const target = e.target as HTMLSelectElement;
 							const url = new URL(window.location.href);
