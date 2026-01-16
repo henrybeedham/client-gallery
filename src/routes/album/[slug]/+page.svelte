@@ -16,11 +16,9 @@
 		Loader2,
 		ArrowLeft
 	} from 'lucide-svelte';
-	import Navigation from '$lib/components/Navigation.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 
 	let { data, form } = $props();
-	let scrollY = $state(0);
 
 	let selectedPhotos: Set<number> = $state(new Set());
 	let isSelecting = $state(false);
@@ -676,9 +674,6 @@
 	</div>
 {:else}
 	<div class="min-h-screen flex flex-col relative">
-		<!-- Navigation -->
-		<Navigation siteTitle={data.settings.siteTitle} {scrollY} />
-
 		<!-- Background image if set -->
 		{#if data.album.background_filename}
 			<div

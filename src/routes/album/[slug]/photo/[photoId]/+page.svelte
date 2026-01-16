@@ -4,11 +4,8 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { ArrowLeft, ChevronLeft, ChevronRight, Download, Camera, Aperture } from 'lucide-svelte';
-	import Navigation from '$lib/components/Navigation.svelte';
-	import Footer from '$lib/components/Footer.svelte';
 
 	let { data } = $props();
-	let scrollY = $state(0);
 
 	let touchStartX = 0;
 	let touchStartY = 0;
@@ -156,7 +153,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} bind:scrollY />
+<svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
 	<title
@@ -215,9 +212,6 @@
 	ontouchstart={handleTouchStart}
 	ontouchend={handleTouchEnd}
 >
-	<!-- Navigation -->
-	<Navigation siteTitle={data.settings.siteTitle} {scrollY} />
-
 	<!-- Header -->
 	<header
 		class="sticky top-0 bg-[var(--color-cream)]/95 backdrop-blur-sm border-b border-[var(--color-border)] z-50"
@@ -396,7 +390,4 @@
 			</div>
 		</aside>
 	</main>
-
-	<!-- Footer -->
-	<Footer copyrightText={data.settings.copyrightText} />
 </div>

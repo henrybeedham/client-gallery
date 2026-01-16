@@ -4,6 +4,7 @@
 	import Footer from '$lib/components/Footer.svelte';
 
 	let { data } = $props();
+	// scrollY is used by the Navigation component for scroll-based styling
 	let scrollY = $state(0);
 </script>
 
