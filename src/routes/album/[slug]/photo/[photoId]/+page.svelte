@@ -287,7 +287,7 @@
 				</div>
 
 				<!-- EXIF metadata -->
-				{#if data.photo.camera_make || data.photo.camera_model || data.photo.lens_model || data.photo.focal_length || data.photo.aperture || data.photo.shutter_speed || data.iso}
+				{#if data.photo.camera_make || data.photo.camera_model || data.photo.lens_model || data.photo.focal_length || data.photo.aperture || data.photo.shutter_speed || data.photo.iso}
 					<div class="border-t border-[var(--color-border)] pt-6">
 						<h2 class="nav-text text-[var(--color-text-muted)] mb-4">
 							Camera & Settings
