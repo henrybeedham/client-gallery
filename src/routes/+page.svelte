@@ -3,6 +3,7 @@
 	import { renderMarkdown } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
+	import { animateIn } from '$lib/animate.js';
 
 	let { data } = $props();
 	let scrollY = $state(0);
@@ -57,30 +58,6 @@
 				sessionStorage.removeItem('homeScrollToPhoto');
 			}
 		}
-
-		// Intersection Observer for scroll animations
-		const observer = new IntersectionObserver(
-			(entries) => {
-				entries.forEach((entry) => {
-					if (entry.isIntersecting) {
-						entry.target.classList.add('visible');
-					}
-				});
-			},
-			{ threshold: 0.1, rootMargin: '0px 0px 100px 0px' }
-		);
-
-		const elements = document.querySelectorAll('.scroll-fade-in');
-		elements.forEach((el) => {
-			// Immediately add visible class to elements already in viewport
-			const rect = el.getBoundingClientRect();
-			if (rect.top < window.innerHeight && rect.bottom > 0) {
-				el.classList.add('visible');
-			}
-			observer.observe(el);
-		});
-
-		return () => observer.disconnect();
 	});
 
 	// Masonry layout for featured album (if layout_style is masonry)
@@ -249,7 +226,7 @@
 		<div class="container">
 			<!-- Featured Album Photos -->
 			{#if data.featuredAlbum && data.featuredPhotos.length > 0}
-				<div class="mb-24 md:mb-32 scroll-fade-in">
+				<div class="mb-24 md:mb-32 scroll-fade-in" use:animateIn>
 					<div class="mb-12 md:mb-16">
 						<h2
 							class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-4"
@@ -271,6 +248,7 @@
 						<div
 							bind:this={masonryContainer}
 							class="relative scroll-fade-in"
+							use:animateIn
 							style="height: {masonryHeight}px"
 						>
 							{#each data.featuredPhotos as photo, index}
@@ -304,6 +282,7 @@
 								<a
 									href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
 									class="group block scroll-fade-in"
+									use:animateIn
 									data-photo-id={photo.id}
 									onclick={() => saveScrollPosition(photo.id)}
 								>
@@ -331,7 +310,7 @@
 				</div>
 			{/if}
 
-			<div class="mb-16 md:mb-24 scroll-fade-in">
+			<div class="mb-16 md:mb-24 scroll-fade-in" use:animateIn>
 				<h2
 					class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-4"
 					style="font-family: 'Playfair Display', serif;"
@@ -345,6 +324,7 @@
 				<!-- Show on Home Albums Grid -->
 				<div
 					class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16 scroll-fade-in"
+					use:animateIn
 				>
 					{#each data.showOnHomeAlbums as album, index}
 						<a
@@ -404,7 +384,11 @@
 	</main>
 
 	<!-- About Section -->
-	<section class="py-20 md:py-32 bg-[var(--color-bg-secondary)] scroll-fade-in" id="about">
+	<section
+		class="py-20 md:py-32 bg-[var(--color-bg-secondary)] scroll-fade-in"
+		id="about"
+		use:animateIn
+	>
 		<div class="container">
 			<div class="max-w-3xl mx-auto text-center">
 				<h2
