@@ -29,25 +29,47 @@
 
 		if (scrollToPhotoId) {
 			const photoId = parseInt(scrollToPhotoId);
-			// Validate photo ID is a positive number
 			if (!isNaN(photoId) && photoId > 0) {
 				tick()
 					.then(() => {
-						// Give images and masonry layout time to calculate
 						setTimeout(() => {
-							// Find the photo element with validated ID
 							const photoLink = document.querySelector(
 								`a[data-photo-id="${photoId}"]`
 							) as HTMLElement;
+
 							if (photoLink) {
+								// --- FIX STARTS HERE ---
+
+								// 1. Force the photo itself to be visible immediately
+								photoLink.classList.add('visible');
+
+								// 2. Force the parent Masonry container to be visible immediately
+								// (Since the container has 'scroll-fade-in', if it's hidden, everything is hidden)
+								const parentContainer = photoLink.closest('.scroll-fade-in');
+								if (parentContainer) {
+									parentContainer.classList.add('visible');
+								}
+
+								// 3. Force any other fade-in elements currently in the viewport to show up
+								// This prevents "invisible" neighbors when you land
+								const allFadeElements = document.querySelectorAll('.scroll-fade-in');
+								allFadeElements.forEach((el) => {
+									const rect = el.getBoundingClientRect();
+									// Using a generous buffer (window.innerHeight * 2) ensures surrounding elements appear
+									if (rect.top < window.innerHeight * 2 && rect.bottom > -window.innerHeight) {
+										el.classList.add('visible');
+									}
+								});
+
+								// --- FIX ENDS HERE ---
+
+								// Execute the scroll
 								photoLink.scrollIntoView({ behavior: 'auto', block: 'center' });
-								// Clean up after scrolling
+
 								setTimeout(() => {
-									history.scrollRestoration = 'auto';
 									sessionStorage.removeItem('homeScrollToPhoto');
 								}, SCROLL_RESTORE_CLEANUP_DELAY);
 							} else {
-								// Fallback: just clear storage if photo not found
 								sessionStorage.removeItem('homeScrollToPhoto');
 							}
 						}, SCROLL_RESTORE_IMAGE_DELAY);
@@ -57,7 +79,6 @@
 						sessionStorage.removeItem('homeScrollToPhoto');
 					});
 			} else {
-				// Clear invalid photo ID from storage
 				sessionStorage.removeItem('homeScrollToPhoto');
 			}
 		}
