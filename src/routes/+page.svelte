@@ -22,6 +22,9 @@
 
 	// Restore scroll position when returning from photo detail
 	onMount(() => {
+		if ('scrollRestoration' in history) {
+			history.scrollRestoration = 'manual';
+		}
 		const scrollToPhotoId = sessionStorage.getItem('homeScrollToPhoto');
 
 		if (scrollToPhotoId) {
@@ -37,9 +40,10 @@
 								`a[data-photo-id="${photoId}"]`
 							) as HTMLElement;
 							if (photoLink) {
-								photoLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+								photoLink.scrollIntoView({ behavior: 'auto', block: 'center' });
 								// Clean up after scrolling
 								setTimeout(() => {
+									history.scrollRestoration = 'auto';
 									sessionStorage.removeItem('homeScrollToPhoto');
 								}, SCROLL_RESTORE_CLEANUP_DELAY);
 							} else {
@@ -130,6 +134,14 @@
 		else if (window.innerWidth >= 1024) columnCount = 3;
 		else if (window.innerWidth >= 640) columnCount = 2;
 		else columnCount = 1;
+
+		if (masonryContainer && masonryContainer.offsetWidth === 0) {
+			// If container has no width yet, force a recalculation after a tick
+			requestAnimationFrame(() => {
+				updateColumnCount();
+				calculateMasonryLayout();
+			});
+		}
 	}
 
 	// Re-calculate masonry when layout changes or window resizes
