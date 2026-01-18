@@ -226,7 +226,7 @@
 		<div class="container">
 			<!-- Featured Album Photos -->
 			{#if data.featuredAlbum && data.featuredPhotos.length > 0}
-				<div class="mb-24 md:mb-32 scroll-fade-in" use:animateIn>
+				<div class="mb-24 md:mb-32">
 					<div class="mb-12 md:mb-16">
 						<h2
 							class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-4"
@@ -245,12 +245,7 @@
 					<!-- Featured Album Photos with Layout Respect -->
 					{#if data.featuredAlbum.layout_style === 'masonry'}
 						<!-- Masonry Layout -->
-						<div
-							bind:this={masonryContainer}
-							class="relative scroll-fade-in"
-							use:animateIn
-							style="height: {masonryHeight}px"
-						>
+						<div bind:this={masonryContainer} class="relative" style="height: {masonryHeight}px">
 							{#each data.featuredPhotos as photo, index}
 								{@const position = masonryPositions[index]}
 								{#if position}
@@ -281,8 +276,7 @@
 							{#each data.featuredPhotos as photo}
 								<a
 									href="/album/{data.featuredAlbum.slug}/photo/{photo.id}"
-									class="group block scroll-fade-in"
-									use:animateIn
+									class="group block"
 									data-photo-id={photo.id}
 									onclick={() => saveScrollPosition(photo.id)}
 								>
@@ -310,7 +304,7 @@
 				</div>
 			{/if}
 
-			<div class="mb-16 md:mb-24 scroll-fade-in" use:animateIn>
+			<div class="mb-16 md:mb-24">
 				<h2
 					class="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--color-charcoal)] mb-4"
 					style="font-family: 'Playfair Display', serif;"
@@ -322,10 +316,7 @@
 
 			{#if data.showOnHomeAlbums && data.showOnHomeAlbums.length > 0}
 				<!-- Show on Home Albums Grid -->
-				<div
-					class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16 scroll-fade-in"
-					use:animateIn
-				>
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 mb-16">
 					{#each data.showOnHomeAlbums as album, index}
 						<a
 							href="/album/{album.slug}"
@@ -384,11 +375,7 @@
 	</main>
 
 	<!-- About Section -->
-	<section
-		class="py-20 md:py-32 bg-[var(--color-bg-secondary)] scroll-fade-in"
-		id="about"
-		use:animateIn
-	>
+	<section class="py-20 md:py-32 bg-[var(--color-bg-secondary)]" id="about">
 		<div class="container">
 			<div class="max-w-3xl mx-auto text-center">
 				<h2
