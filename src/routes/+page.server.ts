@@ -1,5 +1,10 @@
 import type { PageServerLoad } from './$types';
-import { getFeaturedAlbum, getPhotosByAlbum, getAlbumsForShowOnHome, getSettings } from '$lib/server/db';
+import {
+	getFeaturedAlbum,
+	getPhotosByAlbum,
+	getAlbumsForShowOnHome,
+	getSettings
+} from '$lib/server/db';
 
 export const load: PageServerLoad = async () => {
 	// Get the featured album to display on home page
@@ -8,7 +13,7 @@ export const load: PageServerLoad = async () => {
 
 	if (featuredAlbum) {
 		// Get photos for the featured album (limit to 20 for homepage)
-		featuredPhotos = getPhotosByAlbum(featuredAlbum.id, undefined, 'newest').slice(0, 20);
+		featuredPhotos = getPhotosByAlbum(featuredAlbum.id, undefined, 'newest');
 	}
 
 	// Get albums to show in the "Explore More" section (show_on_home = 1, featured_on_home = 0)
