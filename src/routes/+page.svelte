@@ -3,7 +3,6 @@
 	import { renderMarkdown } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
-	import { animateIn } from '$lib/animate.js';
 
 	let { data } = $props();
 	let scrollY = $state(0);
@@ -105,8 +104,8 @@
 		if (typeof window === 'undefined') return;
 		if (window.innerWidth >= 1280) columnCount = 4;
 		else if (window.innerWidth >= 1024) columnCount = 3;
-		else if (window.innerWidth >= 640) columnCount = 2;
-		else columnCount = 1;
+		// else if (window.innerWidth >= 640) columnCount = 2;
+		else columnCount = 2;
 
 		if (masonryContainer && masonryContainer.offsetWidth === 0) {
 			// If container has no width yet, force a recalculation after a tick
