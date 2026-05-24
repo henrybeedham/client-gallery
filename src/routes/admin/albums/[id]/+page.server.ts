@@ -524,15 +524,17 @@ export const actions: Actions = {
 					processed.iso
 				);
 
-				// If the file was in a subfolder, create/get the tag and assign it to the photo
-				if (file.tag) {
-					let tagId = tagCache.get(file.tag);
-					if (!tagId) {
-						const tagSlug = slugify(file.tag);
-						tagId = getOrCreateTag(albumId, file.tag, tagSlug);
-						tagCache.set(file.tag, tagId);
+				// If the file had embedded tags, create/get each tag and assign to the photo
+				if (file.tags && file.tags.length > 0) {
+					for (const tagName of file.tags) {
+						let tagId = tagCache.get(tagName);
+						if (!tagId) {
+							const tagSlug = slugify(tagName);
+							tagId = getOrCreateTag(albumId, tagName, tagSlug);
+							tagCache.set(tagName, tagId);
+						}
+						addTagToPhoto(photoId, tagId);
 					}
-					addTagToPhoto(photoId, tagId);
 				}
 
 				if (!firstPhotoId) {

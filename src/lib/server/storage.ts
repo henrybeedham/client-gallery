@@ -334,7 +334,7 @@ export interface ImportFolderFile {
 	name: string;
 	path: string;
 	size: number;
-	tag: string | null; // Subfolder name to be used as tag, null if in root
+	tags: string[]; // Tags extracted from IPTC/XMP/EXIF (may be empty)
 }
 
 const VALID_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
@@ -344,32 +344,103 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 		return [];
 	}
 
+	// Helper: extract tags from image buffer (IPTC Keywords, XMP Subject, Hierarchical Subject)
+	async function extractTagsFromBuffer(buffer: Buffer): Promise<string[]> {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const meta: any = await exifr.parse(buffer, {
+				pick: ['Keywords', 'Subject', 'HierarchicalSubject']
+			});
+
+			const tagsSet = new Set<string>();
+
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const addValue = (val: any) => {
+				if (!val) return;
+				if (Array.isArray(val)) {
+					for (const v of val) addValue(v);
+					return;
+				}
+
+				// Strings may contain multiple tags separated by commas or semicolons
+				const parts = String(val)
+					.split(/[;,]+/)
+					.map((s) => s.trim())
+					.filter(Boolean);
+				for (const p of parts) tagsSet.add(p);
+			};
+
+			// IPTC / Keywords
+			addValue(meta?.Keywords ?? meta?.keywords);
+			// XMP Subject
+			addValue(meta?.Subject ?? meta?.subject);
+
+			// HierarchicalSubject may be an array or nested arrays, join and split on common separators
+			const hs = meta?.HierarchicalSubject ?? meta?.hierarchicalSubject;
+			if (hs) {
+				if (Array.isArray(hs)) {
+					for (const entry of hs) {
+						if (Array.isArray(entry)) {
+							addValue(entry.join('|'));
+						} else {
+							// entry may be a string like "Top|Child|Sub"
+							const parts = String(entry)
+								.split(/[|\\/]+/)
+								.map((s) => s.trim())
+								.filter(Boolean);
+							for (const p of parts) tagsSet.add(p);
+						}
+					}
+				} else {
+					const parts = String(hs)
+						.split(/[|\\/]+/)
+						.map((s) => s.trim())
+						.filter(Boolean);
+					for (const p of parts) tagsSet.add(p);
+				}
+			}
+
+			return Array.from(tagsSet).sort();
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		} catch (err) {
+			// If anything goes wrong parsing metadata, return empty tags
+			return [];
+		}
+	}
+
 	try {
 		const entries = await fs.readdir(IMPORT_DIR, { withFileTypes: true });
 		const files: ImportFolderFile[] = [];
 
 		for (const entry of entries) {
 			if (entry.isFile()) {
-				// Files in the root import folder (no tag)
+				// Files in the root import folder
 				const ext = path.extname(entry.name).toLowerCase();
 				if (VALID_IMAGE_EXTENSIONS.includes(ext)) {
 					const filePath = path.join(IMPORT_DIR, entry.name);
 					try {
 						const stats = await fs.stat(filePath);
+						let tags: string[] = [];
+						try {
+							const buffer = await fs.readFile(filePath);
+							tags = await extractTagsFromBuffer(buffer);
+						} catch {
+							// ignore tag extraction errors
+						}
+
 						files.push({
 							name: entry.name,
 							path: filePath,
 							size: stats.size,
-							tag: null
+							tags
 						});
 					} catch {
 						// Skip files that can't be read
 					}
 				}
 			} else if (entry.isDirectory()) {
-				// Scan subfolders - subfolder name becomes the tag
-				const subfolderName = entry.name;
-				const subfolderPath = path.join(IMPORT_DIR, subfolderName);
+				// Scan subfolders but do NOT use the subfolder name as a tag anymore; tags are read from the file metadata
+				const subfolderPath = path.join(IMPORT_DIR, entry.name);
 				try {
 					const subEntries = await fs.readdir(subfolderPath, { withFileTypes: true });
 					for (const subEntry of subEntries) {
@@ -379,11 +450,19 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 								const filePath = path.join(subfolderPath, subEntry.name);
 								try {
 									const stats = await fs.stat(filePath);
+									let tags: string[] = [];
+									try {
+										const buffer = await fs.readFile(filePath);
+										tags = await extractTagsFromBuffer(buffer);
+									} catch {
+										// ignore tag extraction errors
+									}
+
 									files.push({
 										name: subEntry.name,
 										path: filePath,
 										size: stats.size,
-										tag: subfolderName
+										tags
 									});
 								} catch {
 									// Skip files that can't be read
