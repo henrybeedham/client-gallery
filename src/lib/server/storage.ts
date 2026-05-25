@@ -347,18 +347,14 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 	// Helper: extract tags from image buffer (IPTC Keywords, XMP Subject, Hierarchical Subject)
 	async function extractTagsFromBuffer(buffer: Buffer): Promise<string[]> {
 		try {
+			// Parse with the IPTC and XMP flags, but DO NOT use 'pick'
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const meta: any = await exifr.parse(buffer, {
 				iptc: true,
-				xmp: true,
-				pick: ['Keywords', 'Subject', 'HierarchicalSubject']
-			});
-			const fullMeta = await exifr.parse(buffer, {
-				iptc: true,
 				xmp: true
 			});
+
 			console.log(`Meta extracted:`, meta);
-			console.log(`Full meta extracted:`, fullMeta);
 
 			const tagsSet = new Set<string>();
 
