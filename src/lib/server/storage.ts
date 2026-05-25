@@ -30,6 +30,7 @@ export interface ProcessedImage {
 	aperture: number | null;
 	shutterSpeed: string | null;
 	iso: number | null;
+	tags: string[]; // Tags extracted from IPTC/XMP/EXIF (may be empty)
 }
 
 function ensureAlbumDirs(albumSlug: string): void {
@@ -339,77 +340,63 @@ export interface ImportFolderFile {
 
 const VALID_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
 
-export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
-	if (!existsSync(IMPORT_DIR)) {
-		return [];
-	}
+export async function extractTagsFromBuffer(buffer: Buffer): Promise<string[]> {
+	try {
+		// Parse with the IPTC and XMP flags
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const meta: any = await exifr.parse(buffer, { iptc: true, xmp: true });
 
-	// Helper: extract tags from image buffer (IPTC Keywords, XMP Subject, Hierarchical Subject)
-	async function extractTagsFromBuffer(buffer: Buffer): Promise<string[]> {
-		try {
-			// Parse with the IPTC and XMP flags, but DO NOT use 'pick'
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const meta: any = await exifr.parse(buffer, {
-				iptc: true,
-				xmp: true
-			});
+		const tagsSet = new Set<string>();
 
-			console.log(`Meta extracted:`, meta);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const addValue = (val: any) => {
+			if (!val) return;
+			if (Array.isArray(val)) {
+				for (const v of val) addValue(v);
+				return;
+			}
+			const parts = String(val)
+				.split(/[;,]+/)
+				.map((s) => s.trim())
+				.filter(Boolean);
+			for (const p of parts) tagsSet.add(p);
+		};
 
-			const tagsSet = new Set<string>();
+		addValue(meta?.Keywords ?? meta?.keywords);
+		addValue(meta?.Subject ?? meta?.subject);
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const addValue = (val: any) => {
-				if (!val) return;
-				if (Array.isArray(val)) {
-					for (const v of val) addValue(v);
-					return;
+		const hs = meta?.HierarchicalSubject ?? meta?.hierarchicalSubject;
+		if (hs) {
+			if (Array.isArray(hs)) {
+				for (const entry of hs) {
+					if (Array.isArray(entry)) {
+						addValue(entry.join('|'));
+					} else {
+						const parts = String(entry)
+							.split(/[|\\/]+/)
+							.map((s) => s.trim())
+							.filter(Boolean);
+						for (const p of parts) tagsSet.add(p);
+					}
 				}
-
-				// Strings may contain multiple tags separated by commas or semicolons
-				const parts = String(val)
-					.split(/[;,]+/)
+			} else {
+				const parts = String(hs)
+					.split(/[|\\/]+/)
 					.map((s) => s.trim())
 					.filter(Boolean);
 				for (const p of parts) tagsSet.add(p);
-			};
-
-			// IPTC / Keywords
-			addValue(meta?.Keywords ?? meta?.keywords);
-			// XMP Subject
-			addValue(meta?.Subject ?? meta?.subject);
-
-			// HierarchicalSubject may be an array or nested arrays, join and split on common separators
-			const hs = meta?.HierarchicalSubject ?? meta?.hierarchicalSubject;
-			if (hs) {
-				if (Array.isArray(hs)) {
-					for (const entry of hs) {
-						if (Array.isArray(entry)) {
-							addValue(entry.join('|'));
-						} else {
-							// entry may be a string like "Top|Child|Sub"
-							const parts = String(entry)
-								.split(/[|\\/]+/)
-								.map((s) => s.trim())
-								.filter(Boolean);
-							for (const p of parts) tagsSet.add(p);
-						}
-					}
-				} else {
-					const parts = String(hs)
-						.split(/[|\\/]+/)
-						.map((s) => s.trim())
-						.filter(Boolean);
-					for (const p of parts) tagsSet.add(p);
-				}
 			}
-
-			return Array.from(tagsSet).sort();
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		} catch (err) {
-			// If anything goes wrong parsing metadata, return empty tags
-			return [];
 		}
+
+		return Array.from(tagsSet).sort();
+	} catch (err) {
+		return [];
+	}
+}
+
+export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
+	if (!existsSync(IMPORT_DIR)) {
+		return [];
 	}
 
 	try {
@@ -418,7 +405,6 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 
 		for (const entry of entries) {
 			if (entry.isFile()) {
-				// Files in the root import folder
 				const ext = path.extname(entry.name).toLowerCase();
 				if (VALID_IMAGE_EXTENSIONS.includes(ext)) {
 					const filePath = path.join(IMPORT_DIR, entry.name);
@@ -433,18 +419,12 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 							// ignore tag extraction errors
 						}
 
-						files.push({
-							name: entry.name,
-							path: filePath,
-							size: stats.size,
-							tags
-						});
+						files.push({ name: entry.name, path: filePath, size: stats.size, tags });
 					} catch {
 						// Skip files that can't be read
 					}
 				}
 			} else if (entry.isDirectory()) {
-				// Scan subfolders but do NOT use the subfolder name as a tag anymore; tags are read from the file metadata
 				const subfolderPath = path.join(IMPORT_DIR, entry.name);
 				try {
 					const subEntries = await fs.readdir(subfolderPath, { withFileTypes: true });
@@ -464,12 +444,7 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 										// ignore tag extraction errors
 									}
 
-									files.push({
-										name: subEntry.name,
-										path: filePath,
-										size: stats.size,
-										tags
-									});
+									files.push({ name: subEntry.name, path: filePath, size: stats.size, tags });
 								} catch {
 									// Skip files that can't be read
 								}
