@@ -171,6 +171,9 @@ export const actions: Actions = {
 		let uploaded = 0;
 		let firstPhotoId: number | null = null;
 
+		// Cache for tag IDs to avoid repeated lookups when uploading
+		const tagCache = new Map<string, number>();
+
 		for (const file of files) {
 			if (!validTypes.includes(file.type)) {
 				continue;
@@ -199,6 +202,19 @@ export const actions: Actions = {
 					processed.shutterSpeed,
 					processed.iso
 				);
+
+				// If the uploaded file had embedded tags, create/get each tag and assign to the photo
+				if (processed.tags && processed.tags.length > 0) {
+					for (const tagName of processed.tags) {
+						let tagId = tagCache.get(tagName);
+						if (!tagId) {
+							const tagSlug = slugify(tagName);
+							tagId = getOrCreateTag(albumId, tagName, tagSlug);
+							tagCache.set(tagName, tagId);
+						}
+						addTagToPhoto(photoId, tagId);
+					}
+				}
 
 				if (!firstPhotoId) {
 					firstPhotoId = photoId;
