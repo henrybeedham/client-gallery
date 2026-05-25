@@ -424,6 +424,7 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 						try {
 							const buffer = await fs.readFile(filePath);
 							tags = await extractTagsFromBuffer(buffer);
+							console.log(`Tags for ${entry.name}:`, tags);
 						} catch {
 							// ignore tag extraction errors
 						}
@@ -454,6 +455,7 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 									try {
 										const buffer = await fs.readFile(filePath);
 										tags = await extractTagsFromBuffer(buffer);
+										console.log(`Tags for ${subEntry.name}:`, tags);
 									} catch {
 										// ignore tag extraction errors
 									}
