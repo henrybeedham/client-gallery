@@ -349,9 +349,14 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 		try {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const meta: any = await exifr.parse(buffer, {
+				iptc: true,
+				xmp: true,
 				pick: ['Keywords', 'Subject', 'HierarchicalSubject']
 			});
-			const fullMeta = await exifr.parse(buffer);
+			const fullMeta = await exifr.parse(buffer, {
+				iptc: true,
+				xmp: true
+			});
 			console.log(`Meta extracted:`, meta);
 			console.log(`Full meta extracted:`, fullMeta);
 
