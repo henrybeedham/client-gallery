@@ -351,6 +351,7 @@ export async function getImportFolderFiles(): Promise<ImportFolderFile[]> {
 			const meta: any = await exifr.parse(buffer, {
 				pick: ['Keywords', 'Subject', 'HierarchicalSubject']
 			});
+			console.log(`Meta extracted:`, meta);
 
 			const tagsSet = new Set<string>();
 
